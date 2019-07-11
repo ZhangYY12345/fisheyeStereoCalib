@@ -1,6 +1,13 @@
 #pragma once
 #include <opencv2/opencv.hpp>
 
+
+#define IMG_CAPTURE_WIDTH	2560
+#define IMG_CAPTURE_HEIGHT	1440
+
+typedef  std::vector<std::vector<cv::Point2f> >  douVecPt2f;
+typedef  std::vector<std::vector<cv::Point3f> >  douVecPt3f;
+
 enum DisparityType
 {
 	DISPARITY_LEFT = 0,
@@ -39,6 +46,8 @@ enum CONSENSUS_MODEL_TYPE_
 	CONSENSUS_MODEL_SPHERE_ = 0,
 	CONSENSUS_MODEL_PLANE_ = 1,
 };
+
+
 
 bool check_image(const cv::Mat &image, std::string name = "Image");
 bool check_dimensions(const cv::Mat &img1, const cv::Mat &img2);
