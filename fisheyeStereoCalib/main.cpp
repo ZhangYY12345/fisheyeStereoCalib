@@ -5,13 +5,15 @@ using namespace std;
 
 int main()
 {
-	std::string imgFilePath = "D:\\studying\\stereo vision\\research code\\data\\2019-07-08";
-	std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\2019-07-08\\stereoCalibrateData20190710.xml";
+	std::string imgFilePath = "D:\\studying\\stereo vision\\research code\\data\\20190718\\camera_jpg\\left";
+	std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\20190718\\camera_jpg\\left\\leftCalibData20190720.xml";
 
 	//std::string imgFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera";
 	//std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera\\stereoCalibrateData20190710.xml";
 
-	double errCalib = stereoCamCalibration(imgFilePath, xmlFilePath);
+	double singleRms = fisheyeCamCalibSingle(imgFilePath, xmlFilePath);
+
+	double errCalib = stereoFisheyCamCalib_3(imgFilePath, xmlFilePath);
 
 	//std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\2019-07-08\\stereoCalibrateDataResult368_2.xml";
 	Mat left_ = imread("D:\\imgs20190627\\left_1.jpeg");
