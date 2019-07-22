@@ -5,19 +5,19 @@ using namespace std;
 
 int main()
 {
-	std::string imgFilePath = "D:\\studying\\stereo vision\\research code\\data\\20190718\\camera_jpg\\left";
-	std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\20190718\\camera_jpg\\left\\leftCalibData20190720.xml";
+	std::string imgFilePath = "D:\\studying\\stereo vision\\research code\\data\\20190719\\camera_jpg_2";
+	std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\20190719\\camera_jpg_2\\stereoCalibData20190720.xml";
 
 	//std::string imgFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera";
 	//std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera\\stereoCalibrateData20190710.xml";
 
-	double singleRms = fisheyeCamCalibSingle(imgFilePath, xmlFilePath);
+	//double singleRms = fisheyeCamCalibSingle(imgFilePath, xmlFilePath);
 
-	double errCalib = stereoFisheyCamCalib_3(imgFilePath, xmlFilePath);
+	//double errCalib = stereoFisheyeCamCalib_3(imgFilePath, xmlFilePath);
 
 	//std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\2019-07-08\\stereoCalibrateDataResult368_2.xml";
-	Mat left_ = imread("D:\\imgs20190627\\left_1.jpeg");
-	Mat right_ = imread("D:\\imgs20190627\\right_1.jpeg");
+	Mat left_ = imread(imgFilePath + "\\1L.jpg");
+	Mat right_ = imread(imgFilePath + "\\1R.jpg");
 	//copyMakeBorder(left_, left_, 0, 0, 0, 8, BORDER_CONSTANT, Scalar(0, 0, 0));
 	//imwrite("D:/1_.jpg", left_);
 	//imwrite("D:/2_.jpg", right_);

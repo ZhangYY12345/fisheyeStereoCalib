@@ -18,9 +18,19 @@ void myCameraUndistort(std::string imgFilePath, std::string cameraParaPath);
 
 //stereo calibration
 double stereoCamCalibration(std::string cameraParaPath);
-//detect pts in the pre-stereo calibration step
-bool ptsCalib(std::string imgFilePathL, cv::Size& imgSize, douVecPt2f& ptsL, douVecPt2f& ptsR, douVecPt3f& ptsReal, int corRowNum, int corColNum);
-bool ptsCalibSingle(std::string imgFilePath, cv::Size& imgSize, douVecPt2f& pts, douVecPt3f& ptsReal, int corRowNum, int corColNum);
+
+//detect pts in the pre-stereo_calibration step
+bool ptsCalib(std::string imgFilePathL, cv::Size& imgSize,
+	douVecPt2f& ptsL, douVecPt2f& ptsR, douVecPt3f& ptsReal,
+	int corRowNum, int corColNum);
+bool ptsCalib(std::vector<cv::Mat> imgsL, std::vector<cv::Mat> imgsR, douVecPt2f& ptsL, douVecPt2f& ptsR,
+	douVecPt3f& ptsReal, int corRowNum, int corColNum);
+
+bool ptsCalib_Single(std::string imgFilePath, cv::Size& imgSize, douVecPt2f& pts,
+	douVecPt3f& ptsReal, int corRowNum, int corColNum);
+bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts,
+	douVecPt3f& ptsReal, int corRowNum, int corColNum);
+ 
 //
 double stereoCamCalibration(std::string imgFilePath, std::string cameraParaPath);
 double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPath);
@@ -34,12 +44,16 @@ double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPa
  *************  fisheye camera calibration   ***************
  ***********************************************************
 */
+//single fisheye camera calibration
 double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath);
 void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string imgFilePath);
+void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string imgFilePath, 
+	std::vector<cv::Mat>& undistortImgs, bool isLeft = true);
+//stereo fisheye calibration
 double stereoFisheyeCamCalib(std::string imgFilePathL, std::string cameraParaPath);
 double stereoFisheyeCamCalib_2(std::string imgFilePathL, std::string cameraParaPath);
-double stereoFisheyCamCalib_3(std::string imgFilePathL, std::string cameraParaPath);
-
+double stereoFisheyeCamCalib_3(std::string imgFilePathL, std::string cameraParaPath);
+//fisheye image undistort
 void merge4();
 void stereoFisheyeUndistort(cv::Mat distLeft, cv::Mat distRight, std::string cameraParaPath, cv::Mat& rectiLeft, cv::Mat& rectiRight);
 
