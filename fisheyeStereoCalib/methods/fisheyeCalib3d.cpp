@@ -1470,12 +1470,10 @@ double stereoFisheyeCamCalib_3(std::string imgFilePath, std::string cameraParaPa
 		//************ stereo calibration ************
 		//********************************************
 		Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
-		//Mat K1 = Mat::eye(3, 3, CV_64FC1);
-		//Mat K2 = Mat::eye(3, 3, CV_64FC1);
-		Mat zeroDistortion = Mat::zeros(D_right.size(), D_right.type());
+		Mat K1, K2, D1, D2;
 		Mat E, F, Q;
 		int stereoFlag = 0;
-		stereoFlag |= cv::CALIB_USE_INTRINSIC_GUESS;
+		//stereoFlag |= cv::CALIB_USE_INTRINSIC_GUESS;
 		//stereoFlag |= cv::CALIB_FIX_S1_S2_S3_S4;
 		//stereoFlag |= cv::CALIB_ZERO_TANGENT_DIST;
 		//stereoFlag |= cv::CALIB_FIX_INTRINSIC;
@@ -1498,20 +1496,42 @@ double stereoFisheyeCamCalib_3(std::string imgFilePath, std::string cameraParaPa
 
 		double rms = stereoCalibrate(objPts3d_,
 			cornerPtsVecL_undist, cornerPtsVecR_undist,
-			K_left, zeroDistortion, K_right, zeroDistortion,
+			K1, D1, K2, D2,
 			imgSize, matrixR, matrixT, E, F, Q, stereoFlag,
 			cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 200, 1e-16));
 
 		std::cout << "stereo_calibration_error" << rms << std::endl;
 
+		Mat R1, R2, P1, P2, Q_;
+		stereoRectify(K1, D1, K2, D2,
+			imgSize, matrixR, matrixT, R1, R2, P1, P2, Q_,
+			CALIB_ZERO_DISPARITY);
+
+		cv::Mat lmapx, lmapy, rmapx, rmapy;
+		//rewrite for fisheye
+		initUndistortRectifyMap(K1, D1, R1, P1, imgSize, CV_32F, lmapx, lmapy);
+		initUndistortRectifyMap(K2, D2, R2, P2, imgSize, CV_32F, rmapx, rmapy);
+
 		FileStorage fn(cameraParaPath, FileStorage::WRITE);
+		fn << "FisheyeUndistort_K1" << K_left;
+		fn << "FisheyeUndistort_D1" << D_left;
+		fn << "FisheyeUndistort_K2" << K_left;
+		fn << "FisheyeUndistort_D2" << D_left;
 		fn << "ImgSize" << imgSize;
-		fn << "Left_CameraInnerPara" << K_left;
-		fn << "Left_CameraDistPara" << D_left;
-		fn << "Right_CameraInnerPara" << K_left;
-		fn << "Right_CameraDistPara" << D_left;
-		fn << "R2L_Rotation_Matrix" << matrixR;
-		fn << "R2L_Translate_Matrix" << matrixT;
+		fn << "StereoCalib_K1" << K1;
+		fn << "StereoCalib_D1" << D1;
+		fn << "StereoCalib_K2" << K2;
+		fn << "StereoCalib_D2" << D2;
+		fn << "StereoCalib_R2L" << matrixR;
+		fn << "StereoCalib_R2L" << matrixT;
+		fn << "Rectify_R1" << R1;
+		fn << "Rectify_P1" << P1;
+		fn << "Rectify_R2" << R2;
+		fn << "Rectify_P2" << P2;
+		fn << "Map_mapxL" << lmapx;
+		fn << "Map_mapxL" << lmapy;
+		fn << "Map_mapxL" << rmapx;
+		fn << "Map_mapxL" << rmapy;
 		fn.release();
 
 		return rms;
@@ -1556,17 +1576,40 @@ void stereoFisheyeUndistort(cv::Mat distLeft, cv::Mat distRight,
 	//camera stereo calibration parameters
 	Size imgSize;
 	Mat leftK, leftD, rightK, rightD;
+	//Mat K1, D1, K2, D2;
+	//Mat R1, P1, R2, P2;
 	//Mat matrixR, matrixT;
+
 	FileStorage fn(cameraParaPath, FileStorage::READ);
+	fn["FisheyeUndistort_K1"] >> leftK;
+	fn["FisheyeUndistort_D1"] >> leftD;
+	fn["FisheyeUndistort_K2"] >> rightK;
+	fn["FisheyeUndistort_D2"] >> rightD;
 	fn["ImgSize"] >> imgSize;
-	fn["Left_CameraInnerPara"] >> leftK;
-	fn["Left_CameraDistPara"] >> leftD;
-	fn["Right_CameraInnerPara"] >> rightK;
-	fn["Right_CameraDistPara"] >> rightD;
-	//fn["R2L_Rotation_Matrix"] >> matrixR;
-	//fn["R2L_Translate_Matrix"] >> matrixT;
+	//fn["StereoCalib_K1"] >> K1;
+	//fn["StereoCalib_D1"] >> D1;
+	//fn["StereoCalib_K2"] >> K2;
+	//fn["StereoCalib_D2"] >> D2;
+	//fn["StereoCalib_R2L"] >> matrixR;
+	//fn["StereoCalib_R2L"] >> matrixT;
+	//fn["Rectify_R1"] >> R1;
+	//fn["Rectify_P1"] >> P1;
+	//fn["Rectify_R2"] >> R2;
+	//fn["Rectify_P2"] >> P2;
+	//fn["Map_mapxL"] >> lmapx;
+	//fn["Map_mapxL"] >> lmapy;
+	//fn["Map_mapxL"] >> rmapx;
+	//fn["Map_mapxL"] >> rmapy;
 	fn.release();
 
+	if(distLeft.size() != imgSize)
+	{
+		resize(distLeft, distLeft, imgSize);
+	}
+	if(distRight.size() != imgSize)
+	{
+		resize(distRight, distRight, imgSize);
+	}
 	Mat undistortLeft, undistortRight;
 	fisheye::undistortImage(distLeft, undistortLeft, leftK, leftD, leftK, imgSize);
 	fisheye::undistortImage(distRight, undistortRight, rightK, rightD, rightK, imgSize);
@@ -1594,13 +1637,10 @@ void stereoFisheyeUndistort(cv::Mat distLeft, cv::Mat distRight,
 	K2 = K2.t();
 	//matrixR = matrixR.t();
 
-
-	Mat R1, R2, P1, P2, Q;
-	double balance = 0.0, fov_scale = 1.0;
+	Mat R1, R2, P1, P2, Q_;
 	stereoRectify(K1, D1, K2, D2,
-		imgSize, matrixR, matrixT, R1, R2, P1, P2, Q,
-		CALIB_ZERO_DISPARITY);//, imgSize, balance, fov_scale
-
+		imgSize, matrixR, matrixT, R1, R2, P1, P2, Q_,
+		CALIB_ZERO_DISPARITY);
 
 	cv::Mat lmapx, lmapy, rmapx, rmapy;
 	//rewrite for fisheye
@@ -1625,6 +1665,80 @@ void stereoFisheyeUndistort(cv::Mat distLeft, cv::Mat distRight,
 
 	cv::imwrite("rectify.jpg", rectification);
 
+}
+
+void rectify_(std::string cameraParaPath, std::string imgPath)
+{
+	//camera stereo calibration parameters
+	Size imgSize;
+	Mat leftK, leftD, rightK, rightD;
+	Mat K1, D1, K2, D2;
+	Mat R1, P1, R2, P2;
+	Mat matrixR, matrixT;
+
+	FileStorage fn(cameraParaPath, FileStorage::READ);
+	fn["FisheyeUndistort_K1"] >> leftK;
+	fn["FisheyeUndistort_D1"] >> leftD;
+	fn["FisheyeUndistort_K2"] >> rightK;
+	fn["FisheyeUndistort_D2"] >> rightD;
+	fn["ImgSize"] >> imgSize;
+	fn["StereoCalib_K1"] >> K1;
+	fn["StereoCalib_D1"] >> D1;
+	fn["StereoCalib_K2"] >> K2;
+	fn["StereoCalib_D2"] >> D2;
+	fn["Rectify_R1"] >> R1;
+	fn["Rectify_P1"] >> P1;
+	fn["Rectify_R2"] >> R2;
+	fn["Rectify_P2"] >> P2;
+	fn.release();
+
+	cv::Mat lmapx, lmapy, rmapx, rmapy;
+	//rewrite for fisheye
+	initUndistortRectifyMap(K1, D1, R1, P1, imgSize, CV_32F, lmapx, lmapy);
+	initUndistortRectifyMap(K2, D2, R2, P2, imgSize, CV_32F, rmapx, rmapy);
+
+	//load all the images in the folder
+	String filePath = imgPath + "\\*L.jpg";
+	std::vector<String> fileNames;
+	glob(filePath, fileNames, false);
+
+	for(int i = 0; i < fileNames.size(); i++)
+	{
+		Mat distortImgL = imread(fileNames[i]);
+		Mat distortImgR = imread(fileNames[i].substr(0, fileNames[i].length() - 5) + "R.jpg");
+
+		if(distortImgL.size() != imgSize)
+		{
+			resize(distortImgL, distortImgL, imgSize);
+		}
+		if (distortImgR.size() != imgSize)
+		{
+			resize(distortImgR, distortImgR, imgSize);
+		}
+
+		Mat undistortLeft, undistortRight;
+		fisheye::undistortImage(distortImgL, undistortLeft, leftK, leftD, leftK, imgSize);
+		fisheye::undistortImage(distortImgR, undistortRight, rightK, rightD, rightK, imgSize);
+
+		Mat rectiLeft, rectiRight;
+		cv::remap(undistortLeft, rectiLeft, lmapx, lmapy, cv::INTER_LINEAR);
+		cv::remap(undistortRight, rectiRight, rmapx, rmapy, cv::INTER_LINEAR);
+
+		for (int ii = 0; ii < rectiLeft.rows; ii += 100)
+		{
+			cv::line(undistortLeft, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+			cv::line(undistortRight, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+
+			cv::line(rectiLeft, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+			cv::line(rectiRight, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+		}
+
+
+		cv::Mat rectification;
+		merge4(undistortLeft, undistortRight, rectiLeft, rectiRight, rectification);
+
+		cv::imwrite(fileNames[i].substr(0, fileNames[i].length() - 5) + "_rectify.jpg", rectification);
+	}
 }
 
 

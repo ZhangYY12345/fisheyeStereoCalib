@@ -56,7 +56,7 @@ double stereoFisheyeCamCalib_3(std::string imgFilePathL, std::string cameraParaP
 //fisheye image undistort
 void merge4();
 void stereoFisheyeUndistort(cv::Mat distLeft, cv::Mat distRight, std::string cameraParaPath, cv::Mat& rectiLeft, cv::Mat& rectiRight);
-
+void rectify_(std::string cameraParaPath, std::string imgPath);
 
 /***********************************************************
  *****************  image rectification   ******************

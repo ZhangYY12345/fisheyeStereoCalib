@@ -27,12 +27,30 @@
     <ClCompile Include="methods\parametersStereo.cpp">
       <Filter>源文件\methods</Filter>
     </ClCompile>
+    <ClCompile Include="methods\corrector.cpp">
+      <Filter>源文件\methods</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\findCircleParameter.cpp">
+      <Filter>源文件\methods</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\fisheyeExpand.cpp">
+      <Filter>源文件\methods</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="methods\fisheyeCalib3d.h">
       <Filter>源文件\methods</Filter>
     </ClInclude>
     <ClInclude Include="methods\parametersStereo.h">
+      <Filter>源文件\methods</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\corrector.h">
+      <Filter>源文件\methods</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\findCircleParameter.h">
+      <Filter>源文件\methods</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeExpand.h">
       <Filter>源文件\methods</Filter>
     </ClInclude>
   </ItemGroup>

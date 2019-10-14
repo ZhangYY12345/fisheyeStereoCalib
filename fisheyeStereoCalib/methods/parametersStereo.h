@@ -47,8 +47,50 @@ enum CONSENSUS_MODEL_TYPE_
 	CONSENSUS_MODEL_PLANE_ = 1,
 };
 
+//fisheye image correction///////from globalInclude.h
+//typedef cv::Mat			Mat;
+//typedef cv::Point		Point;
+//typedef cv::Point2i		Point2i;
+//typedef cv::Size		Size;
+//typedef cv::Vec3b		Vec3b;
+//typedef cv::Scalar		Scalar;
+//typedef cv::Rect		Rect;
+//typedef cv::Point3f		Point3f;
+//typedef cv::Point3i		Point3i;
+//typedef cv::Stitcher	Stitcher;
+
+const double  PI = 3.1415926535897932384626433832795;
+const double  LIMIT = 1e-4;
+
+enum CorrectType
+{
+	Forward,
+	//means correct the distorted image by mapping the pixels on the origin image
+	//to the longitude-latitude rectified image, there may be some pixels on the
+	//rectified image which have no corresponding origin pixel. 
+	Reverse,
+	//means correct the distorted image by reverse mapping, that is from the rectified 
+	//image to the origin distorted image, this method can be sure for that every pixels
+	//on the rectified image have its corresponding origin pixel.
+};
+
+typedef enum
+{
+	STEREOGRAPHIC,
+	EQUIDISTANCE,
+	EQUISOLID,
+	ORTHOGONAL
+}camMode;
+
+typedef enum
+{
+	PERSPECTIVE,
+	LATITUDE_LONGTITUDE,
+}distMapMode;
 
 
+
+//
 bool check_image(const cv::Mat &image, std::string name = "Image");
 bool check_dimensions(const cv::Mat &img1, const cv::Mat &img2);
 

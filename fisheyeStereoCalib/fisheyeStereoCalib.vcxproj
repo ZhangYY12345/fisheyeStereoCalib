@@ -118,11 +118,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="methods\corrector.cpp" />
+    <ClCompile Include="methods\findCircleParameter.cpp" />
     <ClCompile Include="methods\fisheyeCalib3d.cpp" />
+    <ClCompile Include="methods\fisheyeExpand.cpp" />
     <ClCompile Include="methods\parametersStereo.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="methods\corrector.h" />
+    <ClInclude Include="methods\findCircleParameter.h" />
     <ClInclude Include="methods\fisheyeCalib3d.h" />
+    <ClInclude Include="methods\fisheyeExpand.h" />
     <ClInclude Include="methods\parametersStereo.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
