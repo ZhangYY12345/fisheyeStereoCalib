@@ -385,7 +385,7 @@ void findCircleParameter::revisedScanLineMethod(Mat imgOrg, Point2i& center, int
 
 		if (0 == n)
 		{
-			for (int i = 0; i < imgSize.height; i++)
+			for (int i = 0; i < imgSize.height; i++)	//水平扫描线，上端
 			{
 				minMaxLoc(gray.row(i), &minVal, &maxVal, &ptMin1, &ptMax1);
 				if ((maxVal - minVal)>threshold)
@@ -407,7 +407,7 @@ void findCircleParameter::revisedScanLineMethod(Mat imgOrg, Point2i& center, int
 			cv::waitKey();
 #endif
 
-			for (int i = imgSize.height - 1; i >= 0; i--)
+			for (int i = imgSize.height - 1; i >= 0; i--)	//水平扫描线，下端
 			{
 				minMaxLoc(gray.row(i), &minVal, &maxVal, &ptMin2, &ptMax2);
 				if ((maxVal - minVal) > threshold)
@@ -444,12 +444,12 @@ void findCircleParameter::revisedScanLineMethod(Mat imgOrg, Point2i& center, int
 		}
 		else if (0 < n&&n < N)
 		{
-			for (int i = 0; i < imgSize.width; i++)
+			for (int i = 0; i < imgSize.width; i++)	//逐列搜索像素点：与y轴交点逐渐上移
 			{
 				for (int j = 0; j <= i; j++)
 				{
 					x = j;
-					y = -tan(theta)*(x - i);
+					y = -tan(theta)*(x - i);	//不同倾斜角的直线，0~90度，上侧
 
 					Point ptCur(x, y);
 					if (!ptCur.inside(Rect(0, 0, imgSize.width, imgSize.height)))
@@ -457,9 +457,9 @@ void findCircleParameter::revisedScanLineMethod(Mat imgOrg, Point2i& center, int
 						continue;
 					}
 
-					uchar I = gray.at<uchar>(ptCur);
+					uchar I = gray.at<uchar>(ptCur);	
 
-					if (I > max1)
+					if (I > max1)	//获取倾斜直线上0~i行像素集的最大最小灰度值，及其坐标
 					{
 						max1 = I;
 						ptMax1 = ptCur;
@@ -506,12 +506,12 @@ void findCircleParameter::revisedScanLineMethod(Mat imgOrg, Point2i& center, int
 			cv::waitKey();
 #endif
 
-			for (int i = imgSize.width - 1; i >= 0; i--)
+			for (int i = imgSize.width - 1; i >= 0; i--) //逐列搜索像素点：与y轴交点逐渐下移
 			{
 				for (int j = i; j < imgSize.width; j++)
 				{
 					x = j;
-					y = imgSize.height - 1 - tan(theta)*(x - i);
+					y = imgSize.height - 1 - tan(theta)*(x - i);	//不同倾斜角的直线，0~90度，下侧
 
 					Point ptCur(x, y);
 
@@ -583,7 +583,7 @@ void findCircleParameter::revisedScanLineMethod(Mat imgOrg, Point2i& center, int
 		{
 			for (int i = 0; i < imgSize.width; i++)
 			{
-				minMaxLoc(gray.col(i), &minVal, &maxVal, &ptMin1, &ptMax1);
+				minMaxLoc(gray.col(i), &minVal, &maxVal, &ptMin1, &ptMax1);	//垂直扫描线，左侧
 				if ((maxVal - minVal)>threshold)
 				{
 					flag++;
@@ -607,7 +607,7 @@ void findCircleParameter::revisedScanLineMethod(Mat imgOrg, Point2i& center, int
 
 			for (int i = gray.cols - 1; i >= 0; i--)
 			{
-				minMaxLoc(gray.col(i), &minVal, &maxVal, &ptMin2, &ptMax2);
+				minMaxLoc(gray.col(i), &minVal, &maxVal, &ptMin2, &ptMax2);	//垂直扫描线，右侧
 				if ((maxVal - minVal) > threshold)
 				{
 					flag++;
@@ -648,7 +648,7 @@ void findCircleParameter::revisedScanLineMethod(Mat imgOrg, Point2i& center, int
 				for (int j = 0; j <= i; j++)
 				{
 					x = j;
-					y = imgSize.height - 1 - tan(theta)*(x - i);
+					y = imgSize.height - 1 - tan(theta)*(x - i); //不同倾斜角的直线，90~180度，下侧
 
 					Point ptCur(x, y);
 					if (!ptCur.inside(Rect(0, 0, imgSize.width, imgSize.height)))
@@ -708,7 +708,7 @@ void findCircleParameter::revisedScanLineMethod(Mat imgOrg, Point2i& center, int
 				for (int j = i; j < imgSize.width; j++)
 				{
 					x = j;
-					y = -tan(theta)*(x - i);
+					y = -tan(theta)*(x - i);	//不同倾斜角的直线，90~180度，上侧
 
 					Point ptCur(x, y);
 					if (!ptCur.inside(Rect(0, 0, imgSize.width, imgSize.height)))

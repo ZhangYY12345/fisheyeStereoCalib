@@ -6,8 +6,8 @@ typedef struct correctParameters
 	cv::Mat imgOrg;
 	cv::Point2i center;
 	int radius; 
-	double w_longtitude; 
-	double w_latitude; 
+	double w_longtitude;	//¾­¶È
+	double w_latitude;		//Î³¶È
 	distMapMode distMap ; 
 	double theta_left ; 
 	double phi_up ; 
@@ -15,6 +15,7 @@ typedef struct correctParameters
 	camMode camProjMode;
 	CorrectType typeOfCorrect;
 }correctParams;
+
 
 class corrector
 {

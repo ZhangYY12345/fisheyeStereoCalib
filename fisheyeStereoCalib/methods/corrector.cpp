@@ -55,6 +55,8 @@ Mat corrector::heavenAndEarthCorrect(Mat imgOrg, Point center, int radius, doubl
 	double x, y;
 
 	int u, v;
+	Point pt;
+	Rect imgArea(0, 0, imgOrg.cols, imgOrg.rows);
 
 	//展开图的变量分配
 	Mat retImg(heightOfPanorama, widthOfPanorama, CV_8UC3, Scalar(0, 0, 0));
@@ -77,9 +79,16 @@ Mat corrector::heavenAndEarthCorrect(Mat imgOrg, Point center, int radius, doubl
 				u = x + center.x;
 				v = y + center.y;
 
-				_retImg(j, i)[0] = _imgOrg(v, u)[0];
-				_retImg(j, i)[1] = _imgOrg(v, u)[1];
-				_retImg(j, i)[2] = _imgOrg(v, u)[2];
+				pt = Point(u, v);
+
+				if (!pt.inside(imgArea))
+				{
+					continue;
+				}
+
+				_retImg(j, i)[0] = _imgOrg(u, v)[0];
+				_retImg(j, i)[1] = _imgOrg(u, v)[1];
+				_retImg(j, i)[2] = _imgOrg(u, v)[2];
 
 			}
 		}
@@ -88,8 +97,9 @@ Mat corrector::heavenAndEarthCorrect(Mat imgOrg, Point center, int radius, doubl
 	case Forward:
 		int left, top;
 		left = center.x - radius;
-		top = center.y - radius;
-		for (int j = top; j < top + 2 * radius; j++)
+		top = max(center.y - radius, 0);
+		int top_max = min(top + 2 * radius, imgOrg.rows);
+		for (int j = top; j < top_max; j++)
 		{
 			for (int i = left; i < left + 2 * radius; i++)
 			{
@@ -227,9 +237,11 @@ Mat corrector::latitudeCorrection(Mat imgOrg, Point2i center, int radius, double
 
 	//Image cooradinate of imgOrg
 	int u, v;
+	Point pt;
 
 	//Image cooradinate of imgRet
 	int u_latitude, v_latitude;
+	Rect imgArea(0, 0, imgOrg.cols, imgOrg.rows);
 
 	//offset of imgRet Origin
 	double longitude_offset, latitude_offset;
@@ -243,10 +255,12 @@ Mat corrector::latitudeCorrection(Mat imgOrg, Point2i center, int radius, double
 	switch (type)
 	{
 	case Forward:
-		int left, top;
+		int left, top; 
+		int top_max;
 		left = center.x - radius;
-		top = center.y - radius;
-		for (int j = top; j < top + 2 * radius; j++)
+		top = max(center.y - radius, 0);
+		top_max = min(top + 2 * radius, imgOrg.rows);
+		for (int j = top; j < top_max; j++)
 		{
 			for (int i = left; i < left + 2 * radius; i++)
 			{
@@ -338,8 +352,14 @@ Mat corrector::latitudeCorrection(Mat imgOrg, Point2i center, int radius, double
 				//	_imgOrg(v, u)[2] = 255;
 				//	continue;
 				//}
+				pt = Point(u, v);
 
-				_retImg.at<Vec3b>(j, i) = _imgOrg.at<Vec3b>(v, u);
+				if (!pt.inside(imgArea))
+				{
+					continue;
+				}
+
+				_retImg.at<Vec3b>(j, i) = _imgOrg.at<Vec3b>(pt);
 			}
 		}
 
@@ -1138,8 +1158,9 @@ Mat corrector::latitudeCorrection5(Mat imgOrg, Point2i center, int radius, doubl
 
 	int left, top;
 	left = center.x - radius;
-	top = center.y - radius;
-	for (int j = top; j < top + 2 * radius; j++)
+	top = max(center.y - radius, 0);
+	int top_max = min(top + 2 * radius, imgOrg.rows);
+	for (int j = top; j < top_max; j++)
 	{
 		for (int i = left; i < left + 2 * radius; i++)
 		{

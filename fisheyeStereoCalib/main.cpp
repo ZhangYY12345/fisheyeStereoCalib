@@ -7,10 +7,19 @@ using namespace std;
 int main()
 {
 	std::string path_ = "D:\\studying\\stereo vision\\research code\\data\\20190924\\0924\\left\\fisheye\\1L.jpg";
+	//fisheyeExpandApply(path_);
 	Mat imgSrc = imread(path_);
 	Mat imgDst;
-	fisheyeExpand(imgSrc, imgDst);
-	imshow("11", imgDst);
+	std::string resPath_pre = path_.substr(0, path_.length() - 4);
+
+	fisheyeExpandTest(imgSrc, imgDst, STEREOGRAPHIC, resPath_pre + "_STEREOGRAPHIC");
+
+	fisheyeExpandTest(imgSrc, imgDst, EQUIDISTANCE, resPath_pre + "_EQUIDISTANCE");
+
+	fisheyeExpandTest(imgSrc, imgDst, EQUISOLID, resPath_pre + "_EQUISOLID");
+
+	fisheyeExpandTest(imgSrc, imgDst, ORTHOGONAL, resPath_pre + "_ORTHOGONAL");
+
 	waitKey();
 
 
