@@ -3,7 +3,7 @@
 #include "findCircleParameter.h"
 
 
-void fisheyeExpand(cv::Mat src, cv::Mat& dst)
+void fisheyeExpand(cv::Mat src, cv::Mat& dst, bool isLeft)
 {
 	bool isDispCorrectRet = false;
 
@@ -14,9 +14,17 @@ void fisheyeExpand(cv::Mat src, cv::Mat& dst)
 	{
 #pragma region 校正参数设定区
 		params.imgOrg = src;
-		//鱼眼图像的有效区域的值是前期获取的值（针对同一相机是定值）//left camera
-		params.center = cv::Point2i(1275, 708);
-		params.radius = 1183;
+		//鱼眼图像的有效区域的值是前期获取的值（针对同一相机是定值）
+		if (isLeft)//left camera
+		{
+			params.center = cv::Point2i(1283, 724);
+			params.radius = 1199;
+		}
+		else
+		{
+			params.center = cv::Point2i(1283, 722);
+			params.radius = 1187;
+		}
 
 		params.w_longtitude = PI / 2;
 		params.w_latitude = PI / 2;
@@ -35,7 +43,7 @@ void fisheyeExpand(cv::Mat src, cv::Mat& dst)
 	}
 }
 
-void fisheyeExpand(cv::Mat src, cv::Mat& dst, camMode fisheyeCamModel, corrector::correctMethod method_)
+void fisheyeExpand(cv::Mat src, cv::Mat& dst, camMode fisheyeCamModel, corrector::correctMethod method_, bool isLeft)
 {
 	bool isDispCorrectRet = false;
 
@@ -46,9 +54,18 @@ void fisheyeExpand(cv::Mat src, cv::Mat& dst, camMode fisheyeCamModel, corrector
 	{
 #pragma region 校正参数设定区
 		params.imgOrg = src;
-		//鱼眼图像的有效区域的值是前期获取的值（针对同一相机是定值）//left camera
-		params.center = cv::Point2i(1275, 708);
-		params.radius = 1183;
+
+		//鱼眼图像的有效区域的值是前期获取的值（针对同一相机是定值）
+		if(isLeft)//left camera
+		{
+			params.center = cv::Point2i(1283, 724);
+			params.radius = 1199;
+		}
+		else
+		{
+			params.center = cv::Point2i(1283, 722);
+			params.radius = 1187;
+		}
 
 		params.w_longtitude = PI / 2;
 		params.w_latitude = PI / 2;
@@ -67,7 +84,7 @@ void fisheyeExpand(cv::Mat src, cv::Mat& dst, camMode fisheyeCamModel, corrector
 	}
 }
 
-void fisheyeExpandTest(cv::Mat src, cv::Mat& dst, camMode fisheyeCamModel, std::string resPathPre)
+void fisheyeExpandTest(cv::Mat src, cv::Mat& dst, camMode fisheyeCamModel, std::string resPathPre, bool isLeft)
 {
 	bool isDispCorrectRet = false;
 
@@ -78,9 +95,17 @@ void fisheyeExpandTest(cv::Mat src, cv::Mat& dst, camMode fisheyeCamModel, std::
 	{
 #pragma region 校正参数设定区
 		params.imgOrg = src;
-		//鱼眼图像的有效区域的值是前期获取的值（针对同一相机是定值）//left camera
-		params.center = cv::Point2i(1275, 708);
-		params.radius = 1183;
+		//鱼眼图像的有效区域的值是前期获取的值（针对同一相机是定值）
+		if (isLeft)//left camera
+		{
+			params.center = cv::Point2i(1283, 724);
+			params.radius = 1199;
+		}
+		else
+		{
+			params.center = cv::Point2i(1283, 722);
+			params.radius = 1187;
+		}
 
 		params.w_longtitude = PI / 2;
 		params.w_latitude = PI / 2;
@@ -120,7 +145,7 @@ void fisheyeExpandTest(cv::Mat src, cv::Mat& dst, camMode fisheyeCamModel, std::
 
 }
 
-void fisheyeExpandApply(std::string imgPath)
+void fisheyeExpandApply(std::string imgPath, bool isLeft)
 {
 	cv::String filePath = imgPath + "\\*L.jpg";
 	std::vector<cv::String> fileNames;
@@ -130,7 +155,7 @@ void fisheyeExpandApply(std::string imgPath)
 	for (int i = 0; i < fileNames.size(); i++)
 	{
 		image = cv::imread(fileNames[i]);
-		fisheyeExpand(image, imageRes);
+		fisheyeExpand(image, imageRes, isLeft);
 
 		std::string resName = fileNames[i].substr(0, fileNames[i].length() - 4) + "_correct.jpg";
 		cv::imwrite(resName, imageRes);

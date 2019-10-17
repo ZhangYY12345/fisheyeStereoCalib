@@ -6,7 +6,7 @@ using namespace std;
 
 int main()
 {
-	std::string path_ = "D:\\studying\\stereo vision\\research code\\data\\20190924\\0924\\left\\fisheye\\1L.jpg";
+	std::string path_ = "D:\\studying\\stereo vision\\research code\\data\\20191017-2\\left\\1L.jpg";
 	//fisheyeExpandApply(path_);
 	Mat imgSrc = imread(path_);
 	Mat imgDst;
