@@ -1,14 +1,38 @@
 #include "methods/fisheyeCalib3d.h"
 #include "methods/fisheyeExpand.h"
+#include "methods/fisheyeLib/method_.h"
 
 using namespace cv;
 using namespace std;
 
 int main()
 {
+	/*
+	//single fisheye camera calibration
+	fisheyeCalibInfo calibInfoL, calibInfoR;
+	calibInfoL.calibPatternFile = "./20191017-1-2/patternsL.xml";
+	calibInfoL.calibLineDetected = "./20191017-1-2/linesDetectedL.xml";
+	calibInfoL.calibFile = "./20191017-1-2/resCalibL.xml";
+	fisheyeCalib_(calibInfoL);
+
+	calibInfoR.calibPatternFile = "./20191017-1-2/patternsR.xml";
+	calibInfoR.calibLineDetected = "./20191017-1-2/linesDetectedR.xml";
+	calibInfoR.calibFile = "./20191017-1-2/resCalibR.xml";
+	fisheyeCalib_(calibInfoR); 
+
+	waitKey();*/
+
+	string calibXml = "./20191017-1-2/resCalibL.xml";
+	cv::Mat mapx_ceil, mapx_floor, mapy_ceil, mapy_floor;
+	fisheyeCalcMap(calibXml, mapx_ceil, mapx_floor, mapy_ceil, mapy_floor);
+
+
 	std::string path_ = "D:\\studying\\stereo vision\\research code\\data\\20191017-2\\left\\1L.jpg";
 	//fisheyeExpandApply(path_);
 	Mat imgSrc = imread(path_);
+	cv::Mat imgDistort;
+	fisheyeRemap(imgSrc, imgDistort, mapx_ceil, mapx_floor, mapy_ceil, mapy_floor);
+
 	Mat imgDst;
 	std::string resPath_pre = path_.substr(0, path_.length() - 4);
 

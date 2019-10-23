@@ -122,6 +122,17 @@
     <ClCompile Include="methods\findCircleParameter.cpp" />
     <ClCompile Include="methods\fisheyeCalib3d.cpp" />
     <ClCompile Include="methods\fisheyeExpand.cpp" />
+    <ClCompile Include="methods\fisheyeLib\Calibration.cpp" />
+    <ClCompile Include="methods\fisheyeLib\calib_libs\EquidistanceProjection.cpp" />
+    <ClCompile Include="methods\fisheyeLib\calib_libs\EquisolidAngleProjection.cpp" />
+    <ClCompile Include="methods\fisheyeLib\calib_libs\IncidentVector.cpp" />
+    <ClCompile Include="methods\fisheyeLib\calib_libs\OrthographicProjection.cpp" />
+    <ClCompile Include="methods\fisheyeLib\calib_libs\StereographicProjection.cpp" />
+    <ClCompile Include="methods\fisheyeLib\calib_libs\tinyxml2.cpp" />
+    <ClCompile Include="methods\fisheyeLib\LineDetection.cpp" />
+    <ClCompile Include="methods\fisheyeLib\method_.cpp" />
+    <ClCompile Include="methods\fisheyeLib\Pair.cpp" />
+    <ClCompile Include="methods\fisheyeLib\Pattern.cpp" />
     <ClCompile Include="methods\parametersStereo.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -129,6 +140,18 @@
     <ClInclude Include="methods\findCircleParameter.h" />
     <ClInclude Include="methods\fisheyeCalib3d.h" />
     <ClInclude Include="methods\fisheyeExpand.h" />
+    <ClInclude Include="methods\fisheyeLib\Calibration.h" />
+    <ClInclude Include="methods\fisheyeLib\calib_libs\EquidistanceProjection.h" />
+    <ClInclude Include="methods\fisheyeLib\calib_libs\EquisolidAngleProjection.h" />
+    <ClInclude Include="methods\fisheyeLib\calib_libs\IncidentVector.h" />
+    <ClInclude Include="methods\fisheyeLib\calib_libs\OrthographicProjection.h" />
+    <ClInclude Include="methods\fisheyeLib\calib_libs\StereographicProjection.h" />
+    <ClInclude Include="methods\fisheyeLib\calib_libs\tinyxml2.h" />
+    <ClInclude Include="methods\fisheyeLib\LineDetection.h" />
+    <ClInclude Include="methods\fisheyeLib\method_.h" />
+    <ClInclude Include="methods\fisheyeLib\Pair.h" />
+    <ClInclude Include="methods\fisheyeLib\parameterCalib_.h" />
+    <ClInclude Include="methods\fisheyeLib\Pattern.h" />
     <ClInclude Include="methods\parametersStereo.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

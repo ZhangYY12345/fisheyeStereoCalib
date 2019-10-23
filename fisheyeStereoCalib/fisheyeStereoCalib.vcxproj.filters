@@ -16,6 +16,12 @@
     <Filter Include="源文件\methods">
       <UniqueIdentifier>{8e37837f-f51a-47cd-b842-7fd24d8593db}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\methods\fisheyeLib">
+      <UniqueIdentifier>{df8e8568-376f-471a-91ae-c0539b2d53af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\methods\fisheyeLib\cameraModels">
+      <UniqueIdentifier>{3fa7b3b9-3a92-47d3-a741-441121bec89b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -36,6 +42,39 @@
     <ClCompile Include="methods\fisheyeExpand.cpp">
       <Filter>源文件\methods</Filter>
     </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\calib_libs\EquidistanceProjection.cpp">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\calib_libs\EquisolidAngleProjection.cpp">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\calib_libs\IncidentVector.cpp">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\calib_libs\OrthographicProjection.cpp">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\calib_libs\StereographicProjection.cpp">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\calib_libs\tinyxml2.cpp">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\Calibration.cpp">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\LineDetection.cpp">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\method_.cpp">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\Pair.cpp">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\Pattern.cpp">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="methods\fisheyeCalib3d.h">
@@ -52,6 +91,42 @@
     </ClInclude>
     <ClInclude Include="methods\fisheyeExpand.h">
       <Filter>源文件\methods</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\calib_libs\EquidistanceProjection.h">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\calib_libs\EquisolidAngleProjection.h">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\calib_libs\IncidentVector.h">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\calib_libs\OrthographicProjection.h">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\calib_libs\StereographicProjection.h">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\calib_libs\tinyxml2.h">
+      <Filter>源文件\methods\fisheyeLib\cameraModels</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\Calibration.h">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\LineDetection.h">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\method_.h">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\Pair.h">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\parameterCalib_.h">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\Pattern.h">
+      <Filter>源文件\methods\fisheyeLib</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
