@@ -86,6 +86,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <PreprocessorDefinitions>UNICODE;_AMD_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -133,6 +134,7 @@
     <ClCompile Include="methods\fisheyeLib\method_.cpp" />
     <ClCompile Include="methods\fisheyeLib\Pair.cpp" />
     <ClCompile Include="methods\fisheyeLib\Pattern.cpp" />
+    <ClCompile Include="methods\fisheyeLib\Reprojection.cpp" />
     <ClCompile Include="methods\parametersStereo.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -152,6 +154,7 @@
     <ClInclude Include="methods\fisheyeLib\Pair.h" />
     <ClInclude Include="methods\fisheyeLib\parameterCalib_.h" />
     <ClInclude Include="methods\fisheyeLib\Pattern.h" />
+    <ClInclude Include="methods\fisheyeLib\Reprojection.h" />
     <ClInclude Include="methods\parametersStereo.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

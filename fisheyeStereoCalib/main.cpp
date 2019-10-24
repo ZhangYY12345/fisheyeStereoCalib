@@ -23,15 +23,16 @@ int main()
 	waitKey();*/
 
 	string calibXml = "./20191017-1-2/resCalibL.xml";
-	cv::Mat mapx_ceil, mapx_floor, mapy_ceil, mapy_floor;
-	fisheyeCalcMap(calibXml, mapx_ceil, mapx_floor, mapy_ceil, mapy_floor);
+	map<cv::Point2d, vector<cv::Vec4d>, myCompare> map2Dst;
+	int dstH, dstW;
+	fisheyeCalcMap(calibXml, map2Dst, dstH, dstW);
 
 
 	std::string path_ = "D:\\studying\\stereo vision\\research code\\data\\20191017-2\\left\\1L.jpg";
 	//fisheyeExpandApply(path_);
 	Mat imgSrc = imread(path_);
 	cv::Mat imgDistort;
-	fisheyeRemap(imgSrc, imgDistort, mapx_ceil, mapx_floor, mapy_ceil, mapy_floor);
+	fisheyeRemap(imgSrc, imgDistort, map2Dst, dstH, dstW);
 
 	Mat imgDst;
 	std::string resPath_pre = path_.substr(0, path_.length() - 4);

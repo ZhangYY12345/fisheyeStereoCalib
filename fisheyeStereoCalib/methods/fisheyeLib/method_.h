@@ -1,5 +1,23 @@
 #pragma once
+
 #include "parameterCalib_.h"
+
+struct myCompare
+{
+	bool operator() (const cv::Point2d& node1, const cv::Point2d& node2) const
+	{
+		if(node1.x < node2.x)
+		{
+			return true;
+		}
+		if(node1.x == node2.x)
+		{
+			if (node1.y < node2.y)
+				return true;
+		}
+		return false;
+	}
+}; 
 
 //reading xml files
 //void* xmlMapReader(xmlMapRead* file);
@@ -14,7 +32,9 @@ void fisheyeUndistort_(std::string filePath_, cv::Size imgSize, cv::Mat mapX,
 bool ptsDetect_calib(std::vector<cv::Mat> imgsL, std::vector<cv::Mat> imgsR, 
 	douVecPt2f& ptsL, douVecPt2f& ptsR, douVecPt3f& ptsReal, int corRowNum, int corColNum);
 
-void fisheyeCalcMap(std::string calibXml, cv::Mat& mapx_ceil, cv::Mat& mapx_floor, cv::Mat& mapy_ceil, cv::Mat& mapy_floor);
-void fisheyeRemap(cv::Mat src, cv::Mat& dst, cv::Mat& mapx_ceil, cv::Mat& mapx_floor, cv::Mat& mapy_ceil, cv::Mat& mapy_floor);
+void fisheyeCalcMap(std::string calibXml, std::map<cv::Point2d, std::vector<cv::Vec4d>, myCompare>& map2Dst, int& dstH, int& dstW);
+void computeWeight(std::map<cv::Point2d, std::vector<cv::Vec4d>, myCompare>& mapOrigin, std::map<cv::Point2d, std::vector<cv::Vec3d>, myCompare>& mapDst);
+void fisheyeRemap(cv::Mat src, cv::Mat& dst, std::map<cv::Point2d, std::vector<cv::Vec4d>, myCompare >& map2Dst, int dstH, int dstW);
 
 //void rectify_(calibInfo infoStereoCalib);
+

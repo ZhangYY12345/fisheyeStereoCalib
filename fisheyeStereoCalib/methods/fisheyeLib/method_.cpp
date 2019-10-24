@@ -1,6 +1,6 @@
 #include "method_.h"
 #include "../fisheyeCalib3d.h"
-#include <winnt.h>
+#include "../parametersStereo.h"
 
 using namespace std;
 using namespace cv;
@@ -240,7 +240,7 @@ bool ptsDetect_calib(std::vector<cv::Mat> imgsL, std::vector<cv::Mat> imgsR, dou
 	return true;
 }
 
-void fisheyeCalcMap(std::string calibXml, cv::Mat& mapx_ceil, cv::Mat& mapx_floor, cv::Mat& mapy_ceil, cv::Mat& mapy_floor)
+void fisheyeCalcMap(std::string calibXml, map<cv::Point2d, vector<cv::Vec4d>, myCompare>& map2Dst, int& dstH, int& dstW)
 {
 	cv::FileStorage fs(calibXml, cv::FileStorage::READ);
 
@@ -267,6 +267,7 @@ void fisheyeCalcMap(std::string calibXml, cv::Mat& mapx_ceil, cv::Mat& mapx_floo
 
 	cv::Mat mapx = Mat(img_size.height, img_size.width, CV_64FC1);
 	cv::Mat mapy = Mat(img_size.height, img_size.width, CV_64FC1);
+	cv::Mat mapphi = Mat(img_size.height, img_size.width, CV_64FC1);
 
 	for(int y = 0; y < img_size.height; y++)
 	{
@@ -274,6 +275,7 @@ void fisheyeCalcMap(std::string calibXml, cv::Mat& mapx_ceil, cv::Mat& mapx_floo
 		{
 			double real_r = sqrt(pow(x - center.x, 2) + pow(y - center.y, 2));
 			double phi = atan2(y - center.y, x - center.x);
+			mapphi.at<double>(y, x) = phi;
 
 			double scale_r = real_r / f0;
 			double ideal_r = scale_r;
@@ -283,80 +285,135 @@ void fisheyeCalcMap(std::string calibXml, cv::Mat& mapx_ceil, cv::Mat& mapx_floo
 			}
 			ideal_r = ideal_r * f0;
 
-			double ideal_x = ideal_r * cos(phi) + center.x;
-			double ideal_y = ideal_r * sin(phi) + center.y;
+			double ideal_x = ideal_r * cos(phi);
+			double ideal_y = ideal_r * sin(phi);
 
 			mapx.at<double>(y, x) = ideal_x;
 			mapy.at<double>(y, x) = ideal_y;
 		}
 	}
 
-	mapx_ceil.create(img_size.height, img_size.width, CV_64FC1);
-	mapx_floor.create(img_size.height, img_size.width, CV_64FC1);
-	mapy_ceil.create(img_size.height, img_size.width, CV_64FC1);
-	mapy_floor.create(img_size.height, img_size.width, CV_64FC1);
+	double min_x, max_x, min_y, max_y;
+	cv::minMaxLoc(mapx, &min_x, &max_x, NULL, NULL);
+	cv::minMaxLoc(mapy, &min_y, &max_y, NULL, NULL);
+	dstW = (int)max(ceil(max_x), ceil(-min_x)) * 2;
+	dstH = (int)max(ceil(max_y), ceil(-min_y)) * 2;
+	mapx = mapx + dstW / 2;
+	mapy = mapy + dstH / 2;
 
-	for(int y = 0; y < img_size.height; y++)
+	for (int y = 0; y < img_size.height; y++)
 	{
-		for(int x = 0; x < img_size.width; x++)
+		for (int x = 0; x < img_size.width; x++)
 		{
-			mapx_ceil.at<double>(y, x) = ceil(mapx.at<double>(y, x));
-			mapx_floor.at<double>(y, x) = floor(mapx.at<double>(y, x));
-			mapy_ceil.at<double>(y, x) = ceil(mapy.at<double>(y, x));
-			mapy_floor.at<double>(y, x) = ceil(mapy.at<double>(y, x));
+			double x_ceil = ceil(mapx.at<double>(y, x));
+			double x_floor = floor(mapx.at<double>(y, x));
+			double y_ceil = ceil(mapy.at<double>(y, x));
+			double y_floor = floor(mapy.at<double>(y, x));
+
+			double x_diff =  mapx.at<double>(y, x) - x_ceil;
+			double y_diff =  mapy.at<double>(y, x) - y_ceil;
+
+			//(x_ceil, y_ceil)
+			if(map2Dst.find(cv::Point2d(x_ceil, y_ceil)) == map2Dst.end())
+			{
+				Vec4d vec(x, y, x_diff, y_diff);
+				vector<cv::Vec4d> vecVec4d;
+				vecVec4d.push_back(vec);
+				map2Dst[cv::Point2d(x_ceil, y_ceil)] = vecVec4d;
+			}
+			else
+			{
+				Vec4d vec(x, y, x_diff, y_diff);
+				map2Dst[cv::Point2d(x_ceil, y_ceil)].push_back(vec);
+			}
+			//(x_ceil, y_floor)
+			if (map2Dst.find(cv::Point2d(x_ceil, y_floor)) == map2Dst.end())
+			{
+				Vec4d vec(x, y, x_diff, 1 + y_diff);
+				vector<cv::Vec4d> vecVec4d;
+				vecVec4d.push_back(vec);
+				map2Dst[cv::Point2d(x_ceil, y_floor)] = vecVec4d;
+			}
+			else
+			{
+				Vec4d vec(x, y, x_diff, 1 + y_diff);
+				map2Dst[cv::Point2d(x_ceil, y_floor)].push_back(vec);
+			}
+			//(x_floor, y_ceil)
+			if (map2Dst.find(cv::Point2d(x_floor, y_ceil)) == map2Dst.end())
+			{
+				Vec4d vec(x, y, 1 + x_diff, y_diff);
+				vector<cv::Vec4d> vecVec4d;
+				vecVec4d.push_back(vec);
+				map2Dst[cv::Point2d(x_floor, y_ceil)] = vecVec4d;
+			}
+			else
+			{
+				Vec4d vec(x, y, 1 + x_diff, y_diff);
+				map2Dst[cv::Point2d(x_floor, y_ceil)].push_back(vec);
+			}
+			//(x_floor, y_floor)
+			if (map2Dst.find(cv::Point2d(x_floor, y_floor)) == map2Dst.end())
+			{
+				Vec4d vec(x, y, 1 + x_diff, 1 + y_diff);
+				vector<cv::Vec4d> vecVec4d;
+				vecVec4d.push_back(vec);
+				map2Dst[cv::Point2d(x_floor, y_floor)] = vecVec4d;
+			}
+			else
+			{
+				Vec4d vec(x, y, 1 + x_diff, 1 + y_diff);
+				map2Dst[cv::Point2d(x_floor, y_floor)].push_back(vec);
+			}
 		}
+	}
+	int aa = 0;
+}
+
+/**
+ * \brief 高斯加权插值
+ * \param mapOrigin 
+ * \param mapDst 
+ */
+void computeWeight(std::map<cv::Point2d, std::vector<cv::Vec4d>, myCompare>& mapOrigin,
+	std::map<cv::Point2d, std::vector<cv::Vec3d>, myCompare>& mapDst)
+{
+	for(std::map<cv::Point2d, std::vector<cv::Vec4d>, myCompare>::iterator itor = mapOrigin.begin();
+		itor != mapOrigin.end(); itor++)
+	{
+		std::vector<cv::Vec3d> vecVec3d;
+		std::vector<cv::Vec4d> vecVec4d = (*itor).second;
+		for(std::vector<cv::Vec4d>::iterator it = vecVec4d.begin(); it != vecVec4d.end(); it++)
+		{
+			Vec4d vec_ = *it;
+			double weight_ = exp(-(pow((*it)[2], 2) + pow((*it)[3], 2)) / 2);
+			Vec3d vec((*it)[0], (*it)[1], weight_);
+			vecVec3d.push_back(vec);
+		}
+		mapDst[itor->first] = vecVec3d;
 	}
 }
 
-void fisheyeRemap(cv::Mat src, cv::Mat& dst, cv::Mat& mapx_ceil, cv::Mat& mapx_floor, cv::Mat& mapy_ceil,
-	cv::Mat& mapy_floor)
+void fisheyeRemap(cv::Mat src, cv::Mat& dst, std::map<cv::Point2d, std::vector<cv::Vec4d>, myCompare>& map2Dst, int dstH, int dstW)
 {
-	double max_x, max_y;
-	cv::minMaxLoc(mapx_ceil, NULL, &max_x, NULL, NULL);
-	cv::minMaxLoc(mapy_ceil, NULL, &max_y, NULL, NULL);
+	dst.create(dstH, dstW, CV_8UC1);
+	map<Point2d, std::vector<cv::Vec3d>, myCompare> mapVec3d;
+	computeWeight(map2Dst, mapVec3d);
 
-	int dstWidth = (int)max_x + 1;
-	int dstHeight = (int)max_y + 1;
-	dst.create(dstHeight, dstWidth, CV_8UC1);
-
-	cv::Mat dst_x_ceil_y_ceil = cv::Mat::zeros(dstHeight, dstWidth, CV_8UC1);
-	cv::Mat dst_x_ceil_y_floor = cv::Mat::zeros(dstHeight, dstWidth, CV_8UC1);
-	cv::Mat dst_x_floor_y_ceil = cv::Mat::zeros(dstHeight, dstWidth, CV_8UC1);
-	cv::Mat dst_x_floor_y_floor = cv::Mat::zeros(dstHeight, dstWidth, CV_8UC1);
-
-	for(int y = 0; y < src.rows; y++)
+	for(int y = 0; y < dstH; y++)
 	{
-		for(int x = 0; x < src.cols; x++)
+		for(int x = 0; x < dstW; x++)
 		{
-			int ideal_x, ideal_y;
-			ideal_x = mapx_ceil.at<double>(y, x);
-			ideal_y = mapy_ceil.at<double>(y, x);
-			dst_x_ceil_y_ceil.at<uchar>(ideal_y, ideal_x) = src.at<uchar>(y, x);
-
-			ideal_x = mapx_ceil.at<double>(y, x);
-			ideal_y = mapy_floor.at<double>(y, x);
-			dst_x_ceil_y_floor.at<uchar>(ideal_y, ideal_x) = src.at<uchar>(y, x);
-
-			ideal_x = mapx_floor.at<double>(y, x);
-			ideal_y = mapy_ceil.at<double>(y, x);
-			dst_x_floor_y_ceil.at<uchar>(ideal_y, ideal_x) = src.at<uchar>(y, x);
-
-			ideal_x = mapx_floor.at<double>(y, x);
-			ideal_y = mapy_floor.at<double>(y, x);
-			dst_x_floor_y_floor.at<uchar>(ideal_y, ideal_x) = src.at<uchar>(y, x);
+			vector<Vec3d> vecVec3d = mapVec3d[Point2d(x, y)];
+			double val = 0;
+			for(vector<Vec3d>::iterator itor = vecVec3d.begin(); itor != vecVec3d.end(); itor++)
+			{
+				val += (*itor)[2] * src.at<uchar>((int)(*itor)[1], (int)(*itor)[0]);
+			}
+			dst.at<uchar>(y, x) = val;
 		}
 	}
-	imwrite("x_ceil_y_ceil.jpg", dst_x_ceil_y_ceil);
-	imwrite("x_ceil_y_floor.jpg", dst_x_ceil_y_floor);
-	imwrite("x_floor_y_ceil.jpg", dst_x_floor_y_ceil);
-	imwrite("x_floor_y_floor.jpg", dst_x_floor_y_floor);
-}
-
-void fisheyeRemap(cv::Mat src, cv::Mat& dst, cv::Mat mapx, cv::Mat mapy)
-{
-	int width = mapx.cols;
-	int height = mapx.rows;
-
+	imwrite("dst.jpg", dst);
 }
 
 /****************************************

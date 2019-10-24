@@ -75,6 +75,9 @@
     <ClCompile Include="methods\fisheyeLib\Pattern.cpp">
       <Filter>源文件\methods\fisheyeLib</Filter>
     </ClCompile>
+    <ClCompile Include="methods\fisheyeLib\Reprojection.cpp">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="methods\fisheyeCalib3d.h">
@@ -126,6 +129,9 @@
       <Filter>源文件\methods\fisheyeLib</Filter>
     </ClInclude>
     <ClInclude Include="methods\fisheyeLib\Pattern.h">
+      <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheyeLib\Reprojection.h">
       <Filter>源文件\methods\fisheyeLib</Filter>
     </ClInclude>
   </ItemGroup>
