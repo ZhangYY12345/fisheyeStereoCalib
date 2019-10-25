@@ -56,8 +56,9 @@ void Reprojection::theta2radius()
     }
     max_r = sqrt(max_r);
     //max_r = 2000;
-    int theta_size = round(max_r) * precision + 10; // If PRECISION = 10, r = {0, 0.1, 0.2, 0.3, ...}，查找表中距离r的离散取值的个数，每个距离r对应一个入射角
-    
+    int theta_size = (round(max_r) + 1) * precision; // If PRECISION = 10, r = {0, 0.1, 0.2, 0.3, ...}，查找表中距离r的离散取值的个数，每个距离r对应一个入射角
+	ideal_r = round(max_r) + 1;
+
     r2t.resize(theta_size);
     cv::Point2d p(0,0);
     IncidentVector *iv = nullptr;
@@ -86,7 +87,7 @@ void Reprojection::theta2radius()
         r2t[i] = iv->aoi(r);//计算theta角，此处用到畸变公式
     }
     
-    int r_size = max_r * precision + 10; //查找表中距离r的离散取值的个数，每个距离r对应一个唯一的入射角
+	int r_size = (round(max_r) + 1) * precision; //查找表中距离r的离散取值的个数，每个距离r对应一个唯一的入射角
 //    r_size = 2000 * precision;
     t2r.resize(r_size);
     int j = 1; // j/PRECISION: radius
@@ -117,7 +118,7 @@ void Reprojection::saveTheta2Radius(std::string filename)
 void Reprojection::saveRadius2Theta(std::string filename)
 {
     std::ofstream ofs(filename);
-    
+
     for (int i = 0; i < r2t.size(); ++i) {
         ofs << (double)i/precision << ' ' << r2t[i] << ' ' << r2t[i] * 180 / M_PI << std::endl;
     }
@@ -125,12 +126,43 @@ void Reprojection::saveRadius2Theta(std::string filename)
     ofs.close();
 }
 
+/**
+ * \brief save t2r[], ideal_r and center for the undistorted image into XML file
+ * \param fileName 
+ */
+void Reprojection::saveReprojectData(std::string fileName, bool isSave_t2r)
+{
+	cv::FileStorage fn(fileName, cv::FileStorage::WRITE);
+	fn << "Radius" << ideal_r;
+	fn << "Center_x" << ideal_center.x;
+	fn << "Center_y" << ideal_center.y;
 
+	if(isSave_t2r)
+	{
+		std::string t2rFileName = fileName.substr(0, fileName.length() - 4) + "_t2r.dat";
+		saveTheta2Radius(t2rFileName);
+		fn << "t2r_fileName" << t2rFileName;
+	}
+
+	fn.release();
+}
+
+
+/**
+ * \brief 基于透视投影模型的map计算，（理想情况下的入射角计算为透视投影模型）
+ * \param theta_x 
+ * \param theta_y 
+ * \param f_ 
+ * \param mapx 
+ * \param mapy 
+ */
 void Reprojection::calcMaps(double theta_x, double theta_y, double f_, cv::Mat& mapx, cv::Mat& mapy)
 {
     mapx.create(IncidentVector::getImgSize().height, IncidentVector::getImgSize().width, CV_32FC1);
     mapy.create(IncidentVector::getImgSize().height, IncidentVector::getImgSize().width, CV_32FC1);
-    
+
+	ideal_center = cv::Point2d(IncidentVector::getImgSize().width / 2.0, IncidentVector::getImgSize().height / 2.0);
+
     cv::Mat Rx = (cv::Mat_<double>(3,3) <<
                   1,            0,             0,
                   0, cos(theta_x), -sin(theta_x),
@@ -144,7 +176,7 @@ void Reprojection::calcMaps(double theta_x, double theta_y, double f_, cv::Mat& 
 	for (int y_ = 0; y_ < IncidentVector::getImgSize().height; ++y_) { // y
         for (int x_ = 0; x_ < IncidentVector::getImgSize().width; ++x_) { // x
             
-            cv::Point2d p2(x_ - IncidentVector::getImgSize().width/2.0, y_ - IncidentVector::getImgSize().height/2.0);
+            cv::Point2d p2(x_ - IncidentVector::getImgSize().width / 2.0, y_ - IncidentVector::getImgSize().height / 2.0);
             cv::Mat p3 = (cv::Mat_<double>(3,1) << p2.x, p2.y, f_);
             cv::Mat real = 1.0/sqrt(pow(p2.x,2) + pow(p2.y,2) + pow(f_,2)) * R * p3;
             
@@ -157,7 +189,7 @@ void Reprojection::calcMaps(double theta_x, double theta_y, double f_, cv::Mat& 
                 mapy.at<float>(y_,x_) = 0;
                 continue;
             }
-            cv::Point2d final = IncidentVector::getCenter() + t2r[(int)(theta/rad_step)] / sqrt(1-pow(z,2)) * cv::Point2d(x,y);
+            cv::Point2d final = IncidentVector::getCenter() + t2r[(int)(theta/rad_step)]  * (cv::Point2d(x,y) / sqrt(1-pow(z,2)));
             //            cv::Point2d final = center + f * theta / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Perspective projection
             //            cv::Point2d final = center + 2*f*tan(theta/2) / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Stereo graphic projection
             
@@ -171,6 +203,8 @@ void Reprojection::calcMaps(double f_, cv::Mat& mapx, cv::Mat& mapy)
 {
 	mapx.create(IncidentVector::getImgSize().height, IncidentVector::getImgSize().width, CV_32FC1);
 	mapy.create(IncidentVector::getImgSize().height, IncidentVector::getImgSize().width, CV_32FC1);
+
+	ideal_center = cv::Point2d(IncidentVector::getImgSize().width / 2.0, IncidentVector::getImgSize().height / 2.0);
 
 	for (int y_ = 0; y_ < IncidentVector::getImgSize().height; ++y_) { // y
 		for (int x_ = 0; x_ < IncidentVector::getImgSize().width; ++x_) { // x
@@ -189,6 +223,314 @@ void Reprojection::calcMaps(double f_, cv::Mat& mapx, cv::Mat& mapy)
 				continue;
 			}
 			cv::Point2d final = IncidentVector::getCenter() + t2r[(int)(theta / rad_step)] / sqrt(1 - pow(z, 2)) * cv::Point2d(x, y);
+			//            cv::Point2d final = center + f * theta / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Perspective projection
+			//            cv::Point2d final = center + 2*f*tan(theta/2) / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Stereo graphic projection
+
+			mapx.at<float>(y_, x_) = final.x;
+			mapy.at<float>(y_, x_) = final.y;
+		}
+	}
+}
+
+void Reprojection::calcMaps_full(double theta_x, double theta_y, double f_, cv::Mat& mapx, cv::Mat& mapy)
+{
+	mapx.create(IncidentVector::getImgSize().height * 3, IncidentVector::getImgSize().width * 3, CV_32FC1);
+	mapy.create(IncidentVector::getImgSize().height * 3, IncidentVector::getImgSize().width * 3, CV_32FC1);
+
+	ideal_center = cv::Point2d(IncidentVector::getImgSize().width * 3 / 2.0, IncidentVector::getImgSize().height * 3 / 2.0);
+
+	cv::Mat Rx = (cv::Mat_<double>(3, 3) <<
+		1, 0, 0,
+		0, cos(theta_x), -sin(theta_x),
+		0, sin(theta_x), cos(theta_x));
+	cv::Mat Ry = (cv::Mat_<double>(3, 3) <<
+		cos(theta_y), 0, sin(theta_y),
+		0, 1, 0,
+		-sin(theta_y), 0, cos(theta_y));
+	cv::Mat R = Ry * Rx;
+
+	for (int y_ = 0; y_ < IncidentVector::getImgSize().height * 3; ++y_) { // y
+		for (int x_ = 0; x_ < IncidentVector::getImgSize().width * 3; ++x_) { // x
+
+			cv::Point2d p2(x_ - IncidentVector::getImgSize().width * 3 / 2.0, y_ - IncidentVector::getImgSize().height * 3 / 2.0);
+			cv::Mat p3 = (cv::Mat_<double>(3, 1) << p2.x, p2.y, f_);
+			cv::Mat real = 1.0 / sqrt(pow(p2.x, 2) + pow(p2.y, 2) + pow(f_, 2)) * R * p3;
+
+			double x = real.at<double>(0, 0);
+			double y = real.at<double>(1, 0);
+			double z = real.at<double>(2, 0);
+			double theta = atan2(sqrt(1 - pow(z, 2)), z);
+			if (t2r.size() <= (int)(theta / rad_step)) {
+				mapx.at<float>(y_, x_) = 0;
+				mapy.at<float>(y_, x_) = 0;
+				continue;
+			}
+			cv::Point2d final = IncidentVector::getCenter() + t2r[(int)(theta / rad_step)] * (cv::Point2d(x, y) / sqrt(1 - pow(z, 2)));
+			//            cv::Point2d final = center + f * theta / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Perspective projection
+			//            cv::Point2d final = center + 2*f*tan(theta/2) / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Stereo graphic projection
+
+			mapx.at<float>(y_, x_) = final.x;
+			mapy.at<float>(y_, x_) = final.y;
+		}
+	}
+}
+
+void Reprojection::calcMaps_full(double f_, cv::Mat& mapx, cv::Mat& mapy)
+{
+	mapx.create(IncidentVector::getImgSize().height * 3, IncidentVector::getImgSize().width * 3, CV_32FC1);
+	mapy.create(IncidentVector::getImgSize().height * 3, IncidentVector::getImgSize().width * 3, CV_32FC1);
+
+	ideal_center = cv::Point2d(IncidentVector::getImgSize().width * 3 / 2.0, IncidentVector::getImgSize().height * 3 / 2.0);
+
+	for (int y_ = 0; y_ < IncidentVector::getImgSize().height * 3; ++y_) { // y
+		for (int x_ = 0; x_ < IncidentVector::getImgSize().width * 3; ++x_) { // x
+
+			cv::Point2d p2(x_ - IncidentVector::getImgSize().width * 3 / 2.0, y_ - IncidentVector::getImgSize().height * 3 / 2.0);
+			cv::Mat p3 = (cv::Mat_<double>(3, 1) << p2.x, p2.y, f_);
+			cv::Mat real = 1.0 / sqrt(pow(p2.x, 2) + pow(p2.y, 2) + pow(f_, 2))  * p3;
+
+			double x = real.at<double>(0, 0);
+			double y = real.at<double>(1, 0);
+			double z = real.at<double>(2, 0);
+			double theta = atan2(sqrt(1 - pow(z, 2)), z);
+			if (t2r.size() <= (int)(theta / rad_step)) {
+				mapx.at<float>(y_, x_) = 0;
+				mapy.at<float>(y_, x_) = 0;
+				continue;
+			}
+			cv::Point2d final = IncidentVector::getCenter() + t2r[(int)(theta / rad_step)] / sqrt(1 - pow(z, 2)) * cv::Point2d(x, y);
+			//            cv::Point2d final = center + f * theta / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Perspective projection
+			//            cv::Point2d final = center + 2*f*tan(theta/2) / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Stereo graphic projection
+
+			mapx.at<float>(y_, x_) = final.x;
+			mapy.at<float>(y_, x_) = final.y;
+		}
+	}
+}
+
+/**
+ * \brief using fisheye model to calculate the ideal incidence angle
+ * \param theta_x 
+ * \param theta_y 
+ * \param f_ 
+ * \param scale 
+ * \param mapx 
+ * \param mapy 
+ */
+void Reprojection::calcMaps_fisheye_model_full(double theta_x, double theta_y, double f_, cv::Mat& mapx,
+	cv::Mat& mapy, int scale)
+{
+	mapx.create(IncidentVector::getImgSize().height * scale, IncidentVector::getImgSize().width * scale, CV_32FC1);
+	mapy.create(IncidentVector::getImgSize().height * scale, IncidentVector::getImgSize().width * scale, CV_32FC1);
+
+	ideal_center = cv::Point2d(IncidentVector::getImgSize().width * scale / 2.0, IncidentVector::getImgSize().height * scale / 2.0);
+
+	cv::Mat Rx = (cv::Mat_<double>(3, 3) <<
+		1, 0, 0,
+		0, cos(theta_x), -sin(theta_x),
+		0, sin(theta_x), cos(theta_x));
+	cv::Mat Ry = (cv::Mat_<double>(3, 3) <<
+		cos(theta_y), 0, sin(theta_y),
+		0, 1, 0,
+		-sin(theta_y), 0, cos(theta_y));
+	cv::Mat R = Ry * Rx;
+
+	for (int y_ = 0; y_ < IncidentVector::getImgSize().height * scale; ++y_) { // y
+		for (int x_ = 0; x_ < IncidentVector::getImgSize().width * scale; ++x_) { // x
+
+			cv::Point2d p2(x_ - IncidentVector::getImgSize().width * scale / 2.0, y_ - IncidentVector::getImgSize().height * scale / 2.0);
+			cv::Mat p3 = (cv::Mat_<double>(3, 1) << p2.x, p2.y, f_);
+			cv::Mat real = 1.0 / sqrt(pow(p2.x, 2) + pow(p2.y, 2) + pow(f_, 2)) * R * p3;
+
+			double x = real.at<double>(0, 0);
+			double y = real.at<double>(1, 0);
+			double z = real.at<double>(2, 0);
+			double theta;
+			switch(IncidentVector::getProjection())
+			{
+			case 0://StereographicProjection
+				theta = 2 * atan2(sqrt(1 - pow(z, 2)), 2 * z);
+				break;
+			case 1://OrthographicProjection
+				theta = asin(sqrt(1 - pow(z, 2)) / z);
+				break;
+			case 2://EquidistanceProjection
+				theta = sqrt(1 - pow(z, 2)) / z;
+				break;
+			case 3://EquisolidAngleProjection
+				theta = 2 * asin(sqrt(1 - pow(z, 2)) / (2 * z));
+				break;
+			default://透视投影
+				theta = atan2(sqrt(1 - pow(z, 2)), z);
+			}
+			if (t2r.size() <= (int)(theta / rad_step)) {
+				mapx.at<float>(y_, x_) = 0;
+				mapy.at<float>(y_, x_) = 0;
+				continue;
+			}
+			cv::Point2d final = IncidentVector::getCenter() + t2r[(int)(theta / rad_step)] * (cv::Point2d(x, y) / sqrt(1 - pow(z, 2)));
+			//            cv::Point2d final = center + f * theta / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Perspective projection
+			//            cv::Point2d final = center + 2*f*tan(theta/2) / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Stereo graphic projection
+
+			mapx.at<float>(y_, x_) = final.x;
+			mapy.at<float>(y_, x_) = final.y;
+		}
+	}
+}
+
+void Reprojection::calcMaps_fisheye_model_full(double f_, cv::Mat& mapx, cv::Mat& mapy, int scale)
+{
+	mapx.create(IncidentVector::getImgSize().height * scale, IncidentVector::getImgSize().width * scale, CV_32FC1);
+	mapy.create(IncidentVector::getImgSize().height * scale, IncidentVector::getImgSize().width * scale, CV_32FC1);
+
+	ideal_center = cv::Point2d(IncidentVector::getImgSize().width * scale / 2.0, IncidentVector::getImgSize().height * scale / 2.0);
+
+	for (int y_ = 0; y_ < IncidentVector::getImgSize().height * scale; ++y_) { // y
+		for (int x_ = 0; x_ < IncidentVector::getImgSize().width * scale; ++x_) { // x
+
+			cv::Point2d p2(x_ - IncidentVector::getImgSize().width * scale / 2.0, y_ - IncidentVector::getImgSize().height * scale / 2.0);
+			cv::Mat p3 = (cv::Mat_<double>(3, 1) << p2.x, p2.y, f_);
+			cv::Mat real = 1.0 / sqrt(pow(p2.x, 2) + pow(p2.y, 2) + pow(f_, 2))  * p3;
+
+			double x = real.at<double>(0, 0);
+			double y = real.at<double>(1, 0);
+			double z = real.at<double>(2, 0);
+			double theta;
+			switch (IncidentVector::getProjection())
+			{
+			case 0://StereographicProjection
+				theta = 2 * atan2(sqrt(1 - pow(z, 2)), 2 * z);
+				break;
+			case 1://OrthographicProjection
+				theta = asin(sqrt(1 - pow(z, 2)) / z);
+				break;
+			case 2://EquidistanceProjection
+				theta = sqrt(1 - pow(z, 2)) / z;
+				break;
+			case 3://EquisolidAngleProjection
+				theta = 2 * asin(sqrt(1 - pow(z, 2)) / (2 * z));
+				break;
+			default://透视投影
+				theta = atan2(sqrt(1 - pow(z, 2)), z);
+			}
+
+			if (t2r.size() <= (int)(theta / rad_step)) {
+				mapx.at<float>(y_, x_) = 0;
+				mapy.at<float>(y_, x_) = 0;
+				continue;
+			}
+			cv::Point2d final = IncidentVector::getCenter() + t2r[(int)(theta / rad_step)] / sqrt(1 - pow(z, 2)) * cv::Point2d(x, y);
+			//            cv::Point2d final = center + f * theta / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Perspective projection
+			//            cv::Point2d final = center + 2*f*tan(theta/2) / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Stereo graphic projection
+
+			mapx.at<float>(y_, x_) = final.x;
+			mapy.at<float>(y_, x_) = final.y;
+		}
+	}
+}
+
+void Reprojection::calcMaps_fisheye_model_offset_full(double theta_x, double theta_y, double f_, cv::Mat& mapx,
+	cv::Mat& mapy, int offset)
+{
+	mapx.create(IncidentVector::getImgSize().height + offset * 2, IncidentVector::getImgSize().width + offset * 2, CV_32FC1);
+	mapy.create(IncidentVector::getImgSize().height + offset * 2, IncidentVector::getImgSize().width + offset * 2, CV_32FC1);
+
+	ideal_center = cv::Point2d(IncidentVector::getImgSize().width / 2.0 + offset, IncidentVector::getImgSize().height / 2.0 + offset);
+
+	cv::Mat Rx = (cv::Mat_<double>(3, 3) <<
+		1, 0, 0,
+		0, cos(theta_x), -sin(theta_x),
+		0, sin(theta_x), cos(theta_x));
+	cv::Mat Ry = (cv::Mat_<double>(3, 3) <<
+		cos(theta_y), 0, sin(theta_y),
+		0, 1, 0,
+		-sin(theta_y), 0, cos(theta_y));
+	cv::Mat R = Ry * Rx;
+
+	for (int y_ = 0; y_ < IncidentVector::getImgSize().height + offset * 2; ++y_) { // y
+		for (int x_ = 0; x_ < IncidentVector::getImgSize().width + offset * 2; ++x_) { // x
+
+			cv::Point2d p2(x_ - (IncidentVector::getImgSize().width + offset * 2) / 2.0, y_ - (IncidentVector::getImgSize().height + offset * 2) / 2.0);
+			cv::Mat p3 = (cv::Mat_<double>(3, 1) << p2.x, p2.y, f_);
+			cv::Mat real = 1.0 / sqrt(pow(p2.x, 2) + pow(p2.y, 2) + pow(f_, 2)) * R * p3;
+
+			double x = real.at<double>(0, 0);
+			double y = real.at<double>(1, 0);
+			double z = real.at<double>(2, 0);
+			double theta;
+			switch (IncidentVector::getProjection())
+			{
+			case 0://StereographicProjection
+				theta = 2 * atan2(sqrt(1 - pow(z, 2)), 2 * z);
+				break;
+			case 1://OrthographicProjection
+				theta = asin(sqrt(1 - pow(z, 2)) / z);
+				break;
+			case 2://EquidistanceProjection
+				theta = sqrt(1 - pow(z, 2)) / z;
+				break;
+			case 3://EquisolidAngleProjection
+				theta = 2 * asin(sqrt(1 - pow(z, 2)) / (2 * z));
+				break;
+			default://透视投影
+				theta = atan2(sqrt(1 - pow(z, 2)), z);
+			}
+			if (t2r.size() <= (int)(theta / rad_step)) {
+				mapx.at<float>(y_, x_) = 0;
+				mapy.at<float>(y_, x_) = 0;
+				continue;
+			}
+			cv::Point2d final = IncidentVector::getCenter() + t2r[(int)(theta / rad_step)] * (cv::Point2d(x, y) / sqrt(1 - pow(z, 2)));
+			//            cv::Point2d final = center + f * theta / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Perspective projection
+			//            cv::Point2d final = center + 2*f*tan(theta/2) / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Stereo graphic projection
+
+			mapx.at<float>(y_, x_) = final.x;
+			mapy.at<float>(y_, x_) = final.y;
+		}
+	}
+}
+
+void Reprojection::calcMaps_fisheye_model_offset_full(double f_, cv::Mat& mapx, cv::Mat& mapy, int offset)
+{
+	mapx.create(IncidentVector::getImgSize().height + offset * 2, IncidentVector::getImgSize().width + offset * 2, CV_32FC1);
+	mapy.create(IncidentVector::getImgSize().height + offset * 2, IncidentVector::getImgSize().width + offset * 2, CV_32FC1);
+
+	ideal_center = cv::Point2d(IncidentVector::getImgSize().width / 2.0 + offset, IncidentVector::getImgSize().height / 2.0 + offset);
+
+	for (int y_ = 0; y_ < IncidentVector::getImgSize().height + offset * 2; ++y_) { // y
+		for (int x_ = 0; x_ < IncidentVector::getImgSize().width + offset * 2; ++x_) { // x
+
+			cv::Point2d p2(x_ - (IncidentVector::getImgSize().width + offset * 2) / 2.0, y_ - (IncidentVector::getImgSize().height + offset * 2) / 2.0);
+			cv::Mat p3 = (cv::Mat_<double>(3, 1) << p2.x, p2.y, f_);
+			cv::Mat real = 1.0 / sqrt(pow(p2.x, 2) + pow(p2.y, 2) + pow(f_, 2)) * p3;
+
+			double x = real.at<double>(0, 0);
+			double y = real.at<double>(1, 0);
+			double z = real.at<double>(2, 0);
+			double theta;
+			switch (IncidentVector::getProjection())
+			{
+			case 0://StereographicProjection
+				theta = 2 * atan2(sqrt(1 - pow(z, 2)), 2 * z);
+				break;
+			case 1://OrthographicProjection
+				theta = asin(sqrt(1 - pow(z, 2)) / z);
+				break;
+			case 2://EquidistanceProjection
+				theta = sqrt(1 - pow(z, 2)) / z;
+				break;
+			case 3://EquisolidAngleProjection
+				theta = 2 * asin(sqrt(1 - pow(z, 2)) / (2 * z));
+				break;
+			default://透视投影
+				theta = atan2(sqrt(1 - pow(z, 2)), z);
+			}
+			if (t2r.size() <= (int)(theta / rad_step)) {
+				mapx.at<float>(y_, x_) = 0;
+				mapy.at<float>(y_, x_) = 0;
+				continue;
+			}
+			cv::Point2d final = IncidentVector::getCenter() + t2r[(int)(theta / rad_step)] * (cv::Point2d(x, y) / sqrt(1 - pow(z, 2)));
 			//            cv::Point2d final = center + f * theta / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Perspective projection
 			//            cv::Point2d final = center + 2*f*tan(theta/2) / sqrt(1-pow(z,2))  * cv::Point2d(x,y); // Stereo graphic projection
 

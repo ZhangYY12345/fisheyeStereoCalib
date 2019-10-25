@@ -36,5 +36,5 @@ void fisheyeCalcMap(std::string calibXml, std::map<cv::Point2d, std::vector<cv::
 void computeWeight(std::map<cv::Point2d, std::vector<cv::Vec4d>, myCompare>& mapOrigin, std::map<cv::Point2d, std::vector<cv::Vec3d>, myCompare>& mapDst);
 void fisheyeRemap(cv::Mat src, cv::Mat& dst, std::map<cv::Point2d, std::vector<cv::Vec4d>, myCompare >& map2Dst, int dstH, int dstW);
 
-//void rectify_(calibInfo infoStereoCalib);
+void rectify_(calibInfo infoStereoCalib);
 

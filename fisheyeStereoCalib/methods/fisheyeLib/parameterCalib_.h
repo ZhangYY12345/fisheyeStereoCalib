@@ -4,6 +4,7 @@
 #include "LineDetection.h"
 #include "Pair.h"
 #include "Pattern.h"
+#include "Reprojection.h"
 
 typedef  std::vector<std::vector<cv::Point2f> >  douVecPt2f;
 typedef  std::vector<std::vector<cv::Point3f> >  douVecPt3f;
@@ -25,6 +26,9 @@ struct calibInfo
 {
 	std::string calibFileL;			//"resCalibL.xml",left fisheye camera calibration data using the fisheye library
 	std::string calibFileR;			//"resCalibR.xml",right fisheye camera calibration data using the fisheye library
+
+	std::string fisheye_reprojectL;
+	std::string fisheye_reprojectR;
 
 	std::string calibChessImgPathL;	//chessboard images from left fisheye camera for stereo calibration: undistort these images and detect cross points inside for later stereo calibration using cv::stereoCalibration()
 	std::string calibChessImgPathR;	//chessboard images from right fisheye camera for stereo calibration

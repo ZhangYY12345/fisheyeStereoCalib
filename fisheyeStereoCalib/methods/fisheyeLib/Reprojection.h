@@ -27,13 +27,24 @@ public:
     std::vector<double> t2r; // theta to radius
     std::vector<double> r2t;
     double rad_step;
+	double ideal_r;
+	cv::Point2d ideal_center;
     std::string projection;
     
     void loadPrameters(std::string);
     void theta2radius();
     void saveTheta2Radius(std::string filename);
     void saveRadius2Theta(std::string filename);
+	void saveReprojectData(std::string fileName, bool isSave_t2r);
     void calcMaps(double theta_x, double theta_y, double f_, cv::Mat& mapx, cv::Mat& mapy);
-	void calcMaps(double f_, cv::Mat& mapx, cv::Mat& mapy); };
+	void calcMaps(double f_, cv::Mat& mapx, cv::Mat& mapy);
+	void calcMaps_full(double theta_x, double theta_y, double f_, cv::Mat& mapx, cv::Mat& mapy);
+	void calcMaps_full(double f_, cv::Mat& mapx, cv::Mat& mapy);
+	void calcMaps_fisheye_model_full(double theta_x, double theta_y, double f_, cv::Mat& mapx, cv::Mat& mapy, int scale = 2);
+	void calcMaps_fisheye_model_full(double f_, cv::Mat& mapx, cv::Mat& mapy, int scale = 2);
+	void calcMaps_fisheye_model_offset_full(double theta_x, double theta_y, double f_, cv::Mat& mapx, cv::Mat& mapy, int offset);
+	void calcMaps_fisheye_model_offset_full(double f_, cv::Mat& mapx, cv::Mat& mapy, int offset);
+};
+
 
 #endif /* defined(__Reprojection__Reprojection__) */
