@@ -7,6 +7,8 @@
 //
 
 #include "Pair.h"
+#include <thread>
+
 
 //对所有点（图像上的点，图像像素坐标）计算其在相机坐标系的坐标
 void Pair::calcM()
@@ -213,4 +215,21 @@ void Pair::calcDerivatives()
     calcNc();
     calcNcc();
     calcLc();
+}
+
+void pair_calcDerivatives(Pair& obj)
+{
+	obj.calcMd();
+
+	std::thread th1(std::bind(&Pair::calcMc, &obj));
+	std::thread th2(std::bind(&Pair::calcMcc, &obj));
+	th1.join();
+	th2.join();
+
+	std::thread th3(std::bind(&Pair::calcNc, &obj));
+	std::thread th4(std::bind(&Pair::calcNcc, &obj));
+	th3.join();
+	th4.join();
+
+	obj.calcLc();
 }

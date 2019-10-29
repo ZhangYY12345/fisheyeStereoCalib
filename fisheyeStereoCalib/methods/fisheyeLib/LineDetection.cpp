@@ -428,14 +428,14 @@ void LineDetection::processAllImages()
 				//removeNoiseLine(edges[0], false);
 				//removeNoisePts(edges[0], img[0].size(), false);
                 //edges[0] = detectValley(img[0], img[1]);
-                display(cv::Size2i(img[0].cols, img[0].rows), edges[0], "edges");
+                //display(cv::Size2i(img[0].cols, img[0].rows), edges[0], "edges");
                 //edges[1] = detectValley(img[2], img[3]);
 				std::cout << edges[0].size() << std::endl;
                 edges[1] = detectLines(img[2], img[3], true);
 				std::cout << edges[1].size() << std::endl;
 				//removeNoiseLine(edges[1], true);
 				//removeNoisePts(edges[1], img[2].size(), true);
-                display(cv::Size2i(img[2].cols, img[2].rows), edges[1], "edges");
+                //display(cv::Size2i(img[2].cols, img[2].rows), edges[1], "edges");
                 break;
                 
             case Two:

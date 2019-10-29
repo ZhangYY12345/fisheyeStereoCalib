@@ -98,13 +98,13 @@ void fisheyeExpandTest(cv::Mat src, cv::Mat& dst, camMode fisheyeCamModel, std::
 		//鱼眼图像的有效区域的值是前期获取的值（针对同一相机是定值）
 		if (isLeft)//left camera
 		{
-			params.center = cv::Point2i(1283, 724);
-			params.radius = 1199;
+			params.center = cv::Point2i(1560, 940);
+			params.radius = 1286;
 		}
 		else
 		{
-			params.center = cv::Point2i(1283, 722);
-			params.radius = 1187;
+			params.center = cv::Point2i(1560, 940);
+			params.radius = 1286;
 		}
 
 		params.w_longtitude = PI / 2;

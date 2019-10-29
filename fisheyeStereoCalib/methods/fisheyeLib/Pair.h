@@ -92,5 +92,7 @@ public:
     void calcDerivatives();
 };
 
+void pair_calcDerivatives(Pair& obj);
+
 
 #endif

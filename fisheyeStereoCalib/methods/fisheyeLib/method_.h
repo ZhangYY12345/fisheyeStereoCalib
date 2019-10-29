@@ -37,4 +37,5 @@ void computeWeight(std::map<cv::Point2d, std::vector<cv::Vec4d>, myCompare>& map
 void fisheyeRemap(cv::Mat src, cv::Mat& dst, std::map<cv::Point2d, std::vector<cv::Vec4d>, myCompare >& map2Dst, int dstH, int dstW);
 
 void rectify_(calibInfo infoStereoCalib);
-
+void saveFloatMat(cv::Mat& src, std::string filename);
+void loadFloatMat(std::string filename, cv::Mat& dst);

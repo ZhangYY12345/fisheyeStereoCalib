@@ -5,6 +5,10 @@
 using namespace std;
 using namespace cv;
 
+long linesNum;
+long pointsNum;
+int orthogonalPairsNum;
+
 //void* xmlMapReader(void* file)
 //{
 //	
@@ -60,7 +64,10 @@ void fisheyeCalib_(fisheyeCalibInfo infoStereoCalib)
 		std::cout << "    a" << i << ":\t" << IncidentVector::getA().at(i) << std::endl;
 	}
 
+	orthogonalPairsNum = calib.edges.size();
 	std::cout << "Orthogonal pairs: " << calib.edges.size() << std::endl;
+
+
 	long lines = 0;
 	long points = 0;
 	for (auto &pair : calib.edges) {
@@ -74,7 +81,8 @@ void fisheyeCalib_(fisheyeCalibInfo infoStereoCalib)
 	}
 	std::cout << "Lines: " << lines << std::endl;
 	std::cout << "Points: " << points << std::endl;
-
+	linesNum = lines;
+	pointsNum = points;
 
 	// Show an image of all edges
 //    cv::Mat img = cv::Mat::zeros(IncidentVector::getImgSize().height, IncidentVector::getImgSize().width, CV_8UC3);
@@ -150,14 +158,17 @@ void fisheyeUndistort_(std::string filePath_, Size imgSize, cv::Mat mapX,
 			Mat tempSrc = Mat::zeros(imgSize.height, imgSize.width, imgSrc.type());
 			//resize(imgSrc, imgSrc, imgSize);
 			imgSrc.copyTo(tempSrc(Rect(0, 0, imgSrc.cols, imgSrc.rows)));
-			remap(tempSrc, imgDst, mapX, mapY, INTER_LINEAR, BORDER_TRANSPARENT);
+			remap(tempSrc, imgDst, mapX, mapY, INTER_LINEAR, BORDER_TRANSPARENT, Scalar(0));
 		}
 		else
 		{
-			remap(imgSrc, imgDst, mapX, mapY, INTER_LINEAR, BORDER_TRANSPARENT);
+			remap(imgSrc, imgDst, mapX, mapY, INTER_LINEAR, BORDER_TRANSPARENT, Scalar(0));
 		}
 		imgUndistort.push_back(imgDst);
 		imwrite(fileNames[i].substr(0, fileNames[i].length() - 4) + "_undistort.jpg", imgDst);
+		cv::Mat subImg;
+		imgDst(Rect(cv::Point(1000, 500), cv::Point(4000, 2300))).copyTo(subImg);
+		imwrite(fileNames[i].substr(0, fileNames[i].length() - 4) + "_undistort_subImg.jpg", subImg);
 	}
 }
 
@@ -438,7 +449,7 @@ void rectify_(calibInfo infoStereoCalib)
 		std::string param = infoStereoCalib.calibFileL;
 		//std::cout << "Type parameter file name > ";
 		//std::cin >> param;
-		reproj.loadPrameters(param);
+		reproj.loadParameters(param);
 
 		// Print parameters
 		std::cout << "f: " << IncidentVector::getF() << "\nf0: " << IncidentVector::getF0() << std::endl;
@@ -456,11 +467,28 @@ void rectify_(calibInfo infoStereoCalib)
 
 		f_ = IncidentVector::getF();
 		int scale = 2;
-		reproj.calcMaps_fisheye_model_full(f_, mapxL, mapyL, scale);
+		reproj.calcMaps_fisheye_model_full(f_, mapxL, mapyL, scale, true);
 		reproj.saveReprojectData(infoStereoCalib.fisheye_reprojectL, true);
 
+		// correction of remap image
+		cv::Mat mapX_mask, mapY_mask;
+		threshold(mapxL, mapX_mask, 0, 255, THRESH_BINARY);
+		threshold(mapyL, mapY_mask, 0, 255, THRESH_BINARY);
+		mapX_mask.convertTo(mapX_mask, CV_8UC1);
+		mapY_mask.convertTo(mapY_mask, CV_8UC1);
+		cv::Mat mask_;
+		bitwise_and(mapX_mask, mapY_mask, mask_);
+
+		cv::Mat mapX_correct = Mat::zeros(mapxL.size(), mapxL.type());
+		cv::Mat mapY_correct = Mat::zeros(mapyL.size(), mapyL.type());
+		mapxL.copyTo(mapX_correct, mask_);
+		mapyL.copyTo(mapY_correct, mask_);
+
+		saveFloatMat(mapX_correct, infoStereoCalib.stereoCalib_undistort_mapxL);
+		saveFloatMat(mapY_correct, infoStereoCalib.stereoCalib_undistort_mapyL);
+
 		std::string filePathL = infoStereoCalib.calibChessImgPathL;//"D:\\studying\\stereo vision\\research code\\data\\20190719\\camera_jpg_2\\left"
-		fisheyeUndistort_(filePathL, mapxL.size(), mapxL, mapyL, imgUndistortL);
+		fisheyeUndistort_(filePathL, mapxL.size(), mapX_correct, mapY_correct, imgUndistortL);
 	}
 	{
 		Reprojection reproj;
@@ -469,7 +497,7 @@ void rectify_(calibInfo infoStereoCalib)
 		std::string param = infoStereoCalib.calibFileR;// "resCalibR.xml";
 		//std::cout << "Type parameter file name > ";
 		//std::cin >> param;
-		reproj.loadPrameters(param);
+		reproj.loadParameters(param);
 
 		// Print parameters
 		std::cout << "f: " << IncidentVector::getF() << "\nf0: " << IncidentVector::getF0() << std::endl;
@@ -485,14 +513,34 @@ void rectify_(calibInfo infoStereoCalib)
 		reproj.theta2radius();
 		//    reproj.saveRadius2Theta("Stereographic.dat");
 
+		int projection = IncidentVector::getProjection();
 		f_ = IncidentVector::getF();
 		int scale = 2;
-		reproj.calcMaps_fisheye_model_full(f_, mapxR, mapyR, scale);
+		reproj.calcMaps_fisheye_model_full(f_, mapxR, mapyR, scale, true);
 		reproj.saveReprojectData(infoStereoCalib.fisheye_reprojectR, true);
 
+		// correction of remap image
+		cv::Mat mapX_mask, mapY_mask;
+		threshold(mapxR, mapX_mask, 0, 255, THRESH_BINARY);
+		threshold(mapyR, mapY_mask, 0, 255, THRESH_BINARY);
+		mapX_mask.convertTo(mapX_mask, CV_8UC1);
+		mapY_mask.convertTo(mapY_mask, CV_8UC1);
+		cv::Mat mask_;
+		bitwise_and(mapX_mask, mapY_mask, mask_);
+
+		cv::Mat mapX_correct = Mat::zeros(mapxR.size(), mapxR.type());
+		cv::Mat mapY_correct = Mat::zeros(mapxR.size(), mapxR.type());
+		mapxR.copyTo(mapX_correct, mask_);
+		mapyR.copyTo(mapY_correct, mask_);
+
+		saveFloatMat(mapX_correct, infoStereoCalib.stereoCalib_undistort_mapxR);
+		saveFloatMat(mapY_correct, infoStereoCalib.stereoCalib_undistort_mapyR);
+
 		std::string filePathR = infoStereoCalib.calibChessImgPathR;// "D:\\studying\\stereo vision\\research code\\data\\20190719\\camera_jpg_2\\right";
-		fisheyeUndistort_(filePathR, mapxR.size(), mapxR, mapyR, imgUndistortR);
+		fisheyeUndistort_(filePathR, mapxR.size(), mapX_correct, mapY_correct, imgUndistortR);
 	}
+
+	return;
 
 	douVecPt2f ptsLeft, ptsRight;
 	douVecPt3f ptsReal;
@@ -554,21 +602,6 @@ void rectify_(calibInfo infoStereoCalib)
 	fn << "Rectify_Q" << Q_;
 	fn.release();
 
-	FileStorage fn_1(infoStereoCalib.stereoCalib_undistort_mapxL, FileStorage::WRITE);
-	fn_1 << "Fisheye_Undistort_Map_mapxL" << mapxL;
-	fn_1.release();
-
-	FileStorage fn_2(infoStereoCalib.stereoCalib_undistort_mapyL, FileStorage::WRITE);
-	fn_2 << "Fisheye_Undistort_Map_mapyL" << mapyL;
-	fn_2.release();
-
-	FileStorage fn_3(infoStereoCalib.stereoCalib_undistort_mapxR, FileStorage::WRITE);
-	fn_3 << "Fisheye_Undistort_Map_mapxR" << mapxR;
-	fn_3.release();
-
-	FileStorage fn_4(infoStereoCalib.stereoCalib_undistort_mapyR, FileStorage::WRITE);
-	fn_4 << "Fisheye_Undistort_Map_mapyR" << mapyR;
-	fn_4.release();
 
 	FileStorage fn_5(infoStereoCalib.stereoCalib_rectify_mapxL, FileStorage::WRITE);
 	fn_5 << "Stereo_Rectify_Map_mapxL" << lmapx;
@@ -585,4 +618,63 @@ void rectify_(calibInfo infoStereoCalib)
 	FileStorage fn_8(infoStereoCalib.stereoCalib_rectify_mapyR, FileStorage::WRITE);
 	fn_8 << "Stereo_Rectify_Map_mapyR" << rmapy;
 	fn_8.release();
+}
+
+void saveFloatMat(cv::Mat& src, std::string filename)
+{
+	if(src.type() != CV_32F)
+	{
+		src.convertTo(src, CV_32F);
+	}
+
+	std::ofstream ofs(filename);
+	ofs << src.rows << ' ' << src.cols << endl;
+
+	for (int y = 0; y < src.rows; ++y) {
+		for(int x = 0; x < src.cols - 1; ++x)
+		{
+			ofs << src.at<float>(y, x) << ' ';
+		}
+		ofs << src.at<float>(y, src.cols - 1) << std::endl;
+	}
+
+	ofs.close();
+}
+
+void loadFloatMat(std::string filename, cv::Mat& dst)
+{
+	std::ifstream inFile(filename);
+
+	if (!inFile)
+	{
+		std::cout << "fail to open .dat file...";
+		return;
+	}
+
+	stringstream ss;
+
+	string info;
+	getline(inFile, info);
+	ss.str(info);
+	double imgW = 0, imgH = 0;
+	ss >> imgH >> imgW;
+
+	dst.create(imgH, imgW, CV_32FC1);
+
+	string temp;
+	int curRow = 0;
+	while(getline(inFile, temp))
+	{
+		ss.clear();
+		ss.str(temp);
+
+		int curCol = 0;
+		double val;
+		while(ss >> val)
+		{
+			dst.at<float>(curRow, curCol) = val;
+			curCol++;
+		}
+		curRow++;
+	}
 }

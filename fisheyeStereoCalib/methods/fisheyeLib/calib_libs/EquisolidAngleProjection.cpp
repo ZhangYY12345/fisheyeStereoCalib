@@ -21,7 +21,14 @@ double EquisolidAngleProjection::aoi(double r)
         t += a[i] * pow(r/f0, 3+2*i);
     }
     t *= f0 / (2 * f);
-    t = 2 * asin(t);
+	if (t > 1)
+	{
+		t = CV_2PI;
+	}
+	else
+	{
+		t = 2 * asin(t);
+	}
     
     return t;
 }

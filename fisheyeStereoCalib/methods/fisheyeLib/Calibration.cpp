@@ -8,6 +8,10 @@
 
 #include "Calibration.h"
 
+extern long pointsNum;
+extern long linesNum;
+extern int orthogonalPairsNum;
+
 void Calibration::setParameters(std::vector<Pair>& edges, double& f, double& f0, cv::Point2d& center, cv::Size2i& img_size, int a_size) {
     std::vector<double> a(a_size, 0);
     IncidentVector::setParameters(f, f0, a, img_size, center);
@@ -151,17 +155,21 @@ void Calibration::calibrate(bool divide)
     
     double j1 = J1(), j2 = J2(), j3 = J3();
     double gamma[3];
-    C = 0.0001;
+    C = 0.00001;
 
     if (divide) {
         gamma[0] = j1; gamma[1] = j2; gamma[2] = j3;
     } else {
-        gamma[0]= 0;
-        for (auto &pair : edges) {
-            gamma[0] += pair.edge[0].size() + pair.edge[1].size();
-        }
-        gamma[1] = edges.size();
-        gamma[2] = gamma[1]/2;
+        //gamma[0]= 0;
+        //for (auto &pair : edges) {
+        //    gamma[0] += pair.edge[0].size() + pair.edge[1].size();
+        //}
+        //gamma[1] = edges.size();
+        //gamma[2] = gamma[1]/2;
+
+		gamma[0] = pointsNum;
+		gamma[1] = linesNum;
+		gamma[2] = orthogonalPairsNum;
         
         //gamma[0] = gamma[1] = gamma[2] = 1;
     }
@@ -189,7 +197,7 @@ void Calibration::calibrate(bool divide)
             pair.calcM();
             pair.calcNormal();
             pair.calcLine();
-            pair.calcDerivatives();
+            pair_calcDerivatives(pair);
         }
         
         //    ( 3 ) それらを用いてJ のパラメータに関する1 階微分Jc，2 階微分Jcc0 を計算する
@@ -219,7 +227,7 @@ void Calibration::calibrate(bool divide)
             }
             //    ( 4 ) 次の連立1次方程式を解いてΔu0, Δv0, Δf, Δa1, ... を計算する．
 			//计算Δu0,Δv0,Δf,Δa1, ...：参数移动步长
-			bool solveFlag =  cv::solve(left.mul(cmat), -right, delta);
+			bool solveFlag =  cv::solve(left.mul(cmat), -right, delta, cv::DECOMP_SVD);
             std::cout << solveFlag<<std::endl;
             std::cout << "------------------------ Iteration "<< iterations << " -------------------------" << std::endl;
             std::cout << "Delta: " << delta << std::endl;
@@ -358,7 +366,7 @@ void Calibration::calibrate2()
                 pair.calcM();
                 pair.calcNormal();
                 pair.calcLine();
-                pair.calcDerivatives();
+                pair_calcDerivatives(pair);
             }
             
             //    ( 3 ) それらを用いてJ のパラメータに関する1 階微分Jc，2 階微分Jcc0 を計算する
@@ -381,7 +389,7 @@ void Calibration::calibrate2()
                     cmat.at<double>(i,i) = 1+C;
                 }
                 //    ( 4 ) 次の連立1次方程式を解いてΔu0, Δv0, Δf, Δa1, ... を計算する．
-                cv::solve(left.mul(cmat), -right, delta);
+                cv::solve(left.mul(cmat), -right, delta, cv::DECOMP_SVD);
 //                std::cout << "------------------------ Iteration "<< iterations << " -------------------------" << std::endl;
 //                std::cout << "Delta: " << delta << std::endl;
                 
