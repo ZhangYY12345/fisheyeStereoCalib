@@ -21,7 +21,7 @@ int main()
 	fisheyeCalib_(calibInfoR); 
 
 	waitKey();*/
-	
+	/*
 	calibInfo infoCalib;
 	infoCalib.calibFileL = "./20191017-1-2/resCalibL.xml";
 	infoCalib.calibFileR = "./20191017-1-2/resCalibR.xml";
@@ -33,40 +33,55 @@ int main()
 	infoCalib.chessRowNum = 6;
 	infoCalib.chessColNum = 9;
 	infoCalib.stereoCalib = "./20191017-1-2/unditortStereoCalib.xml";
-	infoCalib.stereoCalib_undistort_mapxL = "./20191017-1-2/undistort_mapxL.xml";
-	infoCalib.stereoCalib_undistort_mapyL = "./20191017-1-2/undistort_mapyL.xml";
-	infoCalib.stereoCalib_undistort_mapxR = "./20191017-1-2/undistort_mapxR.xml";
-	infoCalib.stereoCalib_undistort_mapyR = "./20191017-1-2/undistort_mapyR.xml";
+	infoCalib.stereoCalib_undistort_mapxL = "./20191017-1-2/undistort_mapxL.dat";
+	infoCalib.stereoCalib_undistort_mapyL = "./20191017-1-2/undistort_mapyL.dat";
+	infoCalib.stereoCalib_undistort_mapxR = "./20191017-1-2/undistort_mapxR.dat";
+	infoCalib.stereoCalib_undistort_mapyR = "./20191017-1-2/undistort_mapyR.dat";
 
 	infoCalib.stereoCalib_rectify_mapxL = "./20191017-1-2/rectify_mapxL.xml";
 	infoCalib.stereoCalib_rectify_mapyL = "./20191017-1-2/rectify_mapyL.xml";
 	infoCalib.stereoCalib_rectify_mapxR = "./20191017-1-2/rectify_mapxR.xml";
 	infoCalib.stereoCalib_rectify_mapyR = "./20191017-1-2/rectify_mapyR.xml";
 
-	rectify_(infoCalib);
+	//rectify_(infoCalib);*/
 
-	string calibXml = "./20191017-1-2/resCalibL.xml";
-	map<cv::Point2d, vector<cv::Vec4d>, myCompare> map2Dst;
-	int dstH, dstW;
-	fisheyeCalcMap(calibXml, map2Dst, dstH, dstW);
+	//std::string path_ = "D:\\studying\\stereo vision\\research code\\data\\20191017-2\\left\\1L.jpg";
+	std::string path__ = "D:\\studying\\stereo vision\\research code\\data\\20191017-3\\left\\real_fisheye_stereoGraphic\\ideal_stereographic\\left_undistort.jpg";
 
-
-	std::string path_ = "D:\\studying\\stereo vision\\research code\\data\\20191017-2\\left\\1L.jpg";
 	//fisheyeExpandApply(path_);
-	Mat imgSrc = imread(path_);
+	Mat imgSrc = imread(path__);
 	cv::Mat imgDistort;
-	fisheyeRemap(imgSrc, imgDistort, map2Dst, dstH, dstW);
+
 
 	Mat imgDst;
-	std::string resPath_pre = path_.substr(0, path_.length() - 4);
+	std::string resPath_pre = path__.substr(0, path__.length() - 4);
+	// for distorted fisheye images
+	// for left camera:
+	// center = cv::Point(1283, 724)
+	// radius = 1199
+	// for right camera
+	// center = cv::Point(1283, 722)
+	// radius = 1187
 
-	fisheyeExpandTest(imgSrc, imgDst, STEREOGRAPHIC, resPath_pre + "_STEREOGRAPHIC");
 
-	fisheyeExpandTest(imgSrc, imgDst, EQUIDISTANCE, resPath_pre + "_EQUIDISTANCE");
+	// for undistorted fisheye images
+	// for ideal equidistance model and ideal equisolidAngle model
+	// center = cv::Point(1560, 940)
+	// radius = 1286
 
-	fisheyeExpandTest(imgSrc, imgDst, EQUISOLID, resPath_pre + "_EQUISOLID");
+	// for ideal stereographic model
+	// center = cv::Point(2560, 1440)
+	// radius = 2270
+	cv::Point2i center = cv::Point(2560, 1440);
+	int radius = 2270;
 
-	fisheyeExpandTest(imgSrc, imgDst, ORTHOGONAL, resPath_pre + "_ORTHOGONAL");
+	fisheyeExpandTest(imgSrc, imgDst, STEREOGRAPHIC, resPath_pre + "_STEREOGRAPHIC", center, radius);
+
+	//fisheyeExpandTest(imgSrc, imgDst, EQUIDISTANCE, resPath_pre + "_EQUIDISTANCE", center, radius);
+
+	//fisheyeExpandTest(imgSrc, imgDst, EQUISOLID, resPath_pre + "_EQUISOLID", center, radius);
+
+	//fisheyeExpandTest(imgSrc, imgDst, ORTHOGONAL, resPath_pre + "_ORTHOGONAL", center, radius);
 
 	waitKey();
 
