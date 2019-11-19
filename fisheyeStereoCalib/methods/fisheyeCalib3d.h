@@ -5,7 +5,7 @@
 
 void createCalibPicCircle(int width = 2560, int height = 1440, int numX = 30, int numY = 18);
 void createCalibPicSquare(int width = 2560, int height = 1440, int numX = 30, int numY = 18);
-
+void createStripePic_withSquare(int width = 2560, int height = 1440, int numX = 30, int numY = 18, int slope = 5);
 /***********************************************************
  *************  general camera calibration   ***************
  ***********************************************************

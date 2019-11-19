@@ -70,6 +70,55 @@ void createCalibPicSquare(int width, int height, int numX, int numY)
 
 }
 
+void createStripePic_withSquare(int width, int height, int numX, int numY, int slope)
+{
+	int sideLen = min(width / numX, height / numY);
+
+	numX = width / sideLen;
+	numY = height / sideLen;
+
+	width = sideLen * numX;
+	height = sideLen * numY;
+
+	Mat whiteImg(sideLen, sideLen, CV_8UC1, 255);
+	Mat imageStripeH1 = Mat::zeros(height, width, CV_8UC1);
+	Mat imageStripeH2 = Mat::zeros(height, width, CV_8UC1);
+	Mat imageStripeV1 = Mat::zeros(height, width, CV_8UC1);
+	Mat imageStripeV2 = Mat::zeros(height, width, CV_8UC1);
+
+	// Make vertical pattern
+	for (int j = 0; j < numY; j++)
+	{
+		for (int i = 0; i < numX; i++,i++)
+		{
+			whiteImg.copyTo(imageStripeV1(Rect(i * sideLen, j * sideLen, sideLen, sideLen)));
+		}
+	}
+	imageStripeV2 = ~imageStripeV1;
+
+	cv::blur(imageStripeV1, imageStripeV1, cv::Size2i(slope + 1, 1));
+	cv::blur(imageStripeV2, imageStripeV2, cv::Size2i(slope + 1, 1));
+	imwrite("pattern0_square.jpg", imageStripeV1);
+	imwrite("pattern1_square.jpg", imageStripeV2);
+
+
+	// Make horizontal pattern
+	for (int j = 0; j < numY; j++,j++)
+	{
+		for (int i = 0; i < numX; i++)
+		{
+			whiteImg.copyTo(imageStripeH1(Rect(i * sideLen, j * sideLen, sideLen, sideLen)));
+		}
+	}
+	imageStripeH2 = ~imageStripeH1;
+
+	cv::blur(imageStripeH1, imageStripeH1, cv::Size2i(1,slope + 1));
+	cv::blur(imageStripeH2, imageStripeH2, cv::Size2i(1, slope + 1));
+
+	imwrite("pattern2_square.jpg", imageStripeH1);
+	imwrite("pattern3_square.jpg", imageStripeH2);
+}
+
 /**
  * \brief open the target camera and capture images for calibration
  *			\notice that the location of the camera is supposed to be fixed during the capturing

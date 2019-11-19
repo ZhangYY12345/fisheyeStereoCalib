@@ -7,6 +7,9 @@ using namespace std;
 
 int main()
 {
+	createStripePic_withSquare();
+	createCalibPicSquare();
+
 	/*
 	//single fisheye camera calibration
 	fisheyeCalibInfo calibInfoL, calibInfoR;

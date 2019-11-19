@@ -52,7 +52,7 @@ void fisheyeCalib_(fisheyeCalibInfo infoStereoCalib)
 	//    a_size = 5;
 	//    IncidentVector::setA(a);
 	//    int x = atoi(argv[2]), y = atoi(argv[3]), f = atoi(argv[4]);
-	//    double x = 953., y = 600., f = 401.;
+	//    double x = 953., y = 600., f = 401.; 
 	//    IncidentVector::setF(f);
 	//    IncidentVector::setCenter(cv::Point2d(793,606));
 	//    IncidentVector::setF0((int)f);
