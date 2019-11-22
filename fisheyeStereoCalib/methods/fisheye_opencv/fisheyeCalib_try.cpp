@@ -2,7 +2,7 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-camMode cur_fisheye_mode = EQUISOLID;
+camMode cur_fisheye_mode = IDEAL_PERSPECTIVE;
 
 namespace my_cv {
 	namespace
@@ -695,8 +695,27 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 
         double theta_d = theta + k[0]*theta3 + k[1]*theta5 + k[2]*theta7 + k[3]*theta9;
 
+		double r_d;
+		switch (mode)
+		{
+		case STEREOGRAPHIC:
+			r_d = 2 * tan(theta_d / 2);		//r = 2f * tan(theta / 2)
+			break;
+		case EQUIDISTANCE:
+			r_d = theta_d;						// r = f * theta
+			break;
+		case EQUISOLID:
+			r_d = 2 * sin(theta_d / 2);		// r = 2f * sin(theta / 2)
+			break;
+		case ORTHOGONAL:
+			r_d = sin(theta_d);				// r = f * sin(theta)
+			break;
+		default:
+			r_d = tan(theta_d);				//r = f * tan(theta)
+		}
+
         double inv_r = r > 1e-8 ? 1.0/r : 1;
-        double cdist = r > 1e-8 ? theta_d * inv_r : 1;
+        double cdist = r > 1e-8 ? r_d * inv_r : 1;
 
         cv::Vec2d xd1 = x * cdist;
         cv::Vec2d xd3(xd1[0] + alpha*xd1[1], xd1[1]);
@@ -710,10 +729,10 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
         if (isJacobianNeeded)
         {
             //cv::Vec3d Xi = pdepth == CV_32F ? (cv::Vec3d)Xf[i] : Xd[i];
-            //cv::Vec3d Y = aff*Xi;
+            //cv::Vec3d Y = aff*Xi;				Y---->相机坐标系
             double dYdR[] = { Xi[0], Xi[1], Xi[2], 0, 0, 0, 0, 0, 0,
                               0, 0, 0, Xi[0], Xi[1], Xi[2], 0, 0, 0,
-                              0, 0, 0, 0, 0, 0, Xi[0], Xi[1], Xi[2] };
+                              0, 0, 0, 0, 0, 0, Xi[0], Xi[1], Xi[2] };//?todo
 
             cv::Matx33d dYdom_data = cv::Matx<double, 3, 9>(dYdR) * dRdom.t();
             const cv::Vec3d *dYdom = (cv::Vec3d*)dYdom_data.val;
@@ -721,7 +740,7 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
             cv::Matx33d dYdT_data = cv::Matx33d::eye();
             const cv::Vec3d *dYdT = (cv::Vec3d*)dYdT_data.val;
 
-            //cv::Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);
+            //cv::Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);	x--->图像物理坐标系
             cv::Vec3d dxdom[2];
             dxdom[0] = (1.0/Y[2]) * dYdom[0] - x[0]/Y[2] * dYdom[2];
             dxdom[1] = (1.0/Y[2]) * dYdom[1] - x[1]/Y[2] * dYdom[2];
@@ -741,7 +760,25 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 
             // Angle of the incoming ray:
             //double theta = atan(r);
-            double dthetadr = 1.0/(1+r2);
+            double dthetadr;
+			switch (mode)
+			{
+			case STEREOGRAPHIC:
+				dthetadr = 4.0 / (4.0 + r2);		//r = 2f * tan(theta / 2)
+				break;
+			case EQUIDISTANCE:
+				dthetadr = 1;						// r = f * theta
+				break;
+			case EQUISOLID:
+				dthetadr = 2.0 / sqrt(4.0 - r2);		// r = 2f * sin(theta / 2)
+				break;
+			case ORTHOGONAL:
+				dthetadr = 1.0 / sqrt(1.0 - r2);				// r = f * sin(theta)
+				break;
+			default:
+				dthetadr = 1.0/(1+r2);				//r = f * tan(theta)
+			}
+
             cv::Vec3d dthetadom = dthetadr * drdom;
             cv::Vec3d dthetadT  = dthetadr *  drdT;
 
@@ -753,9 +790,40 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 
             //double inv_r = r > 1e-8 ? 1.0/r : 1;
             //double cdist = r > 1e-8 ? theta_d / r : 1;
-            cv::Vec3d dcdistdom = inv_r * (dtheta_ddom - cdist*drdom);
-            cv::Vec3d dcdistdT  = inv_r * (dtheta_ddT  - cdist*drdT);
-            cv::Vec4d dcdistdk  = inv_r *  dtheta_ddk;
+
+            //cv::Vec3d dcdistdom = inv_r * (dtheta_ddom - cdist*drdom);
+            //cv::Vec3d dcdistdT  = inv_r * (dtheta_ddT  - cdist*drdT);
+            //cv::Vec4d dcdistdk  = inv_r *  dtheta_ddk;
+			cv::Vec3d dcdistdom;
+			cv::Vec3d dcdistdT;
+			cv::Vec4d dcdistdk;
+			switch (mode)
+			{
+			case STEREOGRAPHIC:
+				dcdistdom = inv_r * ((1.0 / pow(cos(theta_d / 2.0), 2)) * dtheta_ddom - cdist * drdom);	//r = 2f * tan(theta / 2)
+				dcdistdT = inv_r * ((1.0 / pow(cos(theta_d / 2.0), 2)) * dtheta_ddT - cdist * drdT);
+				dcdistdk = inv_r * (1.0 / pow(cos(theta_d / 2.0), 2)) * dtheta_ddk;
+				break;
+			case EQUIDISTANCE:
+				dcdistdom = inv_r * (dtheta_ddom - cdist * drdom);	// r = f * theta
+				dcdistdT = inv_r * (dtheta_ddT - cdist * drdT);
+				dcdistdk = inv_r *  dtheta_ddk;
+				break;
+			case EQUISOLID:
+				dcdistdom = inv_r * (cos(theta_d / 2.0) * dtheta_ddom - cdist * drdom);	// r = 2f * sin(theta / 2)
+				dcdistdT = inv_r * (cos(theta_d / 2.0) * dtheta_ddT - cdist * drdT);
+				dcdistdk = inv_r * cos(theta_d / 2.0) * dtheta_ddk;
+				break;
+			case ORTHOGONAL:
+				dcdistdom = inv_r * (cos(theta_d) * dtheta_ddom - cdist * drdom);	// r = f * sin(theta)
+				dcdistdT = inv_r * (cos(theta_d) * dtheta_ddT - cdist * drdT);
+				dcdistdk = inv_r * cos(theta_d) * dtheta_ddk;
+				break;
+			default:
+				dcdistdom = inv_r * ((1.0 / pow(cos(theta_d), 2)) * dtheta_ddom - cdist * drdom);	//r = f * tan(theta)
+				dcdistdT = inv_r * ((1.0 / pow(cos(theta_d), 2)) * dtheta_ddT - cdist * drdT);
+				dcdistdk = inv_r * (1.0 / pow(cos(theta_d), 2)) * dtheta_ddk;
+			}
 
             //cv::Vec2d xd1 = x * cdist;
             cv::Vec4d dxd1dk[2];
@@ -869,8 +937,27 @@ void my_cv::fisheye::distortPoints(cv::InputArray undistorted, cv::OutputArray d
 
         double theta_d = theta + k[0]*theta3 + k[1]*theta5 + k[2]*theta7 + k[3]*theta9;
 
+		double r_d;
+		switch (mode)
+		{
+		case STEREOGRAPHIC:
+			r_d = 2 * tan(theta_d / 2);		//r = 2f * tan(theta / 2)
+			break;
+		case EQUIDISTANCE:
+			r_d = theta_d;						// r = f * theta
+			break;
+		case EQUISOLID:
+			r_d = 2 * sin(theta_d / 2);		// r = 2f * sin(theta / 2)
+			break;
+		case ORTHOGONAL:
+			r_d = sin(theta_d);				// r = f * sin(theta)
+			break;
+		default:
+			r_d = tan(theta_d);				//r = f * tan(theta)
+		}
+
         double inv_r = r > 1e-8 ? 1.0/r : 1;
-        double cdist = r > 1e-8 ? theta_d * inv_r : 1;
+        double cdist = r > 1e-8 ? r_d * inv_r : 1;
 
         cv::Vec2d xd1 = x * cdist;
         cv::Vec2d xd3(xd1[0] + alpha*xd1[1], xd1[1]);
@@ -1100,8 +1187,27 @@ void my_cv::fisheye::initUndistortRectifyMap( cv::InputArray K, cv::InputArray D
 
                 double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta4*theta4;
                 double theta_d = theta * (1 + k[0]*theta2 + k[1]*theta4 + k[2]*theta6 + k[3]*theta8);
+				
+            	double r_d;
+				switch (mode)
+				{
+				case STEREOGRAPHIC:
+					r_d = 2 * tan(theta_d / 2);		//r = 2f * tan(theta / 2)
+					break;
+				case EQUIDISTANCE:
+					r_d = theta_d;						// r = f * theta
+					break;
+				case EQUISOLID:
+					r_d = 2 * sin(theta_d / 2);		// r = 2f * sin(theta / 2)
+					break;
+				case ORTHOGONAL:
+					r_d = sin(theta_d);				// r = f * sin(theta)
+					break;
+				default:
+					r_d = tan(theta_d);				//r = f * tan(theta)
+				}
 
-                double scale = (r == 0) ? 1.0 : theta_d / r;
+                double scale = (r == 0) ? 1.0 : r_d / r;
                 u = f[0]*x*scale + c[0];
                 v = f[1]*y*scale + c[1];
             }
