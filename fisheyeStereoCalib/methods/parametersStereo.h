@@ -29,7 +29,7 @@ enum StereoMatchingAlgorithms
 	ADAPTIVE_WEIGHT_MEDIAN = 10,
 };
 
-enum PCLFILTERS_
+enum PCL_FILTERS_
 {
 	PASS_THROUGH = 0,					//使用直通滤波器对点云进行滤波处理
 	VOXEL_GRID = 1,						//使用VoxelGrid滤波器进行下采样：用体素内所有点的重心来近似显示体素中其他点
@@ -48,10 +48,10 @@ enum CONSENSUS_MODEL_TYPE_
 };
 
 //fisheye image correction///////from globalInclude.h
-//typedef cv::Mat			Mat;
+//typedef cv::Mat			cv::Mat;
 //typedef cv::Point		Point;
 //typedef cv::Point2i		Point2i;
-//typedef cv::Size		Size;
+//typedef cv::Size		cv::Size;
 //typedef cv::Vec3b		Vec3b;
 //typedef cv::Scalar		Scalar;
 //typedef cv::Rect		Rect;
@@ -79,13 +79,14 @@ typedef enum
 	STEREOGRAPHIC,
 	EQUIDISTANCE,
 	EQUISOLID,
-	ORTHOGONAL
+	ORTHOGONAL,
+	IDEAL_PERSPECTIVE,
 }camMode;
 
 typedef enum
 {
 	PERSPECTIVE,
-	LATITUDE_LONGTITUDE,
+	LATITUDE_LONGTITUDE,	//经纬度
 }distMapMode;
 
 
@@ -107,6 +108,6 @@ std::vector<_Tp> convertMat2Vector(const cv::Mat mat)
 	}
 
 	cv::Mat mat_ = mat.clone();
-	std::vector<_Tp> vecMat = mat_.reshape(0, 1);
+	std::vector<_Tp> veccv::Mat = mat_.reshape(0, 1);
 	return (std::vector<_Tp>)(mat_.reshape(0, 1));
 }

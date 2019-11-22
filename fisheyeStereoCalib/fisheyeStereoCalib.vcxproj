@@ -135,6 +135,7 @@
     <ClCompile Include="methods\fisheyeLib\Pair.cpp" />
     <ClCompile Include="methods\fisheyeLib\Pattern.cpp" />
     <ClCompile Include="methods\fisheyeLib\Reprojection.cpp" />
+    <ClCompile Include="methods\fisheye_opencv\fisheyeCalib_try.cpp" />
     <ClCompile Include="methods\parametersStereo.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -155,6 +156,7 @@
     <ClInclude Include="methods\fisheyeLib\parameterCalib_.h" />
     <ClInclude Include="methods\fisheyeLib\Pattern.h" />
     <ClInclude Include="methods\fisheyeLib\Reprojection.h" />
+    <ClInclude Include="methods\fisheye_opencv\fisheyeCalib_try.h" />
     <ClInclude Include="methods\parametersStereo.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -52,7 +52,7 @@ void fisheyeCalib_(fisheyeCalibInfo infoStereoCalib)
 	//    a_size = 5;
 	//    IncidentVector::setA(a);
 	//    int x = atoi(argv[2]), y = atoi(argv[3]), f = atoi(argv[4]);
-	//    double x = 953., y = 600., f = 401.;
+	//    double x = 953., y = 600., f = 401.; 
 	//    IncidentVector::setF(f);
 	//    IncidentVector::setCenter(cv::Point2d(793,606));
 	//    IncidentVector::setF0((int)f);
@@ -137,7 +137,7 @@ void fisheyeCalib_(fisheyeCalibInfo infoStereoCalib)
 
 }
 
-void fisheyeUndistort_(std::string filePath_, Size imgSize, cv::Mat mapX,
+void fisheyeUndistort_(std::string filePath_, cv::Size imgSize, cv::Mat mapX,
 	cv::Mat mapY, std::vector<cv::Mat>& imgUndistort)
 {
 	//load all the images in the folder
@@ -151,11 +151,11 @@ void fisheyeUndistort_(std::string filePath_, Size imgSize, cv::Mat mapX,
 	}
 	for(int i = 0; i < fileNames.size(); i++)
 	{
-		Mat imgSrc = imread(fileNames[i]);
-		Mat imgDst;
+		cv::Mat imgSrc = imread(fileNames[i]);
+		cv::Mat imgDst;
 		if(imgSrc.size().width < imgSize.width && imgSrc.size().height < imgSize.height)
 		{
-			Mat tempSrc = Mat::zeros(imgSize.height, imgSize.width, imgSrc.type());
+			cv::Mat tempSrc = cv::Mat::zeros(imgSize.height, imgSize.width, imgSrc.type());
 			//resize(imgSrc, imgSrc, imgSize);
 			imgSrc.copyTo(tempSrc(Rect(0, 0, imgSrc.cols, imgSrc.rows)));
 			remap(tempSrc, imgDst, mapX, mapY, INTER_LINEAR, BORDER_TRANSPARENT, Scalar(0));
@@ -197,14 +197,14 @@ bool ptsDetect_calib(std::vector<cv::Mat> imgsL, std::vector<cv::Mat> imgsR, dou
 	}
 
 	//
-	Size patternSize(corRowNum, corColNum);		//0:the number of inner corners in each row of the chess board
+	cv::Size patternSize(corRowNum, corColNum);		//0:the number of inner corners in each row of the chess board
 																//1:the number of inner corners in each col of the chess board
 
 	//detect the inner corner in each chess image
 	for (int i = 0; i < imgsL.size(); i++)
 	{
-		Mat img_left = imgsL[i];
-		Mat img_right = imgsR[i];
+		cv::Mat img_left = imgsL[i];
+		cv::Mat img_right = imgsR[i];
 
 		if (img_left.rows != img_right.rows && img_left.cols != img_right.cols)
 		{
@@ -219,15 +219,15 @@ bool ptsDetect_calib(std::vector<cv::Mat> imgsL, std::vector<cv::Mat> imgsR, dou
 			CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 		if (patternFound_left && patternFound_right)
 		{
-			Mat imgL_gray, imgR_gray;
+			cv::Mat imgL_gray, imgR_gray;
 			cvtColor(img_left, imgL_gray, COLOR_RGB2GRAY);
-			cornerSubPix(imgL_gray, cornerPts_left, Size(3, 3), Size(-1, -1),
+			cornerSubPix(imgL_gray, cornerPts_left, cv::Size(3, 3), cv::Size(-1, -1),
 				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
 			ptsL.push_back(cornerPts_left);
 			drawChessboardCorners(img_left, patternSize, cornerPts_left, patternFound_left);
 
 			cvtColor(img_right, imgR_gray, COLOR_RGB2GRAY);
-			cornerSubPix(imgR_gray, cornerPts_right, Size(3, 3), Size(-1, -1),
+			cornerSubPix(imgR_gray, cornerPts_right, cv::Size(3, 3), cv::Size(-1, -1),
 				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
 			ptsR.push_back(cornerPts_right);
 			drawChessboardCorners(img_right, patternSize, cornerPts_right, patternFound_right);
@@ -235,7 +235,7 @@ bool ptsDetect_calib(std::vector<cv::Mat> imgsL, std::vector<cv::Mat> imgsR, dou
 	}
 
 	//two cameras calibration
-	Size2f squareSize(100, 100);		//the real size of each grid in the chess board,which is measured manually by ruler
+	cv::Size2f squareSize(100, 100);		//the real size of each grid in the chess board,which is measured manually by ruler
 
 	std::vector<Point3f> tempPts;
 	for (int i = 0; i < patternSize.height; i++)
@@ -282,9 +282,9 @@ void fisheyeCalcMap(std::string calibXml, map<cv::Point2d, vector<cv::Vec4d>, my
 		a.push_back((static_cast<double>(*it)));
 	}
 
-	cv::Mat mapx = Mat(img_size.height, img_size.width, CV_64FC1);
-	cv::Mat mapy = Mat(img_size.height, img_size.width, CV_64FC1);
-	cv::Mat mapphi = Mat(img_size.height, img_size.width, CV_64FC1);
+	cv::Mat mapx = cv::Mat(img_size.height, img_size.width, CV_64FC1);
+	cv::Mat mapy = cv::Mat(img_size.height, img_size.width, CV_64FC1);
+	cv::Mat mapphi = cv::Mat(img_size.height, img_size.width, CV_64FC1);
 
 	for(int y = 0; y < img_size.height; y++)
 	{
@@ -333,53 +333,53 @@ void fisheyeCalcMap(std::string calibXml, map<cv::Point2d, vector<cv::Vec4d>, my
 			//(x_ceil, y_ceil)
 			if(map2Dst.find(cv::Point2d(x_ceil, y_ceil)) == map2Dst.end())
 			{
-				Vec4d vec(x, y, x_diff, y_diff);
+				cv::Vec4d vec(x, y, x_diff, y_diff);
 				vector<cv::Vec4d> vecVec4d;
 				vecVec4d.push_back(vec);
 				map2Dst[cv::Point2d(x_ceil, y_ceil)] = vecVec4d;
 			}
 			else
 			{
-				Vec4d vec(x, y, x_diff, y_diff);
+				cv::Vec4d vec(x, y, x_diff, y_diff);
 				map2Dst[cv::Point2d(x_ceil, y_ceil)].push_back(vec);
 			}
 			//(x_ceil, y_floor)
 			if (map2Dst.find(cv::Point2d(x_ceil, y_floor)) == map2Dst.end())
 			{
-				Vec4d vec(x, y, x_diff, 1 + y_diff);
+				cv::Vec4d vec(x, y, x_diff, 1 + y_diff);
 				vector<cv::Vec4d> vecVec4d;
 				vecVec4d.push_back(vec);
 				map2Dst[cv::Point2d(x_ceil, y_floor)] = vecVec4d;
 			}
 			else
 			{
-				Vec4d vec(x, y, x_diff, 1 + y_diff);
+				cv::Vec4d vec(x, y, x_diff, 1 + y_diff);
 				map2Dst[cv::Point2d(x_ceil, y_floor)].push_back(vec);
 			}
 			//(x_floor, y_ceil)
 			if (map2Dst.find(cv::Point2d(x_floor, y_ceil)) == map2Dst.end())
 			{
-				Vec4d vec(x, y, 1 + x_diff, y_diff);
+				cv::Vec4d vec(x, y, 1 + x_diff, y_diff);
 				vector<cv::Vec4d> vecVec4d;
 				vecVec4d.push_back(vec);
 				map2Dst[cv::Point2d(x_floor, y_ceil)] = vecVec4d;
 			}
 			else
 			{
-				Vec4d vec(x, y, 1 + x_diff, y_diff);
+				cv::Vec4d vec(x, y, 1 + x_diff, y_diff);
 				map2Dst[cv::Point2d(x_floor, y_ceil)].push_back(vec);
 			}
 			//(x_floor, y_floor)
 			if (map2Dst.find(cv::Point2d(x_floor, y_floor)) == map2Dst.end())
 			{
-				Vec4d vec(x, y, 1 + x_diff, 1 + y_diff);
+				cv::Vec4d vec(x, y, 1 + x_diff, 1 + y_diff);
 				vector<cv::Vec4d> vecVec4d;
 				vecVec4d.push_back(vec);
 				map2Dst[cv::Point2d(x_floor, y_floor)] = vecVec4d;
 			}
 			else
 			{
-				Vec4d vec(x, y, 1 + x_diff, 1 + y_diff);
+				cv::Vec4d vec(x, y, 1 + x_diff, 1 + y_diff);
 				map2Dst[cv::Point2d(x_floor, y_floor)].push_back(vec);
 			}
 		}
@@ -402,9 +402,9 @@ void computeWeight(std::map<cv::Point2d, std::vector<cv::Vec4d>, myCompare>& map
 		std::vector<cv::Vec4d> vecVec4d = (*itor).second;
 		for(std::vector<cv::Vec4d>::iterator it = vecVec4d.begin(); it != vecVec4d.end(); it++)
 		{
-			Vec4d vec_ = *it;
+			cv::Vec4d vec_ = *it;
 			double weight_ = exp(-(pow((*it)[2], 2) + pow((*it)[3], 2)) / 2);
-			Vec3d vec((*it)[0], (*it)[1], weight_);
+			cv::Vec3d vec((*it)[0], (*it)[1], weight_);
 			vecVec3d.push_back(vec);
 		}
 		mapDst[itor->first] = vecVec3d;
@@ -421,9 +421,9 @@ void fisheyeRemap(cv::Mat src, cv::Mat& dst, std::map<cv::Point2d, std::vector<c
 	{
 		for(int x = 0; x < dstW; x++)
 		{
-			vector<Vec3d> vecVec3d = mapVec3d[Point2d(x, y)];
+			vector<cv::Vec3d> vecVec3d = mapVec3d[Point2d(x, y)];
 			double val = 0;
-			for(vector<Vec3d>::iterator itor = vecVec3d.begin(); itor != vecVec3d.end(); itor++)
+			for(vector<cv::Vec3d>::iterator itor = vecVec3d.begin(); itor != vecVec3d.end(); itor++)
 			{
 				val += (*itor)[2] * src.at<uchar>((int)(*itor)[1], (int)(*itor)[0]);
 			}
@@ -479,8 +479,8 @@ void rectify_(calibInfo infoStereoCalib)
 		cv::Mat mask_;
 		bitwise_and(mapX_mask, mapY_mask, mask_);
 
-		cv::Mat mapX_correct = Mat::zeros(mapxL.size(), mapxL.type());
-		cv::Mat mapY_correct = Mat::zeros(mapyL.size(), mapyL.type());
+		cv::Mat mapX_correct = cv::Mat::zeros(mapxL.size(), mapxL.type());
+		cv::Mat mapY_correct = cv::Mat::zeros(mapyL.size(), mapyL.type());
 		mapxL.copyTo(mapX_correct, mask_);
 		mapyL.copyTo(mapY_correct, mask_);
 
@@ -488,7 +488,7 @@ void rectify_(calibInfo infoStereoCalib)
 		saveFloatMat(mapY_correct, infoStereoCalib.stereoCalib_undistort_mapyL);
 
 		std::string filePathL = infoStereoCalib.calibChessImgPathL;//"D:\\studying\\stereo vision\\research code\\data\\20190719\\camera_jpg_2\\left"
-		fisheyeUndistort_(filePathL, mapxL.size(), mapX_correct, mapY_correct, imgUndistortL);
+		//fisheyeUndistort_(filePathL, mapxL.size(), mapX_correct, mapY_correct, imgUndistortL);
 	}
 	{
 		Reprojection reproj;
@@ -528,8 +528,8 @@ void rectify_(calibInfo infoStereoCalib)
 		cv::Mat mask_;
 		bitwise_and(mapX_mask, mapY_mask, mask_);
 
-		cv::Mat mapX_correct = Mat::zeros(mapxR.size(), mapxR.type());
-		cv::Mat mapY_correct = Mat::zeros(mapxR.size(), mapxR.type());
+		cv::Mat mapX_correct = cv::Mat::zeros(mapxR.size(), mapxR.type());
+		cv::Mat mapY_correct = cv::Mat::zeros(mapxR.size(), mapxR.type());
 		mapxR.copyTo(mapX_correct, mask_);
 		mapyR.copyTo(mapY_correct, mask_);
 
@@ -537,7 +537,7 @@ void rectify_(calibInfo infoStereoCalib)
 		saveFloatMat(mapY_correct, infoStereoCalib.stereoCalib_undistort_mapyR);
 
 		std::string filePathR = infoStereoCalib.calibChessImgPathR;// "D:\\studying\\stereo vision\\research code\\data\\20190719\\camera_jpg_2\\right";
-		fisheyeUndistort_(filePathR, mapxR.size(), mapX_correct, mapY_correct, imgUndistortR);
+		//fisheyeUndistort_(filePathR, mapxR.size(), mapX_correct, mapY_correct, imgUndistortR);
 	}
 
 	return;
@@ -549,7 +549,7 @@ void rectify_(calibInfo infoStereoCalib)
 	cv::Size imgSize = IncidentVector::getImgSize();
 
 	cv::Mat K1, K2, D1, D2;
-	vector<Mat> Rs_L, Ts_L, Rs_R, Ts_R;
+	vector<cv::Mat> Rs_L, Ts_L, Rs_R, Ts_R;
 	double rmsL = calibrateCamera(ptsReal, ptsLeft, imgSize, K1, D1, Rs_L, Ts_L);
 	double rmsR = calibrateCamera(ptsReal, ptsRight, imgSize, K2, D2, Rs_R, Ts_R);
 
@@ -586,7 +586,7 @@ void rectify_(calibInfo infoStereoCalib)
 	initUndistortRectifyMap(K2, D2, R2, P2, imgSize, CV_32F, rmapx, rmapy);
 
 	FileStorage fn(infoStereoCalib.stereoCalib, FileStorage::WRITE);
-	fn << "ImgSize" << imgSize;
+	fn << "Imgcv::Size" << imgSize;
 	fn << "StereoCalib_K1" << K1;
 	fn << "StereoCalib_D1" << D1;
 	fn << "StereoCalib_K2" << K2;

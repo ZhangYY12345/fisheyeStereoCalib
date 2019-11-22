@@ -22,6 +22,9 @@
     <Filter Include="源文件\methods\fisheyeLib\cameraModels">
       <UniqueIdentifier>{3fa7b3b9-3a92-47d3-a741-441121bec89b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\methods\fisheyeOpenCV">
+      <UniqueIdentifier>{a4ead7c7-8bd8-4e9e-9505-6d827f39f559}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -78,6 +81,9 @@
     <ClCompile Include="methods\fisheyeLib\Reprojection.cpp">
       <Filter>源文件\methods\fisheyeLib</Filter>
     </ClCompile>
+    <ClCompile Include="methods\fisheye_opencv\fisheyeCalib_try.cpp">
+      <Filter>源文件\methods\fisheyeOpenCV</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="methods\fisheyeCalib3d.h">
@@ -133,6 +139,9 @@
     </ClInclude>
     <ClInclude Include="methods\fisheyeLib\Reprojection.h">
       <Filter>源文件\methods\fisheyeLib</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheye_opencv\fisheyeCalib_try.h">
+      <Filter>源文件\methods\fisheyeOpenCV</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

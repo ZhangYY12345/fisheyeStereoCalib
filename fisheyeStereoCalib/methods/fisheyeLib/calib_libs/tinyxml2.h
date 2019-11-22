@@ -325,12 +325,12 @@ class MemPoolT : public MemPool
 {
 public:
     MemPoolT() : _root(0), _currentAllocs(0), _nAllocs(0), _maxAllocs(0), _nUntracked(0)	{}
-    ~MemPoolT() {
-        // Delete the blocks.
-        for( int i=0; i<_blockPtrs.Size(); ++i ) {
-            delete _blockPtrs[i];
-        }
-    }
+	~MemPoolT() {
+		// Delete the blocks.
+		for (int i = 0; i < _blockPtrs.Size(); ++i) {
+			delete _blockPtrs[i];
+		}
+	}
 
     virtual int ItemSize() const	{
         return SIZE;

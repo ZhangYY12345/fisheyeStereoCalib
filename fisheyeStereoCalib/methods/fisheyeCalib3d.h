@@ -5,6 +5,7 @@
 
 void createCalibPicCircle(int width = 2560, int height = 1440, int numX = 30, int numY = 18);
 void createCalibPicSquare(int width = 2560, int height = 1440, int numX = 30, int numY = 18);
+void createStripePic_withSquare(int width = 2560, int height = 1440, int numX = 30, int numY = 18, int slope = 5);
 
 /***********************************************************
  *************  general camera calibration   ***************
@@ -16,8 +17,10 @@ void myCameraCalibration(std::string imgFilePath, std::string cameraParaPath);
 void myCameraUndistort(std::string cameraParaPath);
 void myCameraUndistort(std::string imgFilePath, std::string cameraParaPath);
 
+
 //stereo calibration
 double stereoCamCalibration(std::string cameraParaPath);
+
 
 //detect pts in the pre-stereo_calibration step
 bool ptsCalib(std::string imgFilePathL, cv::Size& imgSize,
@@ -30,7 +33,11 @@ bool ptsCalib_Single(std::string imgFilePath, cv::Size& imgSize, douVecPt2f& pts
 	douVecPt3f& ptsReal, int corRowNum, int corColNum);
 bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts,
 	douVecPt3f& ptsReal, int corRowNum, int corColNum);
- 
+
+void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, bool isHorizon);
+void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal);
+bool ptsCalib_mine();
+
 //
 double stereoCamCalibration(std::string imgFilePath, std::string cameraParaPath);
 double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPath);

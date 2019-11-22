@@ -1,4 +1,5 @@
 #include "fisheyeCalib3d.h"
+#include "fisheye_opencv/fisheyeCalib_try.h"
 
 using namespace cv;
 using namespace std;
@@ -12,7 +13,7 @@ using namespace std;
  */
 void createCalibPicCircle(int width, int height, int numX, int numY)
 {
-	Mat image = Mat::zeros(height, width, CV_8UC1);
+	cv::Mat image = cv::Mat::zeros(height, width, CV_8UC1);
 
 	int interval = min(width / (numX+1), height / (numY+1));
 	int radius = interval / 4;
@@ -47,8 +48,8 @@ void createCalibPicSquare(int width, int height, int numX, int numY)
 	width = sideLen * numX;
 	height = sideLen * numY;
 
-	Mat whiteImg(sideLen, sideLen, CV_8UC1, 255);
-	Mat image = Mat::zeros(height, width, CV_8UC1);
+	cv::Mat whiteImg(sideLen, sideLen, CV_8UC1, 255);
+	cv::Mat image = cv::Mat::zeros(height, width, CV_8UC1);
 
 	for (int j = 0; j < numY; j++, j++)
 	{
@@ -70,6 +71,55 @@ void createCalibPicSquare(int width, int height, int numX, int numY)
 
 }
 
+void createStripePic_withSquare(int width, int height, int numX, int numY, int slope)
+{
+	int sideLen = min(width / numX, height / numY);
+
+	numX = width / sideLen;
+	numY = height / sideLen;
+
+	width = sideLen * numX;
+	height = sideLen * numY;
+
+	cv::Mat whiteImg(sideLen, sideLen, CV_8UC1, 255);
+	cv::Mat imageStripeH1 = cv::Mat::zeros(height, width, CV_8UC1);
+	cv::Mat imageStripeH2 = cv::Mat::zeros(height, width, CV_8UC1);
+	cv::Mat imageStripeV1 = cv::Mat::zeros(height, width, CV_8UC1);
+	cv::Mat imageStripeV2 = cv::Mat::zeros(height, width, CV_8UC1);
+
+	// Make vertical pattern
+	for (int j = 0; j < numY; j++)
+	{
+		for (int i = 0; i < numX; i++,i++)
+		{
+			whiteImg.copyTo(imageStripeV1(Rect(i * sideLen, j * sideLen, sideLen, sideLen)));
+		}
+	}
+	imageStripeV2 = ~imageStripeV1;
+
+	cv::blur(imageStripeV1, imageStripeV1, cv::Size2i(slope + 1, 1));
+	cv::blur(imageStripeV2, imageStripeV2, cv::Size2i(slope + 1, 1));
+	imwrite("pattern0_square.jpg", imageStripeV1);
+	imwrite("pattern1_square.jpg", imageStripeV2);
+
+
+	// Make horizontal pattern
+	for (int j = 0; j < numY; j++,j++)
+	{
+		for (int i = 0; i < numX; i++)
+		{
+			whiteImg.copyTo(imageStripeH1(Rect(i * sideLen, j * sideLen, sideLen, sideLen)));
+		}
+	}
+	imageStripeH2 = ~imageStripeH1;
+
+	cv::blur(imageStripeH1, imageStripeH1, cv::Size2i(1,slope + 1));
+	cv::blur(imageStripeH2, imageStripeH2, cv::Size2i(1, slope + 1));
+
+	imwrite("pattern2_square.jpg", imageStripeH1);
+	imwrite("pattern3_square.jpg", imageStripeH2);
+}
+
 /**
  * \brief open the target camera and capture images for calibration
  *			\notice that the location of the camera is supposed to be fixed during the capturing
@@ -84,17 +134,17 @@ void myCameraCalibration(std::string cameraParaPath)
 		return;
 	}
 	cap.set(CAP_PROP_FOURCC, 'GPJM');
-	Size imgSize(cap.get(CAP_PROP_FRAME_WIDTH), cap.get(CAP_PROP_FRAME_HEIGHT));
+	cv::Size imgSize(cap.get(CAP_PROP_FRAME_WIDTH), cap.get(CAP_PROP_FRAME_HEIGHT));
 
-	Size patternSize(5, 7);		//5:the number of inner corners in each row of the chess board
+	cv::Size patternSize(5, 7);		//5:the number of inner corners in each row of the chess board
 								//7:the number of inner corners in each col of the chess board
 	int gridPatternNum = patternSize.width * patternSize.height;
 
 
 	//detect the inner corner in each chess image
 	std::vector<std::vector<Point2f>> cornerPtsVec;		//store the detected inner corners of each image
-	Mat img;
-	Mat imgGrey;
+	cv::Mat img;
+	cv::Mat imgGrey;
 	while (cornerPtsVec.size() < 20)
 	{
 		cap.read(img);
@@ -105,7 +155,7 @@ void myCameraCalibration(std::string cameraParaPath)
 			+ CALIB_CB_FAST_CHECK);
 		if (patternFound)
 		{
-			cornerSubPix(imgGrey, cornerPts, Size(11, 11), Size(-1, -1), TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 30, 0.1));
+			cornerSubPix(imgGrey, cornerPts, cv::Size(11, 11), cv::Size(-1, -1), TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 30, 0.1));
 			cornerPtsVec.push_back(cornerPts);
 			drawChessboardCorners(imgGrey, patternSize, cornerPts, patternFound);
 			cornerPtsVec.push_back(img);
@@ -115,12 +165,12 @@ void myCameraCalibration(std::string cameraParaPath)
 
 
 	//camera calibration
-	Size2f squareSize(35.0, 36.2);		//the real size of each grid in the chess board,which is measured manually by ruler
+	cv::Size2f squareSize(35.0, 36.2);		//the real size of each grid in the chess board,which is measured manually by ruler
 
-	Mat K = Mat(3, 3, CV_32FC1, Scalar::all(0));	//the inner parameters of camera
-	Mat D = Mat(1, 5, CV_32FC1, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> vectorMatT;									//matrix T of each image
-	std::vector<Mat> vectorMatR;									//matrix R of each image
+	cv::Mat K = cv::Mat(3, 3, CV_32FC1, Scalar::all(0));	//the inner parameters of camera
+	cv::Mat D = cv::Mat(1, 5, CV_32FC1, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> vectorMatT;									//matrix T of each image
+	std::vector<cv::Mat> vectorMatR;									//matrix R of each image
 
 	std::vector<Point3f> tempPts;
 	for (int i = 0; i < patternSize.height; i++)
@@ -140,7 +190,8 @@ void myCameraCalibration(std::string cameraParaPath)
 		objPts3d.push_back(tempPts);
 	}
 
-	calibrateCamera(objPts3d, cornerPtsVec, imgSize, K, D, vectorMatR, vectorMatT, 0);
+	calibrateCamera(objPts3d, cornerPtsVec, imgSize, 
+		K, D, vectorMatR, vectorMatT, 0);
 
 
 	//evaluate the result of the camera calibration,calculate the error of calibration in each image
@@ -154,13 +205,13 @@ void myCameraCalibration(std::string cameraParaPath)
 
 		//calculate the error
 		std::vector<Point2f> tempImagePoint = cornerPtsVec[i]; //the detected corner coordination in the image
-		Mat tempImgPt = Mat(1, tempImagePoint.size(), CV_32FC2);
-		Mat recheckImgPt = Mat(1, imgPts_2d.size(), CV_32FC2);
+		cv::Mat tempImgPt = cv::Mat(1, tempImagePoint.size(), CV_32FC2);
+		cv::Mat recheckImgPt = cv::Mat(1, imgPts_2d.size(), CV_32FC2);
 
 		for (int j = 0; j < tempImagePoint.size(); j++)
 		{
-			recheckImgPt.at<Vec2f>(0, j) = Vec2f(imgPts_2d[j].x, imgPts_2d[j].y);
-			tempImgPt.at<Vec2f>(0, j) = Vec2f(tempImagePoint[j].x, tempImagePoint[j].y);
+			recheckImgPt.at<cv::Vec2f>(0, j) = cv::Vec2f(imgPts_2d[j].x, imgPts_2d[j].y);
+			tempImgPt.at<cv::Vec2f>(0, j) = cv::Vec2f(tempImagePoint[j].x, tempImagePoint[j].y);
 		}
 		err = norm(recheckImgPt, tempImgPt, NORM_L2);
 		totalErr += err / gridPatternNum;
@@ -172,7 +223,7 @@ void myCameraCalibration(std::string cameraParaPath)
 	//output the calibration result
 	std::cout << "相机内参数矩阵：\n" << K << std::endl;
 	std::cout << "相机畸变参数[k1,k2,k3,p1,p2]:\n" << D << std::endl;
-	Mat rotationMatrix = Mat(3, 3, CV_32FC1, Scalar::all(0));
+	cv::Mat rotationMatrix = cv::Mat(3, 3, CV_32FC1, Scalar::all(0));
 	for (int i = 0; i < cornerPtsVec.size(); i++)
 	{
 		Rodrigues(vectorMatR[i], rotationMatrix);
@@ -198,17 +249,17 @@ void myCameraCalibration(std::string imgFilePath, std::string cameraParaPath)
 	String filePath = imgFilePath + "/*.jpg";
 	std::vector<String> fileNames;
 	glob(filePath, fileNames, false);
-	Size patternSize(9, 6);		//5:the number of inner corners in each row of the chess board
+	cv::Size patternSize(9, 6);		//5:the number of inner corners in each row of the chess board
 								//7:the number of inner corners in each col of the chess board
 	int gridPatternNum = 54;
 
-	Size imgSize;
+	cv::Size imgSize;
 
 	//detect the inner corner in each chess image
 	std::vector<std::vector<Point2f>> cornerPtsVec;		//store the detected inner corners of each image
 	for (int i = 0; i < fileNames.size(); i++)
 	{
-		Mat img = imread(fileNames[i], IMREAD_GRAYSCALE);
+		cv::Mat img = imread(fileNames[i], IMREAD_GRAYSCALE);
 		if (i == 0)
 		{
 			imgSize.width = img.cols;
@@ -220,7 +271,7 @@ void myCameraCalibration(std::string imgFilePath, std::string cameraParaPath)
 			+ CALIB_CB_FAST_CHECK);
 		if (patternFound)
 		{
-			cornerSubPix(img, cornerPts, Size(11, 11), Size(-1, -1), TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 30, 0.1));
+			cornerSubPix(img, cornerPts, cv::Size(11, 11), cv::Size(-1, -1), TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 30, 0.1));
 			cornerPtsVec.push_back(cornerPts);
 			drawChessboardCorners(img, patternSize, cornerPts, patternFound);
 		}
@@ -228,12 +279,12 @@ void myCameraCalibration(std::string imgFilePath, std::string cameraParaPath)
 
 
 	//camera calibration
-	Size2f squareSize(35.0, 36.2);		//the real size of each grid in the chess board,which is measured manually by ruler
+	cv::Size2f squareSize(35.0, 36.2);		//the real size of each grid in the chess board,which is measured manually by ruler
 	std::vector<std::vector<Point3f>> objPts3d;					 	//calculated coordination of corners in world coordinate system
-	Mat K = Mat(3, 3, CV_32FC1, Scalar::all(0));	//the inner parameters of camera
-	Mat D = Mat(1, 5, CV_32FC1, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> vectorMatT;									//matrix T of each image
-	std::vector<Mat> vectorMatR;									//matrix R of each image
+	cv::Mat K = cv::Mat(3, 3, CV_32FC1, Scalar::all(0));	//the inner parameters of camera
+	cv::Mat D = cv::Mat(1, 5, CV_32FC1, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> vectorMatT;									//matrix T of each image
+	std::vector<cv::Mat> vectorMatR;									//matrix R of each image
 
 	for (std::vector<std::vector<Point2f>>::iterator itor = cornerPtsVec.begin(); itor != cornerPtsVec.end(); itor++)
 	{
@@ -266,13 +317,13 @@ void myCameraCalibration(std::string imgFilePath, std::string cameraParaPath)
 
 		//calculate the error
 		std::vector<Point2f> tempImagePoint = cornerPtsVec[i]; //the detected corner coordination in the image
-		Mat tempImgPt = Mat(1, tempImagePoint.size(), CV_32FC2);
-		Mat recheckImgPt = Mat(1, imgPts_2d.size(), CV_32FC2);
+		cv::Mat tempImgPt = cv::Mat(1, tempImagePoint.size(), CV_32FC2);
+		cv::Mat recheckImgPt = cv::Mat(1, imgPts_2d.size(), CV_32FC2);
 
 		for (int j = 0; j < tempImagePoint.size(); j++)
 		{
-			recheckImgPt.at<Vec2f>(0, j) = Vec2f(imgPts_2d[j].x, imgPts_2d[j].y);
-			tempImgPt.at<Vec2f>(0, j) = Vec2f(tempImagePoint[j].x, tempImagePoint[j].y);
+			recheckImgPt.at<cv::Vec2f>(0, j) = cv::Vec2f(imgPts_2d[j].x, imgPts_2d[j].y);
+			tempImgPt.at<cv::Vec2f>(0, j) = cv::Vec2f(tempImagePoint[j].x, tempImagePoint[j].y);
 		}
 		err = norm(recheckImgPt, tempImgPt, NORM_L2);
 		totalErr += err / gridPatternNum;
@@ -284,7 +335,7 @@ void myCameraCalibration(std::string imgFilePath, std::string cameraParaPath)
 	//output the calibration result
 	std::cout << "相机内参数矩阵：\n" << K << std::endl;
 	std::cout << "相机畸变参数[k1,k2,k3,p1,p2]:\n" << D << std::endl;
-	Mat rotationMatrix = Mat(3, 3, CV_32FC1, Scalar::all(0));
+	cv::Mat rotationMatrix = cv::Mat(3, 3, CV_32FC1, Scalar::all(0));
 	for (int i = 0; i < cornerPtsVec.size(); i++)
 	{
 		Rodrigues(vectorMatR[i], rotationMatrix);
@@ -305,8 +356,8 @@ void myCameraCalibration(std::string imgFilePath, std::string cameraParaPath)
  */
 void myCameraUndistort(std::string cameraParaPath)
 {
-	Mat K;
-	Mat D;
+	cv::Mat K;
+	cv::Mat D;
 	FileStorage fn(cameraParaPath, FileStorage::READ);
 	fn["CameraInnerPara"] >> K;
 	fn["CameraDistPara"] >> D;
@@ -324,8 +375,8 @@ void myCameraUndistort(std::string cameraParaPath)
 
 	while (1)
 	{
-		Mat img;
-		Mat undistortImg;
+		cv::Mat img;
+		cv::Mat undistortImg;
 		cap.read(img);
 		imshow("originView", img);
 		undistort(img, undistortImg, K, D);
@@ -342,8 +393,8 @@ void myCameraUndistort(std::string cameraParaPath)
  */
 void myCameraUndistort(std::string imgFilePath, std::string cameraParaPath)
 {
-	Mat K;
-	Mat D;
+	cv::Mat K;
+	cv::Mat D;
 	FileStorage fn(cameraParaPath, FileStorage::READ);
 	fn["CameraInnerPara"] >> K;
 	fn["CameraDistPara"] >> D;
@@ -352,11 +403,11 @@ void myCameraUndistort(std::string imgFilePath, std::string cameraParaPath)
 	String filePath = imgFilePath + "/*.jpg";
 	std::vector<String> fileNames;
 	glob(filePath, fileNames, false);
-	Mat undistortImg;
-	std::vector<Mat> undistortImgs;
+	cv::Mat undistortImg;
+	std::vector<cv::Mat> undistortImgs;
 	for (int i = 0; i < fileNames.size(); i++)
 	{
-		Mat img = imread(fileNames[i]);
+		cv::Mat img = imread(fileNames[i]);
 		undistort(img, undistortImg, K, D);
 		imwrite(imgFilePath + "/" + std::to_string(i) + ".jpg", undistortImg);
 		undistortImgs.push_back(undistortImg);
@@ -390,10 +441,10 @@ double stereoCamCalibration(std::string cameraParaPath)
 	cap_right.set(CAP_PROP_FRAME_HEIGHT, IMG_CAPTURE_HEIGHT);
 	cap_right.set(CAP_PROP_FRAME_WIDTH, IMG_CAPTURE_WIDTH);
 
-	Size imgSize(IMG_CAPTURE_WIDTH, IMG_CAPTURE_HEIGHT);
+	cv::Size imgSize(IMG_CAPTURE_WIDTH, IMG_CAPTURE_HEIGHT);
 
 
-	Size patternSize(9, 6);		//5:the number of inner corners in each row of the chess board
+	cv::Size patternSize(9, 6);		//5:the number of inner corners in each row of the chess board
 												//7:the number of inner corners in each col of the chess board
 	int gridPatternNum = patternSize.width * patternSize.height;
 
@@ -402,8 +453,8 @@ double stereoCamCalibration(std::string cameraParaPath)
 	std::vector<std::vector<Point2f> > cornerPtsVec_left, cornerPtsVec_right;		//store the detected inner corners of each image
 	while (cornerPtsVec_left.size() < 20)
 	{
-		Mat img_left, img_right;
-		Mat imgGrey_left, imgGrey_right;
+		cv::Mat img_left, img_right;
+		cv::Mat imgGrey_left, imgGrey_right;
 		cap_left.read(img_left);
 		cvtColor(img_left, imgGrey_left, COLOR_BGR2GRAY);
 		cap_right.read(img_right);
@@ -419,12 +470,12 @@ double stereoCamCalibration(std::string cameraParaPath)
 
 		if (patternFound_left && patternFound_right)
 		{
-			cornerSubPix(imgGrey_left, cornerPts_left, Size(11, 11), Size(-1, -1), 
+			cornerSubPix(imgGrey_left, cornerPts_left, cv::Size(11, 11), cv::Size(-1, -1), 
 				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 0.01));
 			cornerPtsVec_left.push_back(cornerPts_left);
 			drawChessboardCorners(imgGrey_left, patternSize, cornerPts_left, patternFound_left);
 
-			cornerSubPix(imgGrey_right, cornerPts_right, Size(11, 11), Size(-1, -1), 
+			cornerSubPix(imgGrey_right, cornerPts_right, cv::Size(11, 11), cv::Size(-1, -1), 
 				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 0.01));
 			cornerPtsVec_right.push_back(cornerPts_right);
 			drawChessboardCorners(imgGrey_right, patternSize, cornerPts_right, patternFound_right);
@@ -434,7 +485,7 @@ double stereoCamCalibration(std::string cameraParaPath)
 	cap_right.release();
 
 	//stereo calibration
-	Size2f squareSize(100, 100);				//the real size of each grid in the chess board,which is measured manually by ruler,单位：mm
+	cv::Size2f squareSize(100, 100);				//the real size of each grid in the chess board,which is measured manually by ruler,单位：mm
 
 	//get the coordinations of cross points in the real world:stored along rows
 	std::vector<Point3f> tempPts;
@@ -466,28 +517,28 @@ double stereoCamCalibration(std::string cameraParaPath)
 	flag |= CALIB_FIX_K5;
 
 	//calibrate left camera
-	Mat K_left = Mat(3, 3, CV_32FC1, Scalar::all(0));		//the inner parameters of camera
-	Mat D_left = Mat(1, 5, CV_32FC1, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> T_left;										//matrix T of each image
-	std::vector<Mat> R_left;										//matrix R of each image
+	cv::Mat K_left = cv::Mat(3, 3, CV_32FC1, Scalar::all(0));		//the inner parameters of camera
+	cv::Mat D_left = cv::Mat(1, 5, CV_32FC1, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> T_left;										//matrix T of each image
+	std::vector<cv::Mat> R_left;										//matrix R of each image
 	double rmsLeft = calibrateCamera(objPts3d, cornerPtsVec_left, imgSize,
 		K_left, D_left, 
 		R_left, T_left, flag);
 
 	//calibrate right camera
-	Mat K_right = Mat(3, 3, CV_32FC1, Scalar::all(0));	//the inner parameters of camera
-	Mat D_right = Mat(1, 5, CV_32FC1, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> T_right;									//matrix T of each image
-	std::vector<Mat> R_right;									//matrix R of each image
+	cv::Mat K_right = cv::Mat(3, 3, CV_32FC1, Scalar::all(0));	//the inner parameters of camera
+	cv::Mat D_right = cv::Mat(1, 5, CV_32FC1, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> T_right;									//matrix T of each image
+	std::vector<cv::Mat> R_right;									//matrix R of each image
 	double rmsRight = calibrateCamera(objPts3d, cornerPtsVec_right, imgSize,
 		K_right, D_right, 
 		R_right, T_right, flag);
 
 
 	//stereo calibration
-	Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
-	Mat matrixE;				//essential matrix E
-	Mat matrixF;				//fundamental matrix F
+	cv::Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
+	cv::Mat matrixE;				//essential matrix E
+	cv::Mat matrixF;				//fundamental matrix F
 	int stereoFlag = 0;
 	stereoFlag |= CALIB_FIX_INTRINSIC;
 	stereoFlag |= CALIB_SAME_FOCAL_LENGTH;
@@ -500,15 +551,15 @@ double stereoCamCalibration(std::string cameraParaPath)
 	std::cout << "stereo_calibration_error" << rms << std::endl;
 
 	FileStorage fn(cameraParaPath, FileStorage::WRITE);
-	fn << "ImgSize" << imgSize;
+	fn << "Imgcv::Size" << imgSize;
 	fn << "Left_CameraInnerPara" << K_left;
 	fn << "Left_CameraDistPara" << D_left;
 	fn << "Right_CameraInnerPara" << K_right;
 	fn << "Right_CameraDistPara" << D_right;
-	fn << "R2L_Rotation_Matrix" << matrixR;
-	fn << "R2L_Translate_Matrix" << matrixT;
-	fn << "Essential_Matrix" << matrixE;
-	fn << "Fundamental_Matrix" << matrixF;
+	fn << "R2L_Rotation_cv::Matrix" << matrixR;
+	fn << "R2L_Translate_cv::Matrix" << matrixT;
+	fn << "Essential_cv::Matrix" << matrixE;
+	fn << "Fundamental_cv::Matrix" << matrixF;
 	fn.release();
 
 	return rms;
@@ -519,13 +570,13 @@ double stereoCamCalibration(std::string cameraParaPath)
 	for (int i = 0; i < cornerPtsVec_left.size(); i++)
 	{
 		int npt = (int)cornerPtsVec_left[i].size();
-		Mat imgpt[2];
-		imgpt[0] = Mat(cornerPtsVec_left[i]);
-		undistortPoints(imgpt[0], imgpt[0], K_left, D_left, Mat(), K_left);
+		cv::Mat imgpt[2];
+		imgpt[0] = cv::Mat(cornerPtsVec_left[i]);
+		undistortPoints(imgpt[0], imgpt[0], K_left, D_left, cv::Mat(), K_left);
 		computeCorrespondEpilines(imgpt[0], 0 + 1, matrixF, lines[0]);
 
-		imgpt[1] = Mat(cornerPtsVec_right[i]);
-		undistortPoints(imgpt[1], imgpt[1], K_right, D_right, Mat(), K_right);
+		imgpt[1] = cv::Mat(cornerPtsVec_right[i]);
+		undistortPoints(imgpt[1], imgpt[1], K_right, D_right, cv::Mat(), K_right);
 		computeCorrespondEpilines(imgpt[1], 1 + 1, matrixF, lines[1]);
 
 		for (int j = 0; j < npt; j++)
@@ -575,15 +626,15 @@ bool ptsCalib(std::string imgFilePathL, cv::Size& imgSize,
 	String filePath = imgFilePathL + "/*L.jpg";
 	std::vector<String> fileNames;
 	glob(filePath, fileNames, false);
-	Size patternSize(corRowNum, corColNum);		//0:the number of inner corners in each row of the chess board
+	cv::Size patternSize(corRowNum, corColNum);		//0:the number of inner corners in each row of the chess board
 																//1:the number of inner corners in each col of the chess board
 	//detect the inner corner in each chess image
 	int x_expand_half = 0;
 	int y_expand_half = 0;
 	for (int i = 0; i < fileNames.size(); i++)
 	{
-		Mat img_left = imread(fileNames[i]);
-		Mat img_right = imread(fileNames[i].substr(0, fileNames[i].length() - 5) + "R.jpg");
+		cv::Mat img_left = imread(fileNames[i]);
+		cv::Mat img_right = imread(fileNames[i].substr(0, fileNames[i].length() - 5) + "R.jpg");
 
 		if (img_left.rows != img_right.rows && img_left.cols != img_right.cols)
 		{
@@ -597,7 +648,7 @@ bool ptsCalib(std::string imgFilePathL, cv::Size& imgSize,
 			imgSize.height = img_left.rows + y_expand_half * 2;
 		}
 
-		Mat imgL_border, imgR_border;
+		cv::Mat imgL_border, imgR_border;
 		copyMakeBorder(img_left, imgL_border, y_expand_half, y_expand_half, x_expand_half, x_expand_half, BORDER_CONSTANT);
 		copyMakeBorder(img_right, imgR_border, y_expand_half, y_expand_half, x_expand_half, x_expand_half, BORDER_CONSTANT);
 
@@ -608,15 +659,15 @@ bool ptsCalib(std::string imgFilePathL, cv::Size& imgSize,
 			CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 		if (patternFound_left && patternFound_right)
 		{
-			Mat imgL_gray, imgR_gray;
+			cv::Mat imgL_gray, imgR_gray;
 			cvtColor(imgL_border, imgL_gray, COLOR_RGB2GRAY);
-			cornerSubPix(imgL_gray, cornerPts_left, Size(3, 3), Size(-1, -1),
+			cornerSubPix(imgL_gray, cornerPts_left, cv::Size(3, 3), cv::Size(-1, -1),
 				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
 			ptsL.push_back(cornerPts_left);
 			drawChessboardCorners(imgL_border, patternSize, cornerPts_left, patternFound_left);
 
 			cvtColor(imgR_border, imgR_gray, COLOR_RGB2GRAY);
-			cornerSubPix(imgR_gray, cornerPts_right, Size(3, 3), Size(-1, -1),
+			cornerSubPix(imgR_gray, cornerPts_right, cv::Size(3, 3), cv::Size(-1, -1),
 				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
 			ptsR.push_back(cornerPts_right);
 			drawChessboardCorners(imgR_border, patternSize, cornerPts_right, patternFound_right);
@@ -624,7 +675,7 @@ bool ptsCalib(std::string imgFilePathL, cv::Size& imgSize,
 	}
 
 	//two cameras calibration
-	Size2f squareSize(100, 100);		//the real size of each grid in the chess board,which is measured manually by ruler
+	cv::Size2f squareSize(100, 100);		//the real size of each grid in the chess board,which is measured manually by ruler
 
 	std::vector<Point3f> tempPts;
 	for (int i = 0; i < patternSize.height; i++)
@@ -693,14 +744,14 @@ bool ptsCalib(std::vector<cv::Mat> imgsL, std::vector<cv::Mat> imgsR,
 	}
 
 	//
-	Size patternSize(corRowNum, corColNum);		//0:the number of inner corners in each row of the chess board
+	cv::Size patternSize(corRowNum, corColNum);		//0:the number of inner corners in each row of the chess board
 																//1:the number of inner corners in each col of the chess board
 
 	//detect the inner corner in each chess image
 	for (int i = 0; i < imgsL.size(); i++)
 	{
-		Mat img_left = imgsL[i];
-		Mat img_right = imgsR[i];
+		cv::Mat img_left = imgsL[i];
+		cv::Mat img_right = imgsR[i];
 
 		if (img_left.rows != img_right.rows && img_left.cols != img_right.cols)
 		{
@@ -715,15 +766,15 @@ bool ptsCalib(std::vector<cv::Mat> imgsL, std::vector<cv::Mat> imgsR,
 			CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 		if (patternFound_left && patternFound_right)
 		{
-			Mat imgL_gray, imgR_gray;
+			cv::Mat imgL_gray, imgR_gray;
 			cvtColor(img_left, imgL_gray, COLOR_RGB2GRAY);
-			cornerSubPix(imgL_gray, cornerPts_left, Size(3, 3), Size(-1, -1),
+			cornerSubPix(imgL_gray, cornerPts_left, cv::Size(3, 3), cv::Size(-1, -1),
 				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
 			ptsL.push_back(cornerPts_left);
 			drawChessboardCorners(img_left, patternSize, cornerPts_left, patternFound_left);
 
 			cvtColor(img_right, imgR_gray, COLOR_RGB2GRAY);
-			cornerSubPix(imgR_gray, cornerPts_right, Size(3, 3), Size(-1, -1),
+			cornerSubPix(imgR_gray, cornerPts_right, cv::Size(3, 3), cv::Size(-1, -1),
 				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
 			ptsR.push_back(cornerPts_right);
 			drawChessboardCorners(img_right, patternSize, cornerPts_right, patternFound_right);
@@ -731,7 +782,7 @@ bool ptsCalib(std::vector<cv::Mat> imgsL, std::vector<cv::Mat> imgsR,
 	}
 
 	//two cameras calibration
-	Size2f squareSize(100, 100);		//the real size of each grid in the chess board,which is measured manually by ruler
+	cv::Size2f squareSize(100, 100);		//the real size of each grid in the chess board,which is measured manually by ruler
 
 	std::vector<Point3f> tempPts;
 	for (int i = 0; i < patternSize.height; i++)
@@ -782,7 +833,7 @@ bool ptsCalib_Single(std::string imgFilePath, cv::Size& imgSize,
 	String filePath = imgFilePath + "/*.jpg";
 	std::vector<String> fileNames;
 	glob(filePath, fileNames, false);
-	Size patternSize(corRowNum, corColNum);		//0:the number of inner corners in each row of the chess board
+	cv::Size patternSize(corRowNum, corColNum);		//0:the number of inner corners in each row of the chess board
 												//1:the number of inner corners in each col of the chess board
 	int gridPatternNum = patternSize.width * patternSize.height;
 
@@ -791,7 +842,7 @@ bool ptsCalib_Single(std::string imgFilePath, cv::Size& imgSize,
 	int y_expand_half = 0;
 	for (int i = 0; i < fileNames.size(); i++)
 	{
-		Mat img = imread(fileNames[i]);
+		cv::Mat img = imread(fileNames[i]);
 
 		if (i == 0)
 		{
@@ -799,26 +850,31 @@ bool ptsCalib_Single(std::string imgFilePath, cv::Size& imgSize,
 			imgSize.height = img.rows + y_expand_half * 2;
 		}
 
-		Mat imgL_border, imgR_border;
-		copyMakeBorder(img, imgL_border, y_expand_half, y_expand_half, x_expand_half, x_expand_half, BORDER_CONSTANT);
-		copyMakeBorder(img, imgR_border, y_expand_half, y_expand_half, x_expand_half, x_expand_half, BORDER_CONSTANT);
+		cv::Mat imgL_border;
+		copyMakeBorder(img, imgL_border, y_expand_half, y_expand_half, x_expand_half, x_expand_half, BORDER_CONSTANT, 0);
+		//imwrite(fileNames[i].substr(0, fileNames[i].size() - 4) + "_border.jpg", imgL_border);
 
 		std::vector<Point2f> cornerPts;
 		bool patternFound = findChessboardCorners(imgL_border, patternSize, cornerPts,
 			CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 		if (patternFound)
 		{
-			Mat img_gray;
+			cv::Mat img_gray;
 			cvtColor(imgL_border, img_gray, COLOR_RGB2GRAY);
-			cornerSubPix(img_gray, cornerPts, Size(3, 3), Size(-1, -1),
+			cornerSubPix(img_gray, cornerPts, cv::Size(3, 3), cv::Size(-1, -1),
 				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
 			pts.push_back(cornerPts);
 			drawChessboardCorners(imgL_border, patternSize, cornerPts, patternFound);
+			cout << i << "\taccept\n";
+		}
+		else
+		{
+			cout << i << "\treject\n";
 		}
 	}
 
 	//two cameras calibration
-	Size2f squareSize(100, 100);		//the real size of each grid in the chess board,which is measured manually by ruler
+	cv::Size2f squareSize(100, 100);		//the real size of each grid in the chess board,which is measured manually by ruler
 
 	std::vector<Point3f> tempPts;
 	for (int i = 0; i < patternSize.height; i++)
@@ -880,22 +936,22 @@ bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts, douVecPt3f& pts
 		ptsReal.clear();
 	}
 
-	Size patternSize(corRowNum, corColNum);		//0:the number of inner corners in each row of the chess board
+	cv::Size patternSize(corRowNum, corColNum);		//0:the number of inner corners in each row of the chess board
 																//1:the number of inner corners in each col of the chess board
 
 	//detect the inner corner in each chess image
 	for (int i = 0; i < imgs.size(); i++)
 	{
-		Mat img = imgs[i];
+		cv::Mat img = imgs[i];
 
 		std::vector<Point2f> cornerPts;
 		bool patternFound = findChessboardCorners(img, patternSize, cornerPts,
 			CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK);
 		if (patternFound)
 		{
-			Mat img_gray;
+			cv::Mat img_gray;
 			cvtColor(img, img_gray, COLOR_RGB2GRAY);
-			cornerSubPix(img_gray, cornerPts, Size(3, 3), Size(-1, -1),
+			cornerSubPix(img_gray, cornerPts, cv::Size(3, 3), cv::Size(-1, -1),
 				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
 			pts.push_back(cornerPts);
 			drawChessboardCorners(img, patternSize, cornerPts, patternFound);
@@ -903,7 +959,7 @@ bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts, douVecPt3f& pts
 	}
 
 	//two cameras calibration
-	Size2f squareSize(100, 100);		//the real size of each grid in the chess board,which is measured manually by ruler
+	cv::Size2f squareSize(100, 100);		//the real size of each grid in the chess board,which is measured manually by ruler
 
 	std::vector<Point3f> tempPts;
 	for (int i = 0; i < patternSize.height; i++)
@@ -926,6 +982,195 @@ bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts, douVecPt3f& pts
 }
 
 /**
+ * \brief detecting lines for further work///methods following the function detectLine() in LineDetection.cpp
+ * \param src1 
+ * \param src2 
+ * \param dst :image type is CV_8UC1
+ * \param isHorizon
+ */
+void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, bool isHorizon)
+{
+	// Check type of img1 and img2
+	if (src1.type() != CV_64FC1) {
+		cv::Mat tmp;
+		src1.convertTo(tmp, CV_64FC1);
+		src1 = tmp;
+	}
+	if (src2.type() != CV_64FC1) {
+		cv::Mat tmp;
+		src2.convertTo(tmp, CV_64FC1);
+		src2 = tmp;
+	}
+	cv::Mat diff = src1 - src2;
+	cv::Mat cross = cv::Mat::zeros(diff.rows, diff.cols, CV_8UC1);
+	cv::Mat cross_inv = cv::Mat::zeros(diff.rows, diff.cols, CV_8UC1);
+	double thresh = 185;//185 for 20191017
+	bool positive; // Whether previous found cross point was positive
+	bool search; // Whether serching
+	bool found_first;
+	int val_now, val_prev;
+
+	if (isHorizon)
+	{
+		// search for y direction
+		for (int x = 0; x < diff.cols; x++) {
+			val_prev = diff.at<double>(0, x);
+			positive = (val_prev > 0);
+			search = false;
+			found_first = false;
+			for (int y = 1; y < diff.rows; ++y) {
+				val_now = diff.at<double>(y, x);
+				if (search && (
+					((val_now <= 0) && positive) || ((val_now >= 0) && !positive))) {// found crossed point
+					if (abs(val_now) < abs(val_prev)) {
+						if (cross.at<uchar>(y, x) != 255) {
+							cross.at<uchar>(y, x) = 255;
+						}
+					}
+					else {
+						cross.at<uchar>(y - 1, x) = 255;
+					}
+					positive = !positive;
+					search = false;
+				}
+				if (!search && abs(val_now) > thresh) {
+					search = true;
+					if (!found_first) {
+						found_first = true;
+						positive = (val_now > 0);
+					}
+				}
+				val_prev = val_now;
+			}
+		}
+
+		// search for inversed y direction
+		for (int x = 0; x < diff.cols; x++) {
+			val_prev = diff.at<double>(diff.rows - 1, x);
+			positive = (val_prev > 0);
+			search = false;
+			found_first = false;
+			for (int y = diff.rows - 2; y > 0; --y) {
+				val_now = diff.at<double>(y, x);
+				if (search && (
+					((val_now <= 0) && positive) || ((val_now >= 0) && !positive))) {// found crossed point
+					if (abs(val_now) < abs(val_prev)) {
+						if (cross_inv.at<uchar>(y, x) != 255) {
+							cross_inv.at<uchar>(y, x) = 255;
+						}
+					}
+					else {
+						cross_inv.at<uchar>(y + 1, x) = 255;
+					}
+					positive = !positive;
+					search = false;
+				}
+				if (!search && abs(val_now) > thresh) {
+					search = true;
+					if (!found_first) {
+						found_first = true;
+						positive = (val_now > 0);
+					}
+				}
+				val_prev = val_now;
+			}
+		}
+	}
+	else
+	{
+		// search for x direction
+		for (int y = 0; y < diff.rows; y++) {
+			val_prev = diff.at<double>(y, 0);
+			positive = (val_prev > 0);
+			search = false;
+			found_first = false;
+			for (int x = 1; x < diff.cols; ++x) {
+				val_now = diff.at<double>(y, x);
+				if (search && (
+					((val_now <= 0) && positive) || ((val_now >= 0) && !positive))) {// found crossed point
+					if (abs(val_now) < abs(val_prev)) {
+						cross.at<uchar>(y, x) = 255;
+					}
+					else {
+						cross.at<uchar>(y, x - 1) = 255;
+					}
+					positive = !positive;
+					search = false;
+				}
+				if (!search && abs(val_now) > thresh) {
+					search = true;
+					if (!found_first) {
+						found_first = true;
+						positive = (val_now > 0);
+					}
+				}
+				val_prev = val_now;
+			}
+		}
+
+		// search for inversed x direction
+		for (int y = 0; y < diff.rows; y++) {
+			val_prev = diff.at<double>(y, diff.cols - 1);
+			positive = (val_prev > 0);
+			search = false;
+			found_first = false;
+			for (int x = diff.cols - 2; x > 0; --x) {
+				val_now = diff.at<double>(y, x);
+				if (search && (
+					((val_now <= 0) && positive) || ((val_now >= 0) && !positive))) {// found crossed point
+					if (abs(val_now) < abs(val_prev)) {
+						cross_inv.at<uchar>(y, x) = 255;
+					}
+					else {
+						cross_inv.at<uchar>(y, x + 1) = 255;
+					}
+					positive = !positive;
+					search = false;
+				}
+				if (!search && abs(val_now) > thresh) {
+					search = true;
+					if (!found_first) {
+						found_first = true;
+						positive = (val_now > 0);
+					}
+				}
+				val_prev = val_now;
+			}
+		}
+
+	}
+
+	cv::bitwise_and(cross, cross_inv, dst);
+}
+
+/**
+ * \brief detect chess corners based on line detection
+ * \param src 
+ * \param pts 
+ * \param ptsReal 
+ */
+void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal)
+{
+	cv::Mat lineV, lineH;
+	detectLines_(src[0], src[1], lineV, false);
+	detectLines_(src[2], src[3], lineH, true);
+
+	cv::Mat ptsImg;
+	bitwise_and(lineH, lineV, ptsImg);
+	for(int y = 0; y < ptsImg.rows; y++)
+	{
+		for(int x = 0; x < ptsImg.cols; x++)
+		{
+			if(ptsImg.at<uchar>(y, x) == 255)
+			{
+				pts.push_back(Point2f(x, y));
+			}
+		}
+	}
+
+}
+
+/**
  * \brief stereo camera calibration for stereo vision with pre-captured images
  * \param imgFilePath :the path of image pairs captured by left and right cameras, for stereo camera calibration
  * \param cameraParaPath :the path of files storing the camera parameters
@@ -933,7 +1178,7 @@ bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts, douVecPt3f& pts
 double stereoCamCalibration(std::string imgFilePath, std::string cameraParaPath)
 {
 	//detect the inner corner in each chess image
-	Size imgSize;
+	cv::Size imgSize;
 	std::vector<std::vector<Point2f> > cornerPtsVec_left, cornerPtsVec_right;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;					 	//calculated coordination of corners in world coordinate system
 	bool isSuc = ptsCalib(imgFilePath, imgSize, cornerPtsVec_left, cornerPtsVec_right, objPts3d, 6, 9);
@@ -953,18 +1198,18 @@ double stereoCamCalibration(std::string imgFilePath, std::string cameraParaPath)
 	//flag |= CALIB_FIX_K4;
 	//flag |= CALIB_FIX_K5;
 	//left camera calibration
-	Mat K_left = Mat::eye(3, 3, CV_64F);		//the inner parameters of camera
-	Mat D_left = Mat(1, 5, CV_64F, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> T_left;										//matrix T of each image
-	std::vector<Mat> R_left;										//matrix R of each image
+	cv::Mat K_left = cv::Mat::eye(3, 3, CV_64F);		//the inner parameters of camera
+	cv::Mat D_left = cv::Mat(1, 5, CV_64F, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> T_left;										//matrix T of each image
+	std::vector<cv::Mat> R_left;										//matrix R of each image
 	double rmsLeft = calibrateCamera(objPts3d, cornerPtsVec_left, imgSize,
 		K_left, D_left, 
 		R_left, T_left, flag);
 	//right camera calibration
-	Mat K_right = Mat::eye(3, 3, CV_64F);	//the inner parameters of camera
-	Mat D_right = Mat(1, 5, CV_64F, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> T_right;									//matrix T of each image
-	std::vector<Mat> R_right;									//matrix R of each image
+	cv::Mat K_right = cv::Mat::eye(3, 3, CV_64F);	//the inner parameters of camera
+	cv::Mat D_right = cv::Mat(1, 5, CV_64F, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> T_right;									//matrix T of each image
+	std::vector<cv::Mat> R_right;									//matrix R of each image
 	double rmsRight = calibrateCamera(objPts3d, cornerPtsVec_right, imgSize,
 		K_right, D_right, 
 		R_right, T_right, flag);
@@ -972,9 +1217,9 @@ double stereoCamCalibration(std::string imgFilePath, std::string cameraParaPath)
 	cout << "rmsLeft:" << rmsLeft << endl;
 	cout << "rmsRight:" << rmsRight << endl;
 
-	Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
-	Mat matrixE;				//essential matrix E
-	Mat matrixF;				//fundamental matrix F
+	cv::Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
+	cv::Mat matrixE;				//essential matrix E
+	cv::Mat matrixF;				//fundamental matrix F
 	int stereoFlag = 0;
 	stereoFlag |= CALIB_FIX_INTRINSIC;
 	stereoFlag |= CALIB_SAME_FOCAL_LENGTH;
@@ -988,15 +1233,15 @@ double stereoCamCalibration(std::string imgFilePath, std::string cameraParaPath)
 	std::cout << "stereo_calibration_error" << rms << std::endl;
 
 	FileStorage fn(cameraParaPath, FileStorage::WRITE);
-	fn << "ImgSize" << imgSize;
+	fn << "Imgcv::Size" << imgSize;
 	fn << "Left_CameraInnerPara" << K_left;
 	fn << "Left_CameraDistPara" << D_left;
 	fn << "Right_CameraInnerPara" << K_right;
 	fn << "Right_CameraDistPara" << D_right;
-	fn << "R2L_Rotation_Matrix" << matrixR;
-	fn << "R2L_Translate_Matrix" << matrixT;
-	fn << "EssentialMat" << matrixE;
-	fn << "FundamentalMat" << matrixF;
+	fn << "R2L_Rotation_cv::Matrix" << matrixR;
+	fn << "R2L_Translate_cv::Matrix" << matrixT;
+	fn << "Essentialcv::Mat" << matrixE;
+	fn << "Fundamentalcv::Mat" << matrixF;
 	fn.release();
 
 	return rms;
@@ -1005,7 +1250,7 @@ double stereoCamCalibration(std::string imgFilePath, std::string cameraParaPath)
 double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPath)
 {
 	//detect the inner corner in each chess image
-	Size imgSize;
+	cv::Size imgSize;
 	std::vector<std::vector<Point2f> > cornerPtsVec_left, cornerPtsVec_right;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;					 	//calculated coordination of corners in world coordinate system
 	bool isSuc = ptsCalib(imgFilePathL, imgSize, cornerPtsVec_left, cornerPtsVec_right, objPts3d, 6, 9);
@@ -1025,18 +1270,18 @@ double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPa
 	flag |= CALIB_FIX_K4;
 	flag |= CALIB_FIX_K5;
 	//left camera calibration
-	Mat K_left = Mat::eye(3, 3, CV_64F);		//the inner parameters of camera
-	Mat D_left = Mat(1, 5, CV_64F, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> T_left;										//matrix T of each image
-	std::vector<Mat> R_left;										//matrix R of each image
+	cv::Mat K_left = cv::Mat::eye(3, 3, CV_64F);		//the inner parameters of camera
+	cv::Mat D_left = cv::Mat(1, 5, CV_64F, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> T_left;										//matrix T of each image
+	std::vector<cv::Mat> R_left;										//matrix R of each image
 	double rmsLeft = calibrateCamera(objPts3d, cornerPtsVec_left, imgSize,
 		K_left, D_left, 
 		R_left, T_left, flag);
 	//right camera calibration
-	Mat K_right = Mat::eye(3, 3, CV_64F);	//the inner parameters of camera
-	Mat D_right = Mat(1, 5, CV_64F, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> T_right;									//matrix T of each image
-	std::vector<Mat> R_right;									//matrix R of each image
+	cv::Mat K_right = cv::Mat::eye(3, 3, CV_64F);	//the inner parameters of camera
+	cv::Mat D_right = cv::Mat(1, 5, CV_64F, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> T_right;									//matrix T of each image
+	std::vector<cv::Mat> R_right;									//matrix R of each image
 	double rmsRight = calibrateCamera(objPts3d, cornerPtsVec_right, imgSize,
 		K_right, D_right, 
 		R_right, T_right, flag);//| CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO
@@ -1044,7 +1289,7 @@ double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPa
 	cout << "rmsLeft:" << rmsLeft << endl;
 	cout << "rmsRight:" << rmsRight << endl;
 
-	Mat monoMapL1, monoMapL2, monoMapR1, monoMapR2;
+	cv::Mat monoMapL1, monoMapL2, monoMapR1, monoMapR2;
 	//Precompute maps for cv::remap()
 	fisheye::initUndistortRectifyMap(K_left, D_left, noArray(), K_left,
 		imgSize, CV_32F, monoMapL1, monoMapL2);
@@ -1062,11 +1307,11 @@ double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPa
 			K_right, D_right, noArray(), K_right);
 	}
 
-	Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
-	Mat zeroDistortion = Mat::zeros(D_right.size(), D_right.type());
+	cv::Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
+	cv::Mat zeroDistortion = cv::Mat::zeros(D_right.size(), D_right.type());
 
-	Mat matrixE;				//essential matrix E
-	Mat matrixF;				//fundamental matrix F
+	cv::Mat matrixE;				//essential matrix E
+	cv::Mat matrixF;				//fundamental matrix F
 	int stereoFlag = 0;
 	stereoFlag |= CALIB_FIX_INTRINSIC;
 	stereoFlag |= CALIB_SAME_FOCAL_LENGTH;
@@ -1080,15 +1325,15 @@ double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPa
 	std::cout << "stereo_calibration_error" << rms << std::endl;
 	  
 	FileStorage fn(cameraParaPath, FileStorage::WRITE);
-	fn << "ImgSize" << imgSize;
+	fn << "Imgcv::Size" << imgSize;
 	fn << "Left_CameraInnerPara" << K_left;
 	fn << "Left_CameraDistPara" << D_left;
 	fn << "Right_CameraInnerPara" << K_right;
 	fn << "Right_CameraDistPara" << D_right;
-	fn << "R2L_Rotation_Matrix" << matrixR;
-	fn << "R2L_Translate_Matrix" << matrixT;
-	fn << "EssentialMat" << matrixE;
-	fn << "FundamentalMat" << matrixF;
+	fn << "R2L_Rotation_cv::Matrix" << matrixR;
+	fn << "R2L_Translate_cv::Matrix" << matrixT;
+	fn << "Essentialcv::Mat" << matrixE;
+	fn << "Fundamentalcv::Mat" << matrixF;
 	fn.release();
 
 	return rms;
@@ -1102,7 +1347,7 @@ double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPa
  */
 double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath)
 {
-	Size imgSize;
+	cv::Size imgSize;
 	std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;					 	//calculated coordination of corners in world coordinate system
 	bool isSuc = ptsCalib_Single(imgFilePath, imgSize, cornerPtsVec, objPts3d, 6, 9);
@@ -1127,13 +1372,13 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//flag |= fisheye::CALIB_USE_INTRINSIC_GUESS;
 
 	//left camera calibration
-	Mat K = Mat::eye(3, 3, CV_64F);		//the inner parameters of camera
-	Mat D = Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> T;										//matrix T of each image:translation
-	std::vector<Mat> R;										//matrix R of each image:rotation
-	double rms = fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,
+	cv::Mat K = cv::Mat::eye(3, 3, CV_64F);		//the inner parameters of camera
+	cv::Mat D = cv::Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> T;										//matrix T of each image:translation
+	std::vector<cv::Mat> R;										//matrix R of each image:rotation
+	double rms = my_cv::fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
-		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
+		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 
 	if (rms < 1)
 	{
@@ -1141,9 +1386,10 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 		fn << "ImgSize" << imgSize;
 		fn << "CameraInnerPara" << K;
 		fn << "CameraDistPara" << D;
+		fn << "RMS" << rms;
 		fn.release();
 
-		distortRectify_fisheye(K, D, imgSize, imgFilePath);
+		//distortRectify_fisheye(K, D, imgSize, imgFilePath);
 	}
 	else
 	{
@@ -1160,11 +1406,20 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 	std::vector<String> fileNames;
 	glob(filePath, fileNames, false);
 
+	int x_expand_half = 2560 / 2;
+	int y_expand_half = 1440 / 2;
+
 	for (int i = 0; i < fileNames.size(); i++)
 	{
-		Mat imgOrigin = imread(fileNames[i]);
-		Mat imgUndistort;
-		fisheye::undistortImage(imgOrigin, imgUndistort, K, D, K, imgSize);
+		cv::Mat imgOrigin = imread(fileNames[i]);
+		copyMakeBorder(imgOrigin, imgOrigin, y_expand_half, y_expand_half, x_expand_half, x_expand_half, BORDER_CONSTANT, 0);
+
+		cv::Mat imgUndistort;
+		Mat K_new = K;
+		K_new.at<double>(0, 2) = K.at<double>(0, 2) + x_expand_half;
+		K_new.at<double>(1, 2) = K.at<double>(1, 2) + y_expand_half;
+
+		my_cv::fisheye::undistortImage(imgOrigin, imgUndistort, K, D, K_new, imgSize*2);
 		imwrite(fileNames[i].substr(0, fileNames[i].length() - 4) + "_undistort.jpg", imgUndistort);
 	}
 }
@@ -1185,8 +1440,8 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 
 		for (int i = 0; i < fileNames.size(); i++)
 		{
-			Mat imgOrigin = imread(fileNames[i]);
-			Mat imgUndistort;
+			cv::Mat imgOrigin = imread(fileNames[i]);
+			cv::Mat imgUndistort;
 			fisheye::undistortImage(imgOrigin, imgUndistort, K, D, K, imgSize);
 			undistortImgs.push_back(imgUndistort);
 		}
@@ -1199,8 +1454,8 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 
 		for (int i = 0; i < fileNames.size(); i++)
 		{
-			Mat imgOrigin = imread(fileNames[i]);
-			Mat imgUndistort;
+			cv::Mat imgOrigin = imread(fileNames[i]);
+			cv::Mat imgUndistort;
 			fisheye::undistortImage(imgOrigin, imgUndistort, K, D, K, imgSize);
 			undistortImgs.push_back(imgUndistort);
 		}
@@ -1219,7 +1474,7 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 double stereoFisheyeCamCalib(std::string imgFilePath, std::string cameraParaPath)
 {
 	//detect the inner corner in each chess image
-	Size imgSize;
+	cv::Size imgSize;
 	std::vector<std::vector<Point2f> > cornerPtsVec_left, cornerPtsVec_right;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;					 	//calculated coordination of corners in world coordinate system
 	bool isSuc = ptsCalib(imgFilePath, imgSize, cornerPtsVec_left, cornerPtsVec_right, objPts3d, 6, 9);
@@ -1229,10 +1484,10 @@ double stereoFisheyeCamCalib(std::string imgFilePath, std::string cameraParaPath
 		return -1;
 	}
 
-	Mat K1, D1, K2, D2;
-	Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
-	Mat matrixE;				//essential matrix E
-	Mat matrixF;				//fundamental matrix F
+	cv::Mat K1, D1, K2, D2;
+	cv::Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
+	cv::Mat matrixE;				//essential matrix E
+	cv::Mat matrixF;				//fundamental matrix F
 	int stereoFlag = 0;
 	stereoFlag |= cv::fisheye::CALIB_FIX_INTRINSIC;
 	stereoFlag |= cv::fisheye::CALIB_FIX_PRINCIPAL_POINT;
@@ -1253,15 +1508,15 @@ double stereoFisheyeCamCalib(std::string imgFilePath, std::string cameraParaPath
 	std::cout << "stereo_calibration_error" << rms << std::endl;
 
 	FileStorage fn(cameraParaPath, FileStorage::WRITE);
-	fn << "ImgSize" << imgSize;
+	fn << "Imgcv::Size" << imgSize;
 	fn << "Left_CameraInnerPara" << K1;
 	fn << "Left_CameraDistPara" << D1;
 	fn << "Right_CameraInnerPara" << K2;
 	fn << "Right_CameraDistPara" << D2;
-	fn << "R2L_Rotation_Matrix" << matrixR;
-	fn << "R2L_Translate_Matrix" << matrixT;
-	fn << "EssentialMat" << matrixE;
-	fn << "FundamentalMat" << matrixF;
+	fn << "R2L_Rotation_cv::Matrix" << matrixR;
+	fn << "R2L_Translate_cv::Matrix" << matrixT;
+	fn << "Essentialcv::Mat" << matrixE;
+	fn << "Fundamentalcv::Mat" << matrixF;
 	fn.release();
 
 	return rms;
@@ -1275,7 +1530,7 @@ double stereoFisheyeCamCalib(std::string imgFilePath, std::string cameraParaPath
 double stereoFisheyeCamCalib_2(std::string imgFilePath, std::string cameraParaPath)
 {
 	//detect the inner corner in each chess image
-	Size imgSize;
+	cv::Size imgSize;
 	std::vector<std::vector<Point2f> > cornerPtsVec_left, cornerPtsVec_right;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;					 	//calculated coordination of corners in world coordinate system
 	bool isSuc = ptsCalib(imgFilePath, imgSize, cornerPtsVec_left, cornerPtsVec_right, objPts3d, 6, 9);
@@ -1325,18 +1580,18 @@ double stereoFisheyeCamCalib_2(std::string imgFilePath, std::string cameraParaPa
 	//flag |= fisheye::CALIB_USE_INTRINSIC_GUESS;
 
 	//left camera calibration
-	Mat K_left = Mat::eye(3, 3, CV_64F);		//the inner parameters of camera
-	Mat D_left = Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> T_left;										//matrix T of each image:translation
-	std::vector<Mat> R_left;										//matrix R of each image:rotation
+	cv::Mat K_left = cv::Mat::eye(3, 3, CV_64F);		//the inner parameters of camera
+	cv::Mat D_left = cv::Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> T_left;										//matrix T of each image:translation
+	std::vector<cv::Mat> R_left;										//matrix R of each image:rotation
 	double rmsLeft = fisheye::calibrate(objPts3d, cornerPtsVec_left, imgSize,
 		K_left, D_left, R_left, T_left, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	//right camera calibration
-	Mat K_right = Mat::eye(3, 3, CV_64F);	//the inner parameters of camera
-	Mat D_right = Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> T_right;									//matrix T of each image
-	std::vector<Mat> R_right;									//matrix R of each image
+	cv::Mat K_right = cv::Mat::eye(3, 3, CV_64F);	//the inner parameters of camera
+	cv::Mat D_right = cv::Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> T_right;									//matrix T of each image
+	std::vector<cv::Mat> R_right;									//matrix R of each image
 	double rmsRight = fisheye::calibrate(objPts3d, cornerPtsVec_right, imgSize,
 		K_right, D_right, R_right, T_right, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));//| CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO
@@ -1347,9 +1602,9 @@ double stereoFisheyeCamCalib_2(std::string imgFilePath, std::string cameraParaPa
 	//********************************************
 	//************ stereo calibration ************
 	//********************************************
-	Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
-	Mat matrixE;				//essential matrix E
-	Mat matrixF;				//fundamental matrix F
+	cv::Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
+	cv::Mat matrixE;				//essential matrix E
+	cv::Mat matrixF;				//fundamental matrix F
 	int stereoFlag = 0;
 	stereoFlag |= cv::fisheye::CALIB_FIX_INTRINSIC;
 	stereoFlag |= cv::fisheye::CALIB_FIX_PRINCIPAL_POINT;
@@ -1386,15 +1641,15 @@ double stereoFisheyeCamCalib_2(std::string imgFilePath, std::string cameraParaPa
 	std::cout << "stereo_calibration_error" << rms << std::endl;
 
 	FileStorage fn(cameraParaPath, FileStorage::WRITE);
-	fn << "ImgSize" << imgSize;
+	fn << "Imgcv::Size" << imgSize;
 	fn << "Left_CameraInnerPara" << K_left;
 	fn << "Left_CameraDistPara" << D_left;
 	fn << "Right_CameraInnerPara" << K_right;
 	fn << "Right_CameraDistPara" << D_right;
-	fn << "R2L_Rotation_Matrix" << matrixR;
-	fn << "R2L_Translate_Matrix" << matrixT;
-	fn << "EssentialMat" << matrixE;
-	fn << "FundamentalMat" << matrixF;
+	fn << "R2L_Rotation_cv::Matrix" << matrixR;
+	fn << "R2L_Translate_cv::Matrix" << matrixT;
+	fn << "Essentialcv::Mat" << matrixE;
+	fn << "Fundamentalcv::Mat" << matrixF;
 	fn.release();
 
 	return rms;
@@ -1408,7 +1663,7 @@ double stereoFisheyeCamCalib_2(std::string imgFilePath, std::string cameraParaPa
 double stereoFisheyeCamCalib_3(std::string imgFilePath, std::string cameraParaPath)
 {
 	//detect the inner corner in each chess image
-	Size imgSize;
+	cv::Size imgSize;
 	std::vector<std::vector<Point2f> > cornerPtsVec_left, cornerPtsVec_right;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;					 	//calculated coordination of corners in world coordinate system
 	bool isSuc = ptsCalib(imgFilePath, imgSize, cornerPtsVec_left, cornerPtsVec_right, objPts3d, 6, 9);
@@ -1434,18 +1689,18 @@ double stereoFisheyeCamCalib_3(std::string imgFilePath, std::string cameraParaPa
 	//flag |= fisheye::CALIB_USE_INTRINSIC_GUESS;
 
 	//left camera calibration
-	Mat K_left = Mat::eye(3, 3, CV_64F);		//the inner parameters of camera
-	Mat D_left = Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> T_left;										//matrix T of each image:translation
-	std::vector<Mat> R_left;										//matrix R of each image:rotation
+	cv::Mat K_left = cv::Mat::eye(3, 3, CV_64F);		//the inner parameters of camera
+	cv::Mat D_left = cv::Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> T_left;										//matrix T of each image:translation
+	std::vector<cv::Mat> R_left;										//matrix R of each image:rotation
 	double rmsLeft = fisheye::calibrate(objPts3d, cornerPtsVec_left, imgSize,
 		K_left, D_left, R_left, T_left, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
 	//right camera calibration
-	Mat K_right = Mat::eye(3, 3, CV_64F);	//the inner parameters of camera
-	Mat D_right = Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
-	std::vector<Mat> T_right;									//matrix T of each image
-	std::vector<Mat> R_right;									//matrix R of each image
+	cv::Mat K_right = cv::Mat::eye(3, 3, CV_64F);	//the inner parameters of camera
+	cv::Mat D_right = cv::Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
+	std::vector<cv::Mat> T_right;									//matrix T of each image
+	std::vector<cv::Mat> R_right;									//matrix R of each image
 	double rmsRight = fisheye::calibrate(objPts3d, cornerPtsVec_right, imgSize,
 		K_right, D_right, R_right, T_right, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));//
@@ -1469,9 +1724,9 @@ double stereoFisheyeCamCalib_3(std::string imgFilePath, std::string cameraParaPa
 		//********************************************
 		//************ stereo calibration ************
 		//********************************************
-		Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
-		Mat K1, K2, D1, D2;
-		Mat E, F, Q;
+		cv::Mat matrixR, matrixT;		//the rotation mattrix and translate matrix of the right camera related to the left camera
+		cv::Mat K1, K2, D1, D2;
+		cv::Mat E, F, Q;
 		int stereoFlag = 0;
 		//stereoFlag |= cv::CALIB_USE_INTRINSIC_GUESS;
 		//stereoFlag |= cv::CALIB_FIX_S1_S2_S3_S4;
@@ -1502,7 +1757,7 @@ double stereoFisheyeCamCalib_3(std::string imgFilePath, std::string cameraParaPa
 
 		std::cout << "stereo_calibration_error" << rms << std::endl;
 
-		Mat R1, R2, P1, P2, Q_;
+		cv::Mat R1, R2, P1, P2, Q_;
 		stereoRectify(K1, D1, K2, D2,
 			imgSize, matrixR, matrixT, R1, R2, P1, P2, Q_,
 			CALIB_ZERO_DISPARITY);
@@ -1517,7 +1772,7 @@ double stereoFisheyeCamCalib_3(std::string imgFilePath, std::string cameraParaPa
 		fn << "FisheyeUndistort_D1" << D_left;
 		fn << "FisheyeUndistort_K2" << K_left;
 		fn << "FisheyeUndistort_D2" << D_left;
-		fn << "ImgSize" << imgSize;
+		fn << "Imgcv::Size" << imgSize;
 		fn << "StereoCalib_K1" << K1;
 		fn << "StereoCalib_D1" << D1;
 		fn << "StereoCalib_K2" << K2;
@@ -1574,18 +1829,18 @@ void stereoFisheyeUndistort(cv::Mat distLeft, cv::Mat distRight,
 	std::string cameraParaPath, cv::Mat& rectiLeft, cv::Mat& rectiRight)
 {
 	//camera stereo calibration parameters
-	Size imgSize;
-	Mat leftK, leftD, rightK, rightD;
-	//Mat K1, D1, K2, D2;
-	//Mat R1, P1, R2, P2;
-	//Mat matrixR, matrixT;
+	cv::Size imgSize;
+	cv::Mat leftK, leftD, rightK, rightD;
+	//cv::Mat K1, D1, K2, D2;
+	//cv::Mat R1, P1, R2, P2;
+	//cv::Mat matrixR, matrixT;
 
 	FileStorage fn(cameraParaPath, FileStorage::READ);
 	fn["FisheyeUndistort_K1"] >> leftK;
 	fn["FisheyeUndistort_D1"] >> leftD;
 	fn["FisheyeUndistort_K2"] >> rightK;
 	fn["FisheyeUndistort_D2"] >> rightD;
-	fn["ImgSize"] >> imgSize;
+	fn["Imgcv::Size"] >> imgSize;
 	//fn["StereoCalib_K1"] >> K1;
 	//fn["StereoCalib_D1"] >> D1;
 	//fn["StereoCalib_K2"] >> K2;
@@ -1610,34 +1865,34 @@ void stereoFisheyeUndistort(cv::Mat distLeft, cv::Mat distRight,
 	{
 		resize(distRight, distRight, imgSize);
 	}
-	Mat undistortLeft, undistortRight;
+	cv::Mat undistortLeft, undistortRight;
 	fisheye::undistortImage(distLeft, undistortLeft, leftK, leftD, leftK, imgSize);
 	fisheye::undistortImage(distRight, undistortRight, rightK, rightD, rightK, imgSize);
 
-	Mat K1 = (Mat_<double>(3,3) << 
+	cv::Mat K1 = (cv::Mat_<double>(3,3) << 
 		212.0527, 0, 0, 
 		0, 210.5292, 0, 
 		322.6531, 176.3494, 1);
-	Mat D1 = (Mat_<double>(4, 1) <<
+	cv::Mat D1 = (cv::Mat_<double>(4, 1) <<
 		0.0041, -0.0013, 0, 0);
-	Mat K2 = (Mat_<double>(3, 3) <<
+	cv::Mat K2 = (cv::Mat_<double>(3, 3) <<
 		215.5334, 0, 0,
 		0, 211.0490, 0,
 		323.6923,182.7369, 1);
-	Mat D2 = (Mat_<double>(4, 1) <<
+	cv::Mat D2 = (cv::Mat_<double>(4, 1) <<
 		-0.0053, 0.0025, 0, 0);
-	Mat matrixR = (Mat_<double>(3, 3) <<
+	cv::Mat matrixR = (cv::Mat_<double>(3, 3) <<
 		0.998273142127583, -0.00292436388398383, -0.0586701099589566,
 		0.00149299633958467, 0.999700528454590, -0.0244258954706668,
 		0.0587239701370062, 0.0242961211613707, 0.997978553791543);
-	Mat matrixT = (Mat_<double>(3, 1) <<
+	cv::Mat matrixT = (cv::Mat_<double>(3, 1) <<
 		-37.0476034022594, -7.32635604514172, 0.423312785199701);
 
 	K1 = K1.t();
 	K2 = K2.t();
 	//matrixR = matrixR.t();
 
-	Mat R1, R2, P1, P2, Q_;
+	cv::Mat R1, R2, P1, P2, Q_;
 	stereoRectify(K1, D1, K2, D2,
 		imgSize, matrixR, matrixT, R1, R2, P1, P2, Q_,
 		CALIB_ZERO_DISPARITY);
@@ -1670,18 +1925,18 @@ void stereoFisheyeUndistort(cv::Mat distLeft, cv::Mat distRight,
 void rectify_(std::string cameraParaPath, std::string imgPath)
 {
 	//camera stereo calibration parameters
-	Size imgSize;
-	Mat leftK, leftD, rightK, rightD;
-	Mat K1, D1, K2, D2;
-	Mat R1, P1, R2, P2;
-	Mat matrixR, matrixT;
+	cv::Size imgSize;
+	cv::Mat leftK, leftD, rightK, rightD;
+	cv::Mat K1, D1, K2, D2;
+	cv::Mat R1, P1, R2, P2;
+	cv::Mat matrixR, matrixT;
 
 	FileStorage fn(cameraParaPath, FileStorage::READ);
 	fn["FisheyeUndistort_K1"] >> leftK;
 	fn["FisheyeUndistort_D1"] >> leftD;
 	fn["FisheyeUndistort_K2"] >> rightK;
 	fn["FisheyeUndistort_D2"] >> rightD;
-	fn["ImgSize"] >> imgSize;
+	fn["Imgcv::Size"] >> imgSize;
 	fn["StereoCalib_K1"] >> K1;
 	fn["StereoCalib_D1"] >> D1;
 	fn["StereoCalib_K2"] >> K2;
@@ -1704,8 +1959,8 @@ void rectify_(std::string cameraParaPath, std::string imgPath)
 
 	for(int i = 0; i < fileNames.size(); i++)
 	{
-		Mat distortImgL = imread(fileNames[i]);
-		Mat distortImgR = imread(fileNames[i].substr(0, fileNames[i].length() - 5) + "R.jpg");
+		cv::Mat distortImgL = imread(fileNames[i]);
+		cv::Mat distortImgR = imread(fileNames[i].substr(0, fileNames[i].length() - 5) + "R.jpg");
 
 		if(distortImgL.size() != imgSize)
 		{
@@ -1716,11 +1971,11 @@ void rectify_(std::string cameraParaPath, std::string imgPath)
 			resize(distortImgR, distortImgR, imgSize);
 		}
 
-		Mat undistortLeft, undistortRight;
+		cv::Mat undistortLeft, undistortRight;
 		fisheye::undistortImage(distortImgL, undistortLeft, leftK, leftD, leftK, imgSize);
 		fisheye::undistortImage(distortImgR, undistortRight, rightK, rightD, rightK, imgSize);
 
-		Mat rectiLeft, rectiRight;
+		cv::Mat rectiLeft, rectiRight;
 		cv::remap(undistortLeft, rectiLeft, lmapx, lmapy, cv::INTER_LINEAR);
 		cv::remap(undistortRight, rectiRight, rmapx, rmapy, cv::INTER_LINEAR);
 
@@ -1768,24 +2023,24 @@ cv::Mat mergeRectification(const cv::Mat& l, const cv::Mat& r)
  */
 void stereoCameraUndistort(std::string imgFilePath, std::string cameraParaPath)
 {
-	Size imgSize;
-	Mat cameraInnerPara_left, cameraInnerPara_right;
-	Mat cameraDistPara_left, cameraDistPara_right;
-	Mat matrixR, matrixT;
+	cv::Size imgSize;
+	cv::Mat cameraInnerPara_left, cameraInnerPara_right;
+	cv::Mat cameraDistPara_left, cameraDistPara_right;
+	cv::Mat matrixR, matrixT;
 	FileStorage fn(cameraParaPath, FileStorage::READ);
-	fn["ImgSize"] >> imgSize;
+	fn["Imgcv::Size"] >> imgSize;
 	fn["Left_CameraInnerPara"] >> cameraInnerPara_left;
 	fn["Left_CameraDistPara"] >> cameraDistPara_left;
 	fn["Right_CameraInnerPara"] >> cameraInnerPara_right;
 	fn["Right_CameraDistPara"] >> cameraDistPara_right;
-	fn["R2L_Rotation_Matrix"] >> matrixR;
-	fn["R2L_Translate_Matrix"] >> matrixT;
+	fn["R2L_Rotation_cv::Matrix"] >> matrixR;
+	fn["R2L_Translate_cv::Matrix"] >> matrixT;
 	fn.release();
 
-	Mat matrixRectify_left, matrixRectify_right, matrixProjection_left, matrixProjection_right;
+	cv::Mat matrixRectify_left, matrixRectify_right, matrixProjection_left, matrixProjection_right;
 	Rect validRoi[2];
 
-	Mat R_L, R_R, P_L, P_R, Q;
+	cv::Mat R_L, R_R, P_L, P_R, Q;
 	fisheye::stereoRectify(cameraInnerPara_left, cameraDistPara_left,
 		cameraInnerPara_right, cameraDistPara_right,
 		imgSize, matrixR, matrixT, R_L, R_R, P_L, P_R, Q,
@@ -1796,7 +2051,7 @@ void stereoCameraUndistort(std::string imgFilePath, std::string cameraParaPath)
 	//bool isVerticalStereo = fabs(matrixProjection_right.at<double>(1, 3)) > fabs(matrixProjection_right.at<double>(0, 3));
 
 	// COMPUTE AND DISPLAY RECTIFICATION
-	Mat lmapx, lmapy, rmapx, rmapy;
+	cv::Mat lmapx, lmapy, rmapx, rmapy;
 	// IF BY CALIBRATED (BOUGUET'S METHOD)
 
 	//Precompute maps for cv::remap()
@@ -1808,7 +2063,7 @@ void stereoCameraUndistort(std::string imgFilePath, std::string cameraParaPath)
 		R_R, P_R,
 		imgSize * 2, CV_32F, rmapx, rmapy);
 
-	//Mat canvas;
+	//cv::Mat canvas;
 	//double sf;
 	//int w, h;
 	//if (!isVerticalStereo)
@@ -1831,7 +2086,7 @@ void stereoCameraUndistort(std::string imgFilePath, std::string cameraParaPath)
 
 	//Stereo matching
 	int ndisparities = 16 * 15;   /**< Range of disparity */
-	int SADWindowSize = 31; /**< Size of the block window. Must be odd */
+	int SADWindowSize = 31; /**< cv::Size of the block window. Must be odd */
 	//Ptr<StereoBM> sbm = StereoBM::create(ndisparities, SADWindowSize);
 	//sbm->setMinDisparity(0);			//确定匹配搜索从哪里开始，默认为0
 	////sbm->setNumDisparities(64);		//在该数值确定的视差范围内进行搜索，视差窗口
@@ -1849,10 +2104,10 @@ void stereoCameraUndistort(std::string imgFilePath, std::string cameraParaPath)
 	//	40 * 7 * 7,
 	//	1, 63, 10, 100, 32, StereoSGBM::MODE_SGBM);
 
-	Mat frame_left, frame_right;
-	Mat imgLeft, imgRight;
-	Mat rimg, cimg;
-	Mat Mask;
+	cv::Mat frame_left, frame_right;
+	cv::Mat imgLeft, imgRight;
+	cv::Mat rimg, cimg;
+	cv::Mat Mask;
 
 	String filePath = imgFilePath + "\\*L.jpg";
 	std::vector<String> fileNames;
@@ -1878,7 +2133,7 @@ void stereoCameraUndistort(std::string imgFilePath, std::string cameraParaPath)
 		//cv::rectangle(frame_right, cv::Rect(255, 0, 829, frame_left.rows - 1), cv::Scalar(0, 0, 255));
 		//cv::rectangle(frame_right, cv::Rect(255 - ndisparities, 0, 829 + ndisparities, frame_left.rows - 1), cv::Scalar(0, 0, 255));
 
-		Mat lundist, rundist;
+		cv::Mat lundist, rundist;
 		cv::remap(frame_left, lundist, lmapx, lmapy, INTER_LINEAR);
 		cv::remap(frame_right, rundist, rmapx, rmapy, cv::INTER_LINEAR);
 
@@ -1897,8 +2152,8 @@ void stereoCameraUndistort(std::string imgFilePath, std::string cameraParaPath)
 		//	for (int j = 0; j < canvas.cols; j += 32)
 		//		line(canvas, Point(j, 0), Point(j, canvas.rows), Scalar(0, 255, 0), 1, 8);
 
-		//Mat imgLeftBGR = imgLeft.clone();
-		//Mat imgRightBGR = imgRight.clone();
+		//cv::Mat imgLeftBGR = imgLeft.clone();
+		//cv::Mat imgRightBGR = imgRight.clone();
 
 		//cvtColor(imgLeft, imgLeft, COLOR_BGR2GRAY);
 		//cvtColor(imgRight, imgRight, COLOR_BGR2GRAY);
@@ -1912,22 +2167,22 @@ void stereoCameraUndistort(std::string imgFilePath, std::string cameraParaPath)
 
 void getRectifiedImages(std::string imgFilePath, std::string cameraParaPath)
 {
-	Size imgSize;
-	Mat cameraInnerPara_left, cameraInnerPara_right;
-	Mat cameraDistPara_left, cameraDistPara_right;
-	Mat matrixR, matrixT;
+	cv::Size imgSize;
+	cv::Mat cameraInnerPara_left, cameraInnerPara_right;
+	cv::Mat cameraDistPara_left, cameraDistPara_right;
+	cv::Mat matrixR, matrixT;
 	FileStorage fn(cameraParaPath, FileStorage::READ);
-	fn["ImgSize"] >> imgSize;
+	fn["Imgcv::Size"] >> imgSize;
 	fn["Left_CameraInnerPara"] >> cameraInnerPara_left;
 	fn["Left_CameraDistPara"] >> cameraDistPara_left;
 	fn["Right_CameraInnerPara"] >> cameraInnerPara_right;
 	fn["Right_CameraDistPara"] >> cameraDistPara_right;
-	fn["R2L_Rotation_Matrix"] >> matrixR;
-	fn["R2L_Translate_Matrix"] >> matrixT;
+	fn["R2L_Rotation_cv::Matrix"] >> matrixR;
+	fn["R2L_Translate_cv::Matrix"] >> matrixT;
 	fn.release();
 
 
-	Mat matrixRectify_left, matrixRectify_right, matrixProjection_left, matrixProjection_right, Q;
+	cv::Mat matrixRectify_left, matrixRectify_right, matrixProjection_left, matrixProjection_right, Q;
 	Rect validRoi[2];
 
 	stereoRectify(cameraInnerPara_left, cameraDistPara_left,
@@ -1940,14 +2195,14 @@ void getRectifiedImages(std::string imgFilePath, std::string cameraParaPath)
 	bool isVerticalStereo = fabs(matrixProjection_right.at<double>(1, 3)) > fabs(matrixProjection_right.at<double>(0, 3));
 
 	// COMPUTE AND DISPLAY RECTIFICATION
-	Mat rmap[2][2];
+	cv::Mat rmap[2][2];
 	// IF BY CALIBRATED (BOUGUET'S METHOD)
 
 	//Precompute maps for cv::remap()
 	initUndistortRectifyMap(cameraInnerPara_left, cameraDistPara_left, matrixRectify_left, matrixProjection_left, imgSize, CV_16SC2, rmap[0][0], rmap[0][1]);
 	initUndistortRectifyMap(cameraInnerPara_right, cameraDistPara_right, matrixRectify_right, matrixProjection_right, imgSize, CV_16SC2, rmap[1][0], rmap[1][1]);
 
-	Mat canvas;
+	cv::Mat canvas;
 	double sf;
 	int w, h;
 	if (!isVerticalStereo)
@@ -1970,7 +2225,7 @@ void getRectifiedImages(std::string imgFilePath, std::string cameraParaPath)
 
 	//Stereo matching
 	int ndisparities = 16 * 5;   /**< Range of disparity */
-	int SADWindowSize = 31; /**< Size of the block window. Must be odd */
+	int SADWindowSize = 31; /**< cv::Size of the block window. Must be odd */
 	Ptr<StereoBM> sbm = StereoBM::create(ndisparities, SADWindowSize);
 	sbm->setMinDisparity(0);			//确定匹配搜索从哪里开始，默认为0
 										//sbm->setNumDisparities(64);		//在该数值确定的视差范围内进行搜索，视差窗口
@@ -1988,10 +2243,10 @@ void getRectifiedImages(std::string imgFilePath, std::string cameraParaPath)
 		40 * 7 * 7,
 		1, 63, 10, 100, 32, StereoSGBM::MODE_SGBM);
 
-	Mat frame_left, frame_right;
-	Mat imgLeft, imgRight;
-	Mat rimg, cimg;
-	Mat Mask;
+	cv::Mat frame_left, frame_right;
+	cv::Mat imgLeft, imgRight;
+	cv::Mat rimg, cimg;
+	cv::Mat Mask;
 
 	String filePath = imgFilePath + "/left*.jpg";
 	std::vector<String> fileNames;
@@ -2013,14 +2268,14 @@ void getRectifiedImages(std::string imgFilePath, std::string cameraParaPath)
 
 		remap(frame_left, rimg, rmap[0][0], rmap[0][1], INTER_LINEAR);
 		rimg.copyTo(cimg);
-		Mat canvasPart1 = !isVerticalStereo ? canvas(Rect(w * 0, 0, w, h)) : canvas(Rect(0, h * 0, w, h));
+		cv::Mat canvasPart1 = !isVerticalStereo ? canvas(Rect(w * 0, 0, w, h)) : canvas(Rect(0, h * 0, w, h));
 		resize(cimg, canvasPart1, canvasPart1.size(), 0, 0, INTER_AREA);
 		Rect vroi1(cvRound(validRoi[0].x*sf), cvRound(validRoi[0].y*sf),
 			cvRound(validRoi[0].width*sf), cvRound(validRoi[0].height*sf));
 
 		remap(frame_right, rimg, rmap[1][0], rmap[1][1], INTER_LINEAR);
 		rimg.copyTo(cimg);
-		Mat canvasPart2 = !isVerticalStereo ? canvas(Rect(w * 1, 0, w, h)) : canvas(Rect(0, h * 1, w, h));
+		cv::Mat canvasPart2 = !isVerticalStereo ? canvas(Rect(w * 1, 0, w, h)) : canvas(Rect(0, h * 1, w, h));
 		resize(cimg, canvasPart2, canvasPart2.size(), 0, 0, INTER_AREA);
 		Rect vroi2 = Rect(cvRound(validRoi[1].x*sf), cvRound(validRoi[1].y*sf),
 			cvRound(validRoi[1].width*sf), cvRound(validRoi[1].height*sf));
@@ -2040,18 +2295,18 @@ void getRectifiedImages(std::string imgFilePath, std::string cameraParaPath)
 			for (int j = 0; j < canvas.cols; j += 32)
 				line(canvas, Point(j, 0), Point(j, canvas.rows), Scalar(0, 255, 0), 1, 8);
 
-		Mat imgLeftBGR = imgLeft.clone();
-		Mat imgRightBGR = imgRight.clone();
+		cv::Mat imgLeftBGR = imgLeft.clone();
+		cv::Mat imgRightBGR = imgRight.clone();
 
 		cvtColor(imgLeft, imgLeft, COLOR_BGR2GRAY);
 		cvtColor(imgRight, imgRight, COLOR_BGR2GRAY);
 
 
 		//-- And create the image in which we will save our disparities
-		Mat imgDisparity16S = Mat(imgLeft.rows, imgLeft.cols, CV_16S);
-		Mat imgDisparity8U = Mat(imgLeft.rows, imgLeft.cols, CV_8UC1);
-		Mat sgbmDisp16S = Mat(imgLeft.rows, imgLeft.cols, CV_16S);
-		Mat sgbmDisp8U = Mat(imgLeft.rows, imgLeft.cols, CV_8UC1);
+		cv::Mat imgDisparity16S = cv::Mat(imgLeft.rows, imgLeft.cols, CV_16S);
+		cv::Mat imgDisparity8U = cv::Mat(imgLeft.rows, imgLeft.cols, CV_8UC1);
+		cv::Mat sgbmDisp16S = cv::Mat(imgLeft.rows, imgLeft.cols, CV_16S);
+		cv::Mat sgbmDisp8U = cv::Mat(imgLeft.rows, imgLeft.cols, CV_8UC1);
 
 		if (imgLeft.empty() || imgRight.empty())
 		{
@@ -2064,7 +2319,7 @@ void getRectifiedImages(std::string imgFilePath, std::string cameraParaPath)
 		imgDisparity16S.convertTo(imgDisparity8U, CV_8UC1, 255.0 / 1000.0);
 		cv::compare(imgDisparity16S, 0, Mask, CMP_GE);
 		applyColorMap(imgDisparity8U, imgDisparity8U, COLORMAP_HSV);
-		Mat disparityShow;
+		cv::Mat disparityShow;
 		imgDisparity8U.copyTo(disparityShow, Mask);
 
 
@@ -2073,7 +2328,7 @@ void getRectifiedImages(std::string imgFilePath, std::string cameraParaPath)
 		sgbmDisp16S.convertTo(sgbmDisp8U, CV_8UC1, 255.0 / 1000.0);
 		cv::compare(sgbmDisp16S, 0, Mask, CMP_GE);
 		applyColorMap(sgbmDisp8U, sgbmDisp8U, COLORMAP_HSV);
-		Mat  sgbmDisparityShow;
+		cv::Mat  sgbmDisparityShow;
 		sgbmDisp8U.copyTo(sgbmDisparityShow, Mask);
 
 		imshow("bmDisparity", disparityShow);
@@ -2089,22 +2344,22 @@ void getRectifiedImages(std::string imgFilePath, std::string cameraParaPath)
 void getRectifiedImages(cv::Mat imgLeft, cv::Mat imgRight, std::string cameraParaPath, cv::Mat& rectifiedLeft,
 	cv::Mat& rectifiedRight)
 {
-	Size imgSize;
-	Mat cameraInnerPara_left, cameraInnerPara_right;
-	Mat cameraDistPara_left, cameraDistPara_right;
-	Mat matrixR, matrixT;
+	cv::Size imgSize;
+	cv::Mat cameraInnerPara_left, cameraInnerPara_right;
+	cv::Mat cameraDistPara_left, cameraDistPara_right;
+	cv::Mat matrixR, matrixT;
 	FileStorage fn(cameraParaPath, FileStorage::READ);
-	fn["ImgSize"] >> imgSize;
+	fn["Imgcv::Size"] >> imgSize;
 	fn["Left_CameraInnerPara"] >> cameraInnerPara_left;
 	fn["Left_CameraDistPara"] >> cameraDistPara_left;
 	fn["Right_CameraInnerPara"] >> cameraInnerPara_right;
 	fn["Right_CameraDistPara"] >> cameraDistPara_right;
-	fn["R2L_Rotation_Matrix"] >> matrixR;
-	fn["R2L_Translate_Matrix"] >> matrixT;
+	fn["R2L_Rotation_cv::Matrix"] >> matrixR;
+	fn["R2L_Translate_cv::Matrix"] >> matrixT;
 	fn.release();
 
 
-	Mat matrixRectify_left, matrixRectify_right, matrixProjection_left, matrixProjection_right, Q;
+	cv::Mat matrixRectify_left, matrixRectify_right, matrixProjection_left, matrixProjection_right, Q;
 	Rect validRoi[2];
 
 	stereoRectify(cameraInnerPara_left, cameraDistPara_left,
@@ -2117,14 +2372,14 @@ void getRectifiedImages(cv::Mat imgLeft, cv::Mat imgRight, std::string cameraPar
 	bool isVerticalStereo = fabs(matrixProjection_right.at<double>(1, 3)) > fabs(matrixProjection_right.at<double>(0, 3));
 
 	// COMPUTE AND DISPLAY RECTIFICATION
-	Mat rmap[2][2];
+	cv::Mat rmap[2][2];
 	// IF BY CALIBRATED (BOUGUET'S METHOD)
 
 	//Precompute maps for cv::remap()
 	initUndistortRectifyMap(cameraInnerPara_left, cameraDistPara_left, matrixRectify_left, matrixProjection_left, imgSize, CV_16SC2, rmap[0][0], rmap[0][1]);
 	initUndistortRectifyMap(cameraInnerPara_right, cameraDistPara_right, matrixRectify_right, matrixProjection_right, imgSize, CV_16SC2, rmap[1][0], rmap[1][1]);
 
-	Mat canvas;
+	cv::Mat canvas;
 	double sf;
 	int w, h;
 	if (!isVerticalStereo)
@@ -2142,8 +2397,8 @@ void getRectifiedImages(cv::Mat imgLeft, cv::Mat imgRight, std::string cameraPar
 		canvas.create(h * 2, w, CV_8UC3);
 	}
 
-	Mat rimg, cimg;
-	Mat Mask;
+	cv::Mat rimg, cimg;
+	cv::Mat Mask;
 
 	if (imgLeft.rows != imgRight.rows && imgLeft.cols != imgRight.cols && imgLeft.rows != imgSize.height && imgLeft.cols != imgSize.width)
 	{
@@ -2156,14 +2411,14 @@ void getRectifiedImages(cv::Mat imgLeft, cv::Mat imgRight, std::string cameraPar
 
 	remap(imgLeft, rimg, rmap[0][0], rmap[0][1], INTER_LINEAR);
 	rimg.copyTo(cimg);
-	Mat canvasPart1 = !isVerticalStereo ? canvas(Rect(w * 0, 0, w, h)) : canvas(Rect(0, h * 0, w, h));
+	cv::Mat canvasPart1 = !isVerticalStereo ? canvas(Rect(w * 0, 0, w, h)) : canvas(Rect(0, h * 0, w, h));
 	resize(cimg, canvasPart1, canvasPart1.size(), 0, 0, INTER_AREA);
 	Rect vroi1(cvRound(validRoi[0].x*sf), cvRound(validRoi[0].y*sf),
 		cvRound(validRoi[0].width*sf), cvRound(validRoi[0].height*sf));
 
 	remap(imgRight, rimg, rmap[1][0], rmap[1][1], INTER_LINEAR);
 	rimg.copyTo(cimg);
-	Mat canvasPart2 = !isVerticalStereo ? canvas(Rect(w * 1, 0, w, h)) : canvas(Rect(0, h * 1, w, h));
+	cv::Mat canvasPart2 = !isVerticalStereo ? canvas(Rect(w * 1, 0, w, h)) : canvas(Rect(0, h * 1, w, h));
 	resize(cimg, canvasPart2, canvasPart2.size(), 0, 0, INTER_AREA);
 	Rect vroi2 = Rect(cvRound(validRoi[1].x*sf), cvRound(validRoi[1].y*sf),
 		cvRound(validRoi[1].width*sf), cvRound(validRoi[1].height*sf));

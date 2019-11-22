@@ -21,8 +21,8 @@ public:
     class Cc { // To store all second derivatives of M or N for a pair
     public:
         std::vector<std::vector<cv::Mat> > ms;	//ms contains 
-												//(IncidentVector::nparam*IncidentVector::nparam) (Mat)s
-												//Mat size is 3*3
+												//(IncidentVector::nparam*IncidentVector::nparam) (cv::Mat)s
+												//cv::Mat size is 3*3
         Cc() {
             ms.clear();
             for (int i = 0; i < IncidentVector::nparam; ++i) {
@@ -46,8 +46,8 @@ public:
     
     class C { // To store all first derivatives of M or N for a pair
     public:
-        std::vector<cv::Mat> ms;				//ms contains (IncidentVector::nparam) (Mat)s
-												//Mat size is 3*3
+        std::vector<cv::Mat> ms;				//ms contains (IncidentVector::nparam) (cv::Mat)s
+												//cv::Mat size is 3*3
         C() {
             ms.resize(IncidentVector::nparam);
             init();

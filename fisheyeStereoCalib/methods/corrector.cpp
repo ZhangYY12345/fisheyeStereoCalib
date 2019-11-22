@@ -9,13 +9,13 @@ using namespace cv;
 int corrector::counter = 0;
 
 //以动态的方式显示被校正的图像
-void corrector::dispHeaveAndEarthCorrectImage(Mat sourceImage)
+void corrector::dispHeaveAndEarthCorrectImage(cv::Mat sourceImage)
 {
-	Mat image = sourceImage.clone();
+	cv::Mat image = sourceImage.clone();
 	Point2i center;
 	int radius;
 
-	Mat dispImage;
+	cv::Mat dispImage;
 
 	std::string win_name = "Heaven And Earth Correct";
 	cv::namedWindow(win_name, cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO);
@@ -37,7 +37,7 @@ void corrector::dispHeaveAndEarthCorrectImage(Mat sourceImage)
 }
 
 //对于向天和向地拍摄的鱼眼图片校正
-Mat corrector::heavenAndEarthCorrect(Mat imgOrg, Point center, int radius, double startRadian, CorrectType type)
+cv::Mat corrector::heavenAndEarthCorrect(cv::Mat imgOrg, Point center, int radius, double startRadian, CorrectType type)
 {
 	//设定展开图的高度，因为鱼眼图像不能灰复高度信息，所以这里可以跟根实际来
 	//进行调节
@@ -59,7 +59,7 @@ Mat corrector::heavenAndEarthCorrect(Mat imgOrg, Point center, int radius, doubl
 	Rect imgArea(0, 0, imgOrg.cols, imgOrg.rows);
 
 	//展开图的变量分配
-	Mat retImg(heightOfPanorama, widthOfPanorama, CV_8UC3, Scalar(0, 0, 0));
+	cv::Mat retImg(heightOfPanorama, widthOfPanorama, CV_8UC3, Scalar(0, 0, 0));
 	cv::Mat_<Vec3b> _retImg = retImg;
 	cv::Mat_<Vec3b> _imgOrg = imgOrg.clone();
 
@@ -145,9 +145,9 @@ Mat corrector::heavenAndEarthCorrect(Mat imgOrg, Point center, int radius, doubl
 
 #pragma endregion
 
-Mat corrector::correctImage(correctParameters params, correctMethod method,bool isDispRet)
+cv::Mat corrector::correctImage(correctParameters params, correctMethod method,bool isDispRet)
 {
-	Mat resultImage;
+	cv::Mat resultImage;
 	switch (method)
 	{
 	case correctMethod::LONG_LAT_MAP_REVERSE_FORWARD:
@@ -176,15 +176,15 @@ Mat corrector::correctImage(correctParameters params, correctMethod method,bool 
 	{
 		string win_name("The result Image"+counter);
 
-		Mat resizedImage;
-		resize(params.imgOrg, resizedImage, Size((params.imgOrg.size().width / (double)params.imgOrg.size().height*resultImage.size().height), resultImage.size().height));
+		cv::Mat resizedImage;
+		resize(params.imgOrg, resizedImage, cv::Size((params.imgOrg.size().width / (double)params.imgOrg.size().height*resultImage.size().height), resultImage.size().height));
 
-		Mat compareTwoImages(Size(resizedImage.size().width + 10 + resultImage.size().width, resultImage.size().height), resultImage.type());
+		cv::Mat compareTwoImages(cv::Size(resizedImage.size().width + 10 + resultImage.size().width, resultImage.size().height), resultImage.type());
 		Rect sourceROI(0, 0, resizedImage.size().width, resizedImage.size().height);
 		Rect resultROI(resizedImage.size().width + 10, 0, resultImage.size().width, resultImage.size().height);
 
-		Mat sourceTemp = compareTwoImages(sourceROI);
-		Mat resultTemp = compareTwoImages(resultROI);
+		cv::Mat sourceTemp = compareTwoImages(sourceROI);
+		cv::Mat resultTemp = compareTwoImages(resultROI);
 
 		addWeighted(sourceTemp, 0, resizedImage, 1, 0, sourceTemp);
 		addWeighted(resultTemp, 0, resultImage, 1, 0, resultTemp);
@@ -200,19 +200,19 @@ Mat corrector::correctImage(correctParameters params, correctMethod method,bool 
 
 #pragma region 关于经纬度以及纵向压缩柱面投影校正的方法(动态成员)
 //longitude-latitude reverse or forward map correction method
-Mat corrector::latitudeCorrection(Mat imgOrg, Point2i center, int radius, double camerFieldAngle, CorrectType type)
+cv::Mat corrector::latitudeCorrection(cv::Mat imgOrg, Point2i center, int radius, double camerFieldAngle, CorrectType type)
 {
 	if (!(camerFieldAngle > 0 && camerFieldAngle <= PI))
 	{
 		cout << "The parameter \"camerFieldAngle\" must be in the interval (0,PI]." << endl;
-		return Mat();
+		return cv::Mat();
 	}
 	double rateOfWindow = 0.9;
 	int width = imgOrg.size().width*rateOfWindow;
 	int height = width;
-	Size imgSize(width, height);
+	cv::Size imgSize(width, height);
 
-	Mat retImg(imgSize, CV_8UC3, Scalar(0, 0, 0));
+	cv::Mat retImg(imgSize, CV_8UC3, Scalar(0, 0, 0));
 
 	double dx = camerFieldAngle / imgSize.width;
 	double dy = dx;
@@ -366,7 +366,7 @@ Mat corrector::latitudeCorrection(Mat imgOrg, Point2i center, int radius, double
 		break;
 	default:
 		cout << "The CorrectType is Wrong! It should be \"Forward\" or \"Reverse\"." << endl;
-		return Mat();
+		return cv::Mat();
 	}
 
 	//imwrite("C:\\Users\\Joker\\Desktop\\ret4.jpg", retImg);
@@ -382,12 +382,12 @@ Mat corrector::latitudeCorrection(Mat imgOrg, Point2i center, int radius, double
 }
 
 //persective or longitude-latitude map with camera len model optional
-Mat corrector::latitudeCorrection2(Mat imgOrg, Point2i center, int radius, distMapMode distMap, double camerFieldAngle, camMode camProjMode)
+cv::Mat corrector::latitudeCorrection2(cv::Mat imgOrg, Point2i center, int radius, distMapMode distMap, double camerFieldAngle, camMode camProjMode)
 {
 	if (!(camerFieldAngle > 0 && camerFieldAngle <= PI))
 	{
 		cout << "The parameter \"camerFieldAngle\" must be in the interval (0,PI]." << endl;
-		return Mat();
+		return cv::Mat();
 	}
 	double rateOfWindow = 0.9;
 	//int width = imgOrg.size().width*rateOfWindow;
@@ -397,11 +397,11 @@ Mat corrector::latitudeCorrection2(Mat imgOrg, Point2i center, int radius, distM
 	int height = width;
 
 
-	Size imgSize(width, height);
+	cv::Size imgSize(width, height);
 	int center_x = imgSize.width / 2;
 	int center_y = imgSize.height / 2;
 
-	Mat retImg(imgSize, CV_8UC3, Scalar(0, 0, 0));
+	cv::Mat retImg(imgSize, CV_8UC3, Scalar(0, 0, 0));
 
 	double dx = camerFieldAngle / imgSize.width;
 	double dy = camerFieldAngle / imgSize.height;
@@ -547,12 +547,12 @@ Mat corrector::latitudeCorrection2(Mat imgOrg, Point2i center, int radius, distM
 }
 
 //w=PI/2
-Mat corrector::latitudeCorrection3(Mat imgOrg, Point2i center, int radius, distMapMode distMap, double theta_left, double phi_up, double camerFieldAngle, camMode camProjMode)
+cv::Mat corrector::latitudeCorrection3(cv::Mat imgOrg, Point2i center, int radius, distMapMode distMap, double theta_left, double phi_up, double camerFieldAngle, camMode camProjMode)
 {
 	if (!(camerFieldAngle > 0 && camerFieldAngle <= PI))
 	{
 		cout << "The parameter \"camerFieldAngle\" must be in the interval (0,PI]." << endl;
-		return Mat();
+		return cv::Mat();
 	}
 	double rateOfWindow = 0.9;
 
@@ -564,11 +564,11 @@ Mat corrector::latitudeCorrection3(Mat imgOrg, Point2i center, int radius, distM
 	//int height = imgOrg.rows;
 
 
-	Size imgSize(width, height);
+	cv::Size imgSize(width, height);
 	int center_x = imgSize.width / 2;
 	int center_y = imgSize.height / 2;
 
-	Mat retImg(imgSize, CV_8UC3, Scalar(0, 0, 0));
+	cv::Mat retImg(imgSize, CV_8UC3, Scalar(0, 0, 0));
 
 	double dx = camerFieldAngle / imgSize.width;
 	double dy = camerFieldAngle / imgSize.height;
@@ -810,12 +810,12 @@ double corrector::getPhi(double l)
 }
 
 /*********************w is variable********************************/
-Mat corrector::latitudeCorrection4(Mat imgOrg, Point2i center, int radius, double w_longtitude, double w_latitude, distMapMode distMap, double theta_left, double phi_up, double camerFieldAngle, camMode camProjMode)
+cv::Mat corrector::latitudeCorrection4(cv::Mat imgOrg, Point2i center, int radius, double w_longtitude, double w_latitude, distMapMode distMap, double theta_left, double phi_up, double camerFieldAngle, camMode camProjMode)
 {
 	if (!(camerFieldAngle > 0 && camerFieldAngle <= PI))
 	{
 		cout << "The parameter \"camerFieldAngle\" must be in the interval (0,PI]." << endl;
-		return Mat();
+		return cv::Mat();
 	}
 	double rateOfWindow = 0.9;
 
@@ -828,11 +828,11 @@ Mat corrector::latitudeCorrection4(Mat imgOrg, Point2i center, int radius, doubl
 	//int height = imgOrg.rows;
 
 
-	Size imgSize(width, height);
+	cv::Size imgSize(width, height);
 	int center_x = imgSize.width / 2;
 	int center_y = imgSize.height / 2;
 
-	Mat retImg(imgSize, CV_8UC3, Scalar(0, 0, 0));
+	cv::Mat retImg(imgSize, CV_8UC3, Scalar(0, 0, 0));
 
 	double dx = camerFieldAngle / imgSize.width;
 	double dy = camerFieldAngle / imgSize.height;
@@ -1092,12 +1092,12 @@ double corrector::auxFunc(double w, double phi)
 }
 
 /************************w is variable, and Forward map*/
-Mat corrector::latitudeCorrection5(Mat imgOrg, Point2i center, int radius, double w_longtitude, double w_latitude, distMapMode distMap, double theta_left, double phi_up, double camerFieldAngle, camMode camProjMode)
+cv::Mat corrector::latitudeCorrection5(cv::Mat imgOrg, Point2i center, int radius, double w_longtitude, double w_latitude, distMapMode distMap, double theta_left, double phi_up, double camerFieldAngle, camMode camProjMode)
 {
 	if (!(camerFieldAngle > 0 && camerFieldAngle <= PI))
 	{
 		cout << "The parameter \"camerFieldAngle\" must be in the interval (0,PI]." << endl;
-		return Mat();
+		return cv::Mat();
 	}
 	double rateOfWindow = 0.9;
 
@@ -1110,11 +1110,11 @@ Mat corrector::latitudeCorrection5(Mat imgOrg, Point2i center, int radius, doubl
 	//int height = imgOrg.rows;
 
 
-	Size imgSize(width, height);
+	cv::Size imgSize(width, height);
 	int center_x = imgSize.width / 2;
 	int center_y = imgSize.height / 2;
 
-	Mat retImg(imgSize, CV_8UC3, Scalar(0, 0, 0));
+	cv::Mat retImg(imgSize, CV_8UC3, Scalar(0, 0, 0));
 
 	double dx = camerFieldAngle / imgSize.width;
 	double dy = camerFieldAngle / imgSize.height;

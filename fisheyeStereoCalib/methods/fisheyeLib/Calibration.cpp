@@ -167,11 +167,11 @@ void Calibration::calibrate(bool divide)
         //gamma[1] = edges.size();
         //gamma[2] = gamma[1]/2;
 
-		gamma[0] = pointsNum;
-		gamma[1] = linesNum;
-		gamma[2] = orthogonalPairsNum;
+		//gamma[0] = pointsNum;
+		//gamma[1] = linesNum;
+		//gamma[2] = orthogonalPairsNum;
         
-        //gamma[0] = gamma[1] = gamma[2] = 1;
+        gamma[0] = gamma[1] = gamma[2] = 1;
     }
     J0 = j1 / gamma[0] + j2 / gamma[1] + j3 / gamma[2];
     std::cout << "J1  \t" << j1/gamma[0] << "\nJ2  \t" << j2/gamma[1] << "\nJ3  \t" << j3/gamma[2] << std::endl;

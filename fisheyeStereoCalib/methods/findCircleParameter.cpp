@@ -32,7 +32,7 @@ Point2i findCircleParameter::center = Point2i(-1, -1);
 int findCircleParameter::radius = -1;
 
 //存放原图
-Mat findCircleParameter::image = Mat();
+cv::Mat findCircleParameter::image = cv::Mat();
 #pragma endregion
 
 #pragma region 验证部分变量初始化
@@ -57,7 +57,7 @@ int findCircleParameter::height_disp_img = -1;
 
 
 //初始化识别图，导入待识别图像
-bool findCircleParameter::init(Mat img)
+bool findCircleParameter::init(cv::Mat img)
 {
 	image = img;
 	if (image.data)
@@ -112,7 +112,7 @@ bool findCircleParameter::getCircleParatemer(Point2i & centerPos, int& r)
 //光标回调函数
 void findCircleParameter::onMouse(int event, int x, int y, int, void* params)
 {
-	Mat src = image.clone();
+	cv::Mat src = image.clone();
 	cv::Point pt(x, y);
 	switch (event)
 	{
@@ -250,9 +250,9 @@ void findCircleParameter::findPoints(Point2i center, int radius, std::vector<cv:
 	tmpK.push_back(e3);
 	cout << e1 << endl << e2 << endl << e3 << endl;
 	cout << "tmpK=" << tmpK << endl;
-	Mat K = Mat(tmpK).reshape(1).t(); //从标准空间坐标到报像头空间坐标的变换矩阵
+	cv::Mat K = cv::Mat(tmpK).reshape(1).t(); //从标准空间坐标到报像头空间坐标的变换矩阵
 	cout << "K=" << K << endl;
-	Mat T = K.inv(cv::DECOMP_SVD);//从报像头空间坐标到标准空间坐标平面变换矩阵
+	cv::Mat T = K.inv(cv::DECOMP_SVD);//从报像头空间坐标到标准空间坐标平面变换矩阵
 
 	points.clear();
 	const int count = 20;
@@ -262,10 +262,10 @@ void findCircleParameter::findPoints(Point2i center, int radius, std::vector<cv:
 	while (l++ <= count)
 	{
 		Point3f stdPt(cos(start), sin(start), 0);
-		Mat  matPt(stdPt);
+		cv::Mat  matPt(stdPt);
 
 		cout << matPt << endl << K << endl;
-		Mat ptSphere(K*matPt);
+		cv::Mat ptSphere(K*matPt);
 		cout << ptSphere << endl;
 		cv::Mat_<double> ptSphere_double;
 		ptSphere.convertTo(ptSphere_double, CV_64F);
@@ -355,16 +355,16 @@ void findCircleParameter::On_threshold_trackbar(int thresholdValue_slider_value,
 }
 
 //变角度线扫描法——改进后的线扫描法
-void findCircleParameter::revisedScanLineMethod(Mat imgOrg, Point2i& center, int& radius, int threshold, int N)
+void findCircleParameter::revisedScanLineMethod(cv::Mat imgOrg, Point2i& center, int& radius, int threshold, int N)
 {
-	Mat src, gray;
+	cv::Mat src, gray;
 	src = imgOrg.clone();
 	cvtColor(src, gray, cv::COLOR_BGR2GRAY);
 
 	vector<Point> points;
 	vector<double> distance;
 
-	Size imgSize = src.size();
+	cv::Size imgSize = src.size();
 
 	int x, y;
 	double theta = 0;
@@ -857,8 +857,8 @@ bool findCircleParameter::CircleFitByKasa(vector<Point> validPoints, Point& cent
 		extendB.push_back((pow((*iter).x, 2) + pow((*iter).y, 2)));
 		iter++;
 	}
-	Mat A = Mat(extendA).reshape(1);
-	Mat	B = Mat(extendB).reshape(1);
+	cv::Mat A = cv::Mat(extendA).reshape(1);
+	cv::Mat	B = cv::Mat(extendB).reshape(1);
 
 	cv::Mat_<double> dA, dB;
 	cv::Mat_<double> P(3, 1, CV_64F);
