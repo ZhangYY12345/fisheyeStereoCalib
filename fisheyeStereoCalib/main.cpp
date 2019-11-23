@@ -99,7 +99,7 @@ int main()
 	//std::string imgFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera";
 	//std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera\\stereoCalibrateData20190710.xml";
 
-	double singleRms = fisheyeCamCalibSingle(imgFilePath, xmlFilePath);
+	//double singleRms = fisheyeCamCalibSingle(imgFilePath, xmlFilePath);
 
 	cv::Mat K, D;
 	cv::Size imgSize;
@@ -110,7 +110,7 @@ int main()
 	fn.release();
 
 	string to_undistort = "D:/studying/stereo vision/research code/data/20191017-3/left";
-	distortRectify_fisheye(K, D, imgSize, imgFilePath);
+	distortRectify_fisheye(K, D, imgSize, to_undistort);
 
 
 	//double errCalib = stereoFisheyeCamCalib_3(imgFilePath, xmlFilePath);

@@ -89,6 +89,13 @@ typedef enum
 	LATITUDE_LONGTITUDE,	//¾­Î³¶È
 }distMapMode;
 
+typedef  enum
+{
+	ORIGIN_FISHEYE_CALIB,
+	THETA_D_FISHEYE_CALIB,
+	RADIUS_D_FISHEYE_CALIB,
+	RADIUS_RD_FISHEYE_CALIB,
+}DISTORT_Mode_Fisheye;
 
 
 //

@@ -84,6 +84,9 @@
     <ClCompile Include="methods\fisheye_opencv\fisheyeCalib_try.cpp">
       <Filter>源文件\methods\fisheyeOpenCV</Filter>
     </ClCompile>
+    <ClCompile Include="methods\fisheye_opencv\fisheyeCalib_theta_d.cpp">
+      <Filter>源文件\methods\fisheyeOpenCV</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="methods\fisheyeCalib3d.h">
@@ -141,6 +144,9 @@
       <Filter>源文件\methods\fisheyeLib</Filter>
     </ClInclude>
     <ClInclude Include="methods\fisheye_opencv\fisheyeCalib_try.h">
+      <Filter>源文件\methods\fisheyeOpenCV</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheye_opencv\fisheyeCalib_theta_d.h">
       <Filter>源文件\methods\fisheyeOpenCV</Filter>
     </ClInclude>
   </ItemGroup>
