@@ -2,7 +2,7 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-camMode cur_fisheye_mode = IDEAL_PERSPECTIVE;
+camMode cur_fisheye_mode = EQUISOLID;
 
 namespace my_cv {
 	namespace
@@ -2164,6 +2164,7 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 
 		double r_d = sqrt(pw[0] * pw[0] + pw[1] * pw[1]);
 
+		/*
 		double theta_d;
 		switch (mode)
 		{
@@ -2206,6 +2207,7 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 			r_d = tan(theta_d);
 			break;
 		}
+		*/
 
 		if (r_d > 1e-8)
 		{

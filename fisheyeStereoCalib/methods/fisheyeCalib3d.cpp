@@ -1406,8 +1406,8 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 	std::vector<String> fileNames;
 	glob(filePath, fileNames, false);
 
-	int x_expand_half = 2560 * 0 / 2;
-	int y_expand_half = 1440 * 0 / 2;
+	int x_expand_half = 2560 * 6 / 2;
+	int y_expand_half = 1440 * 6 / 2;
 	Mat K_new = K;
 	K_new.at<double>(0, 2) = K.at<double>(0, 2) + x_expand_half;
 	K_new.at<double>(1, 2) = K.at<double>(1, 2) + y_expand_half;
@@ -1419,7 +1419,7 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 
 		cv::Mat imgUndistort;
 
-		my_cv::fisheye_r_d::undistortImage(imgOrigin, imgUndistort, K_new, D, K_new, imgSize);
+		my_cv::fisheye_r_d::undistortImage(imgOrigin, imgUndistort, K_new, D, K_new, imgSize*7);
 		imwrite(fileNames[i].substr(0, fileNames[i].length() - 4) + "_undistort.jpg", imgUndistort);
 	}
 }
