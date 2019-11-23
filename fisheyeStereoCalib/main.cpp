@@ -99,7 +99,7 @@ int main()
 	//std::string imgFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera";
 	//std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera\\stereoCalibrateData20190710.xml";
 
-	double singleRms = fisheyeCamCalibSingle(imgFilePath, xmlFilePath);
+	//double singleRms = fisheyeCamCalibSingle(imgFilePath, xmlFilePath);
 
 	cv::Mat K, D;
 	cv::Size imgSize;

@@ -865,11 +865,11 @@ bool ptsCalib_Single(std::string imgFilePath, cv::Size& imgSize,
 				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
 			pts.push_back(cornerPts);
 			drawChessboardCorners(imgL_border, patternSize, cornerPts, patternFound);
-			cout << i << "\taccept\n";
+			cout << fileNames[i] << "\taccept\n";
 		}
 		else
 		{
-			cout << i << "\treject\n";
+			cout << fileNames[i] << "\treject\n";
 		}
 	}
 
@@ -1376,7 +1376,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	cv::Mat D = cv::Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
-	double rms = my_cv::fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,
+	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 
@@ -1406,8 +1406,11 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 	std::vector<String> fileNames;
 	glob(filePath, fileNames, false);
 
-	int x_expand_half = 2560 / 2;
-	int y_expand_half = 1440 / 2;
+	int x_expand_half = 2560 * 0 / 2;
+	int y_expand_half = 1440 * 0 / 2;
+	Mat K_new = K;
+	K_new.at<double>(0, 2) = K.at<double>(0, 2) + x_expand_half;
+	K_new.at<double>(1, 2) = K.at<double>(1, 2) + y_expand_half;
 
 	for (int i = 0; i < fileNames.size(); i++)
 	{
@@ -1415,11 +1418,8 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 		copyMakeBorder(imgOrigin, imgOrigin, y_expand_half, y_expand_half, x_expand_half, x_expand_half, BORDER_CONSTANT, 0);
 
 		cv::Mat imgUndistort;
-		Mat K_new = K;
-		K_new.at<double>(0, 2) = K.at<double>(0, 2) + x_expand_half;
-		K_new.at<double>(1, 2) = K.at<double>(1, 2) + y_expand_half;
 
-		my_cv::fisheye::undistortImage(imgOrigin, imgUndistort, K, D, K_new, imgSize*2);
+		my_cv::fisheye_r_d::undistortImage(imgOrigin, imgUndistort, K_new, D, K_new, imgSize);
 		imwrite(fileNames[i].substr(0, fileNames[i].length() - 4) + "_undistort.jpg", imgUndistort);
 	}
 }
