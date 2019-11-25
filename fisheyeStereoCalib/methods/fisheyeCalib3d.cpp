@@ -1,5 +1,7 @@
 #include "fisheyeCalib3d.h"
-#include "fisheye_opencv/fisheyeCalib_try.h"
+#include "fisheye_opencv/fisheyeCalib_theta_d.h"
+#include "fisheye_opencv/fisheyeCalib_radius_d.h"
+#include "fisheye_opencv/fisheyeCalib_radius_rd.h"
 
 using namespace cv;
 using namespace std;
@@ -1376,7 +1378,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	cv::Mat D = cv::Mat(1, 4, CV_64F, Scalar::all(0));		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
-	double rms = my_cv::fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,
+	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 
@@ -1419,7 +1421,7 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 
 		cv::Mat imgUndistort;
 
-		my_cv::fisheye::undistortImage(imgOrigin, imgUndistort, K_new, D, K_new, imgSize*2);
+		my_cv::fisheye_r_d::undistortImage(imgOrigin, imgUndistort, K_new, D, K_new, imgSize*2);
 		imwrite(fileNames[i].substr(0, fileNames[i].length() - 4) + "_undistort.jpg", imgUndistort);
 	}
 }

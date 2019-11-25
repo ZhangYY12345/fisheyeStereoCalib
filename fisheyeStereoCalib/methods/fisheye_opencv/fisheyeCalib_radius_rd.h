@@ -5,7 +5,7 @@
 
 namespace my_cv
 {
-	namespace fisheye
+	namespace fisheye_r_rd
 	{
 		CV_EXPORTS void projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints, const cv::Affine3d& affine,
 			cv::InputArray K, cv::InputArray D, double alpha = 0, cv::OutputArray jacobian = cv::noArray(), camMode mode = STEREOGRAPHIC);
@@ -38,6 +38,7 @@ namespace my_cv
 			cv::InputOutputArray K1, cv::InputOutputArray D1, cv::InputOutputArray K2, cv::InputOutputArray D2, cv::Size imageSize,
 			cv::OutputArray R, cv::OutputArray T, int flags = cv::fisheye::CALIB_FIX_INTRINSIC,
 			cv::TermCriteria criteria = cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 100, DBL_EPSILON));
+
 	}
 
 }

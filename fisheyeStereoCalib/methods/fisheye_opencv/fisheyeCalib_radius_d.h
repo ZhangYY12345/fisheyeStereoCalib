@@ -5,7 +5,8 @@
 
 namespace my_cv
 {
-	namespace fisheye
+	// r_d = r(1 + k[0] * r^2 + k[1] * r^4 + k[2] * r^6 + k[3] * r^8)
+	namespace fisheye_r_d
 	{
 		CV_EXPORTS void projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints, const cv::Affine3d& affine,
 			cv::InputArray K, cv::InputArray D, double alpha = 0, cv::OutputArray jacobian = cv::noArray(), camMode mode = STEREOGRAPHIC);
@@ -16,6 +17,8 @@ namespace my_cv
 
 		CV_EXPORTS_W void undistortPoints(cv::InputArray distorted, cv::OutputArray undistorted,
 			cv::InputArray K, cv::InputArray D, cv::InputArray R = cv::noArray(), cv::InputArray P = cv::noArray(), camMode mode = STEREOGRAPHIC);
+		CV_EXPORTS_W void undistortPoints_H(cv::InputArray distorted, cv::OutputArray undistorted,
+			cv::InputArray K, cv::InputArray D, camMode mode = STEREOGRAPHIC);
 
 		CV_EXPORTS_W void initUndistortRectifyMap(cv::InputArray K, cv::InputArray D, cv::InputArray R, cv::InputArray P,
 			const cv::Size& size, int m1type, cv::OutputArray map1, cv::OutputArray map2, camMode mode = STEREOGRAPHIC);
@@ -39,5 +42,4 @@ namespace my_cv
 			cv::OutputArray R, cv::OutputArray T, int flags = cv::fisheye::CALIB_FIX_INTRINSIC,
 			cv::TermCriteria criteria = cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 100, DBL_EPSILON));
 	}
-
 }
