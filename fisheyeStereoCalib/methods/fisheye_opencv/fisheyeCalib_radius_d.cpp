@@ -1,5 +1,6 @@
 #include "fisheyeCalib_radius_d.h"
 #include "fisheyeCalib_try.h"
+#include "../findCircleParameter.h"
 
 extern camMode cur_fisheye_mode;
 
@@ -131,7 +132,7 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 			cv::Matx33d dYdT_data = cv::Matx33d::eye();
 			const cv::Vec3d *dYdT = (cv::Vec3d*)dYdT_data.val;
 
-			//cv::Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);	x--->图像物理坐标系
+			//cv::Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);	x--->归一化相机坐标系
 			cv::Vec3d dxdom[2];
 			dxdom[0] = (1.0 / Y[2]) * dYdom[0] - x[0] / Y[2] * dYdom[2];
 			dxdom[1] = (1.0 / Y[2]) * dYdom[1] - x[1] / Y[2] * dYdom[2];
@@ -145,12 +146,13 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 			cv::Vec3d dr_2dT = 2 * x[0] * dxdT[0] + 2 * x[1] * dxdT[1];
 
 			//double r_ = std::sqrt(r_2);
-			double dr_dr_2 = r_ > 1e-8 ? 1.0 / (2.0 * r_) : 1;
+			double dr_dr_2 = r_ > 1e-8 ? 1.0/(2.0*r_) : 1;
 			cv::Vec3d dr_dom = dr_dr_2 * dr_2dom;
 			cv::Vec3d dr_dT = dr_dr_2 * dr_2dT;
 
-			cv::Vec3d dthetadom = 1.0 / (1 + r_2) * dr_dom;
-			cv::Vec3d dthetadT = 1.0 / (1 + r_2) * dr_dT;
+			double dthetadr_ = 1.0 / (1 + r_2);
+			cv::Vec3d dthetadom = dthetadr_ * dr_dom;
+			cv::Vec3d dthetadT = dthetadr_ * dr_dT;
 
 			cv::Vec3d drdtheta;
 			switch (mode)
@@ -524,7 +526,7 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 			r = r_d;
 
 			const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
-			for (int j = 0; j < 20; j++)
+			for (int j = 0; j < 30; j++)
 			{
 				double r2 = r * r, r4 = r2 * r2, r6 = r4 * r2, r8 = r6 * r2;
 				double k0_r2 = k[0] * r2, k1_r4 = k[1] * r4, k2_r6 = k[2] * r6, k3_r8 = k[3] * r8;
@@ -955,8 +957,29 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 		ComputeJacobians(objectPoints, imagePoints, finalParam, omc, Tc, check_cond, thresh_cond, JJ2, ex3, RADIUS_D_FISHEYE_CALIB);
 
 		cv::Mat G;
-		solve(JJ2, ex3, G);
+		int a = solve(JJ2, ex3, G, cv::DECOMP_SVD);
 		currentParam = finalParam + alpha_smooth2 * G;
+
+		//for(int image_idx = 0; image_idx < objectPoints.total(); image_idx++)
+		//{
+		//	cv::Mat image, object;
+		//	objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
+		//	imagePoints.getMat(image_idx).convertTo(image, CV_64FC2);
+
+		//	bool imT = image.rows < image.cols;
+		//	cv::Mat om(omc[image_idx]), T(Tc[image_idx]);
+
+		//	std::vector<cv::Point2d> x;
+		//	cv::Mat jacobians;
+		//	my_cv::internal::projectPoints(object, x, om, T, finalParam, jacobians, RADIUS_D_FISHEYE_CALIB);
+		//	cv::Mat exkk = (imT ? image.t() : image) - cv::Mat(x);
+
+		//	std::vector<cv::Point2d> x_cur;
+		//	cv::Mat jacobians_cur;
+		//	my_cv::internal::projectPoints(object, x_cur, om, T, currentParam, jacobians_cur, RADIUS_D_FISHEYE_CALIB);
+		//	cv::Mat exkk_cur = (imT ? image.t() : image) - cv::Mat(x_cur);
+		//}
+
 
 		change = norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
 			cv::Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
@@ -1204,7 +1227,7 @@ double my_cv::fisheye_r_d::stereoCalibrate(cv::InputArrayOfArrays objectPoints, 
 		int a = cv::countNonZero(intrinsicLeft.isEstimate);
 		int b = cv::countNonZero(intrinsicRight.isEstimate);
 		cv::Mat deltas;
-		solve(J.t() * J, J.t()*e, deltas);
+		solve(J.t() * J, J.t()*e, deltas, cv::DECOMP_SVD);
 		if (a > 0)
 			intrinsicLeft = intrinsicLeft + deltas.rowRange(0, a);
 		if (b > 0)

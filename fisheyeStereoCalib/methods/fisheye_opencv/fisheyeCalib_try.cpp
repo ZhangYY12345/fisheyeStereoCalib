@@ -5,7 +5,7 @@
 #include "fisheyeCalib_radius_d.h"
 #include "fisheyeCalib_radius_rd.h"
 
-camMode cur_fisheye_mode = STEREOGRAPHIC;
+camMode cur_fisheye_mode = EQUIDISTANCE;
 
 my_cv::internal::IntrinsicParams::IntrinsicParams() :
 	f(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec4d::all(0)), alpha(0), isEstimate(9, 0)
@@ -383,9 +383,9 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 		cv::Mat exkk = (imT ? image.t() : image) - cv::Mat(x);
 
 		cv::Mat A(jacobians.rows, 9, CV_64FC1);
-		jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));
-		jacobians.col(14).copyTo(A.col(4));
-		jacobians.colRange(4, 8).copyTo(A.colRange(5, 9));
+		jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
+		jacobians.col(14).copyTo(A.col(4));//alpha
+		jacobians.colRange(4, 8).copyTo(A.colRange(5, 9));//k
 
 		A = A.t();
 
