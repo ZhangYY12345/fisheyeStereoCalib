@@ -1363,7 +1363,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//single camera calibration
 	int flag = 0;
 	flag |= fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-	flag |= fisheye::CALIB_CHECK_COND;
+	//flag |= fisheye::CALIB_CHECK_COND;
 	//flag |= fisheye::CALIB_FIX_SKEW;
 	//flag |= fisheye::CALIB_FIX_K1;
 	//flag |= fisheye::CALIB_FIX_K2;
@@ -1384,7 +1384,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
 	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
-		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
+		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 500, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 
 	if (rms < 1)
 	{

@@ -412,8 +412,8 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 			double diff_r = INFINITY;
 			for(std::set<double>::iterator r_si = r_s.begin(); r_si != r_s.end(); r_si++)
 			{
-				double cur_diff = r_d - *r_si;
-				if(fabs(cur_diff) < diff_r)
+				double cur_diff = fabs(r_d - *r_si);
+				if(cur_diff < diff_r)
 				{
 					diff_r = cur_diff;
 					r = *r_si;
@@ -578,8 +578,8 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 				{
 					continue;
 				}
-				double cur_diff = r_d - *r_si;
-				if (fabs(cur_diff) < diff_r)
+				double cur_diff = fabs(r_d - *r_si);
+				if (cur_diff < diff_r)
 				{
 					diff_r = cur_diff;
 					r = *r_si;

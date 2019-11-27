@@ -553,23 +553,24 @@ void my_cv::fisheye:: initUndistortRectifyMap(cv::InputArray K, cv::InputArray D
 
 	cv::Matx33d PP = cv::Matx33d::eye();
 	if (!P.empty())
-		P.getMat().colRange(0, 3).convertTo(PP, CV_64F);
+		P.getMat().colRange(0, 3).convertTo(PP, CV_64F);// 相机内参矩阵
 
 	cv::Matx33d iR = (PP * RR).inv(cv::DECOMP_SVD);
 
-	for (int i = 0; i < size.height; ++i)//(i, j)理想图像像素坐标系
+	for (int i = 0; i < size.height; ++i)// (u, v) = (j, i) 理想图像像素坐标系
 	{
 		float* m1f = map1.getMat().ptr<float>(i);
 		float* m2f = map2.getMat().ptr<float>(i);
 		short*  m1 = (short*)m1f;
 		ushort* m2 = (ushort*)m2f;
 
-		double _x = i * iR(0, 1) + iR(0, 2),	//
+		double _x = i * iR(0, 1) + iR(0, 2),	// 旋转后的理想相机坐标系坐标
 			_y = i * iR(1, 1) + iR(1, 2),
 			_w = i * iR(2, 1) + iR(2, 2);
 
 		for (int j = 0; j < size.width; ++j)
 		{
+			distortPoints()
 			double u, v;
 			if (_w <= 0)
 			{
@@ -580,9 +581,9 @@ void my_cv::fisheye:: initUndistortRectifyMap(cv::InputArray K, cv::InputArray D
 			{
 				double x = _x / _w, y = _y / _w;
 
-				double r_ = sqrt(x*x + y * y);
+				double r = sqrt(x*x + y * y);
 
-				double theta;
+				double theta = atan(r);
 				if (isModeRelated)
 				{
 					switch (mode)
@@ -637,7 +638,7 @@ void my_cv::fisheye:: initUndistortRectifyMap(cv::InputArray K, cv::InputArray D
 				K.getMat().colRange(0, 3).convertTo(KK, CV_64F);
 
 				cv::Vec3d pr = KK * cv::Vec3d(pu[0], pu[1], 1.0); // rotated point optionally(随意的) multiplied by new camera matrix//图像像素坐标系
-				cv::Vec2d fi(pr[0] / pr[2], pr[1] / pr[2]);       // 归一化相机坐标系？？
+				cv::Vec2d fi(pr[0] / pr[2], pr[1] / pr[2]);       // 
 
 				u = fi[0];
 				v = fi[1];
