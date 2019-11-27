@@ -1,6 +1,6 @@
 #include "fisheyeCalib_radius_d.h"
 #include "fisheyeCalib_try.h"
-#include "../findCircleParameter.h"
+#include "../polynomial-solve/root_finder.h"
 
 extern camMode cur_fisheye_mode;
 
@@ -388,20 +388,41 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 		if (r_d > 1e-8)
 		{
 			// compensate distortion iteratively
-			r = r_d;
+			//r = r_d;
 
-			const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
-			for (int j = 0; j < 20; j++)
+			Eigen::VectorXd coeffs(10);
+			coeffs(9) = -r_d;
+			coeffs(8) = 1;
+			coeffs(7) = coeffs(5) = coeffs(3) = coeffs(1) = 0; 
+			coeffs(6) = k[0]; 
+			coeffs(4) = k[1]; 
+			coeffs(2) = k[2]; 
+			coeffs(0) = k[3];
+
+			std::set<double> r_s;
+			r_s = RootFinder::solvePolyInterval(coeffs, -INFINITY, INFINITY, 1e-7, false);
+			double diff_r = INFINITY;
+			for(std::set<double>::iterator r_si = r_s.begin(); r_si != r_s.end(); r_si++)
 			{
-				double r2 = r * r, r4 = r2 * r2, r6 = r4 * r2, r8 = r6 * r2;
-				double k0_r2 = k[0] * r2, k1_r4 = k[1] * r4, k2_r6 = k[2] * r6, k3_r8 = k[3] * r8;
-				/* new_r = r - r_fix, r_fix = f0(r) / f0'(r) *///牛顿迭代法求解多项式
-				double r_fix = (r * (1 + k0_r2 + k1_r4 + k2_r6 + k3_r8) - r_d) /
-					(1 + 3 * k0_r2 + 5 * k1_r4 + 7 * k2_r6 + 9 * k3_r8);
-				r = r - r_fix;
-				if (fabs(r_fix) < EPS)
-					break;
+				double cur_diff = r_d - *r_si;
+				if(fabs(cur_diff) < diff_r)
+				{
+					diff_r = cur_diff;
+					r = *r_si;
+				}
 			}
+			//const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
+			//while(true)
+			//{
+			//	double r2 = r * r, r4 = r2 * r2, r6 = r4 * r2, r8 = r6 * r2;
+			//	double k0_r2 = k[0] * r2, k1_r4 = k[1] * r4, k2_r6 = k[2] * r6, k3_r8 = k[3] * r8;
+			//	/* new_r = r - r_fix, r_fix = f0(r) / f0'(r) *///牛顿迭代法求解多项式
+			//	double r_fix = (r * (1 + k0_r2 + k1_r4 + k2_r6 + k3_r8) - r_d) /
+			//		(1 + 3 * k0_r2 + 5 * k1_r4 + 7 * k2_r6 + 9 * k3_r8);
+			//	r = r - r_fix;
+			//	if (fabs(r_fix) < EPS)
+			//		break;
+			//}
 
 			scale = r / r_d;
 		}
@@ -519,29 +540,57 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 
 		double r_d = sqrt(pw[0] * pw[0] + pw[1] * pw[1]);
 
-		double r = 1.0;
+		double r = r_d;
 		if (r_d > 1e-8)
 		{
-			// compensate distortion iteratively
-			r = r_d;
+			Eigen::VectorXd coeffs(10);
+			coeffs(9) = -r_d;
+			coeffs(8) = 1;
+			coeffs(7) = coeffs(5) = coeffs(3) = coeffs(1) = 0;
+			coeffs(6) = k[0];
+			coeffs(4) = k[1];
+			coeffs(2) = k[2];
+			coeffs(0) = k[3];
 
-			const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
-			for (int j = 0; j < 30; j++)
+			std::set<double> r_s;
+			r_s = RootFinder::solvePolyInterval(coeffs, -INFINITY, INFINITY, 1e-7, false);
+			double diff_r = INFINITY;
+			for (std::set<double>::iterator r_si = r_s.begin(); r_si != r_s.end(); r_si++)
 			{
-				double r2 = r * r, r4 = r2 * r2, r6 = r4 * r2, r8 = r6 * r2;
-				double k0_r2 = k[0] * r2, k1_r4 = k[1] * r4, k2_r6 = k[2] * r6, k3_r8 = k[3] * r8;
-				/* new_r = r - r_fix, r_fix = f0(r) / f0'(r) *///牛顿迭代法求解多项式
-				double r_fix = (r * (1 + k0_r2 + k1_r4 + k2_r6 + k3_r8) - r_d) /
-					(1 + 3 * k0_r2 + 5 * k1_r4 + 7 * k2_r6 + 9 * k3_r8);
-				r = r - r_fix;
-				if (fabs(r_fix) < EPS)
-					break;
+				if(*r_si < 1e-8)
+				{
+					continue;
+				}
+				double cur_diff = r_d - *r_si;
+				if (fabs(cur_diff) < diff_r)
+				{
+					diff_r = cur_diff;
+					r = *r_si;
+				}
 			}
 
-			scale = r / r_d;
+			//// compensate distortion iteratively
+			//r = r_d;
+
+			//const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
+			//while (true)
+			//{
+			//	double r2 = r * r, r4 = r2 * r2, r6 = r4 * r2, r8 = r6 * r2;
+			//	double k0_r2 = k[0] * r2, k1_r4 = k[1] * r4, k2_r6 = k[2] * r6, k3_r8 = k[3] * r8;
+			//	/* new_r = r - r_fix, r_fix = f0(r) / f0'(r) *///牛顿迭代法求解多项式
+			//	double r_fix = (r * (1 + k0_r2 + k1_r4 + k2_r6 + k3_r8) - r_d) /
+			//		(1 + 3 * k0_r2 + 5 * k1_r4 + 7 * k2_r6 + 9 * k3_r8);
+			//	r = r - r_fix;
+			//	if (fabs(r_fix) < EPS)
+			//		break;
+			//}
 		}
 
-		cv::Vec2d pu = pw * scale; //undistorted point in the image space
+		//cv::Vec2d pu = pw / r_d; //undistorted point in the image space
+		//if (sdepth == CV_32F)
+		//	dstf[i] = pu;
+		//else
+		//	dstd[i] = pu;
 
 		// reproject
 		double theta;
@@ -563,9 +612,9 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 			theta = atan(r);
 			break;
 		}
-		cv::Vec2d pfi = pw / r_d;
 		double r_ = tan(theta);
-		cv::Vec2d fi = r_ * pfi;
+		double newScale = r_ / r_d;
+		cv::Vec2d fi = pw * newScale;
 
 		if (sdepth == CV_32F)
 			dstf[i] = fi;
@@ -957,7 +1006,7 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 		ComputeJacobians(objectPoints, imagePoints, finalParam, omc, Tc, check_cond, thresh_cond, JJ2, ex3, RADIUS_D_FISHEYE_CALIB);
 
 		cv::Mat G;
-		int a = solve(JJ2, ex3, G, cv::DECOMP_SVD);
+		int a = solve(JJ2, ex3, G, cv::DECOMP_QR);
 		currentParam = finalParam + alpha_smooth2 * G;
 
 		//for(int image_idx = 0; image_idx < objectPoints.total(); image_idx++)
@@ -1227,7 +1276,7 @@ double my_cv::fisheye_r_d::stereoCalibrate(cv::InputArrayOfArrays objectPoints, 
 		int a = cv::countNonZero(intrinsicLeft.isEstimate);
 		int b = cv::countNonZero(intrinsicRight.isEstimate);
 		cv::Mat deltas;
-		solve(J.t() * J, J.t()*e, deltas, cv::DECOMP_SVD);
+		solve(J.t() * J, J.t()*e, deltas, cv::DECOMP_QR);
 		if (a > 0)
 			intrinsicLeft = intrinsicLeft + deltas.rowRange(0, a);
 		if (b > 0)

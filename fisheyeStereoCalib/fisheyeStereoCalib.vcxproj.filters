@@ -25,6 +25,9 @@
     <Filter Include="源文件\methods\fisheyeOpenCV">
       <UniqueIdentifier>{a4ead7c7-8bd8-4e9e-9505-6d827f39f559}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\methods\polynomial-solver">
+      <UniqueIdentifier>{881f9563-5b10-4d90-9537-1ec90c75940e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -93,6 +96,9 @@
     <ClCompile Include="methods\fisheye_opencv\fisheyeCalib_radius_rd.cpp">
       <Filter>源文件\methods\fisheyeOpenCV</Filter>
     </ClCompile>
+    <ClCompile Include="methods\polynomial-solve\root_finder.cpp">
+      <Filter>源文件\methods\polynomial-solver</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="methods\fisheyeCalib3d.h">
@@ -160,6 +166,9 @@
     </ClInclude>
     <ClInclude Include="methods\fisheye_opencv\fisheyeCalib_radius_rd.h">
       <Filter>源文件\methods\fisheyeOpenCV</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\polynomial-solve\root_finder.h">
+      <Filter>源文件\methods\polynomial-solver</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

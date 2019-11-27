@@ -175,7 +175,7 @@ cv::Mat my_cv::internal::ComputeHomography(cv::Mat m, cv::Mat M)
 	cv::Mat L = cv::Mat::zeros(2 * Np, 9, CV_64FC1);
 
 	for (int i = 0; i < Np; ++i)
-	{
+	{ 
 		for (int j = 0; j < 3; j++)
 		{
 			L.at<double>(2 * i, j) = M.at<double>(j, i);
@@ -247,6 +247,10 @@ cv::Mat my_cv::internal::NormalizePixels(const cv::Mat& imagePoints, const Intri
 		ptr_d[i][0] -= param.alpha * ptr_d[i][1];
 	}
 
+	cv::Matx33d K(param.f[0], param.f[0] * param.alpha, param.c[0],
+		0, param.f[1], param.c[1],
+		0, 0, 1);
+
 	switch (distortMode)
 	{
 	case ORIGIN_FISHEYE_CALIB:
@@ -259,7 +263,7 @@ cv::Mat my_cv::internal::NormalizePixels(const cv::Mat& imagePoints, const Intri
 		break;
 	case RADIUS_D_FISHEYE_CALIB:
 		//fisheye_r_d::
-		my_cv::fisheye_r_d::undistortPoints_H(distorted, undistorted, cv::Matx33d::eye(), param.k, cur_fisheye_mode);
+		my_cv::fisheye_r_d::undistortPoints_H(imagePoints, undistorted, K, param.k, cur_fisheye_mode);
 		break;
 	case RADIUS_RD_FISHEYE_CALIB:
 		//fisheye_r_rd::
@@ -281,6 +285,7 @@ void my_cv::internal::InitExtrinsics(const cv::Mat& _imagePoints, const cv::Mat&
 	cv::Mat objectPointsMean, covObjectPoints;
 	cv::Mat Rckk;
 	int Np = imagePointsNormalized.cols;
+	//坐标归一化
 	calcCovarMatrix(objectPoints, covObjectPoints, objectPointsMean, cv::COVAR_NORMAL | cv::COVAR_COLS);
 	cv::SVD svd(covObjectPoints);
 	cv::Mat R(svd.vt);
@@ -290,6 +295,7 @@ void my_cv::internal::InitExtrinsics(const cv::Mat& _imagePoints, const cv::Mat&
 		R = -R;
 	cv::Mat T = -R * objectPointsMean;
 	cv::Mat X_new = R * objectPoints + T * cv::Mat::ones(1, Np, CV_64FC1);  //理想相机坐标系坐标
+	//计算基础矩阵H
 	cv::Mat H = ComputeHomography(imagePointsNormalized, X_new(cv::Rect(0, 0, X_new.cols, 2)));
 	double sc = .5 * (norm(H.col(0)) + norm(H.col(1)));
 	H = H / sc;

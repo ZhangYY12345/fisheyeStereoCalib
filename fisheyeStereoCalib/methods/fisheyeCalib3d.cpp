@@ -1363,13 +1363,13 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//single camera calibration
 	int flag = 0;
 	flag |= fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-	//flag |= fisheye::CALIB_CHECK_COND;
-	flag |= fisheye::CALIB_FIX_SKEW;
+	flag |= fisheye::CALIB_CHECK_COND;
+	//flag |= fisheye::CALIB_FIX_SKEW;
 	//flag |= fisheye::CALIB_FIX_K1;
 	//flag |= fisheye::CALIB_FIX_K2;
 	//flag |= fisheye::CALIB_FIX_K3;
 	//flag |= fisheye::CALIB_FIX_K4;
-	flag |= fisheye::CALIB_FIX_PRINCIPAL_POINT;
+	//flag |= fisheye::CALIB_FIX_PRINCIPAL_POINT;
 	//flag |= fisheye::CALIB_FIX_INTRINSIC;
 	flag |= fisheye::CALIB_USE_INTRINSIC_GUESS;
 

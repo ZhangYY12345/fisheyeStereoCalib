@@ -65,6 +65,8 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="D:\Program Files (x86)\OpenCVSetup\opencv410\opencv410LocalDebug.props" />
+    <Import Project="..\..\..\..\..\..\..\Program Files\Eigen\Eigen337\eigen.props" />
+    <Import Project="..\..\..\..\..\..\..\Program Files\Boost\boost.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -140,6 +142,7 @@
     <ClCompile Include="methods\fisheye_opencv\fisheyeCalib_theta_d.cpp" />
     <ClCompile Include="methods\fisheye_opencv\fisheyeCalib_try.cpp" />
     <ClCompile Include="methods\parametersStereo.cpp" />
+    <ClCompile Include="methods\polynomial-solve\root_finder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="methods\corrector.h" />
@@ -164,6 +167,7 @@
     <ClInclude Include="methods\fisheye_opencv\fisheyeCalib_theta_d.h" />
     <ClInclude Include="methods\fisheye_opencv\fisheyeCalib_try.h" />
     <ClInclude Include="methods\parametersStereo.h" />
+    <ClInclude Include="methods\polynomial-solve\root_finder.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
