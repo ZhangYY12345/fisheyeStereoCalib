@@ -1377,8 +1377,8 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	cv::Mat K = cv::Mat::eye(3, 3, CV_64FC1);		//the inner parameters of camera
 	K.at<double>(0, 0) = 832.7025533;
 	K.at<double>(1, 1) = 832.7025533;
-	K.at<double>(0, 2) = 1328.8759253594599;
-	K.at<double>(1, 2) = 733.40922627889438;
+	K.at<double>(0, 2) = 1280.0;
+	K.at<double>(1, 2) = 720.0;
 	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation

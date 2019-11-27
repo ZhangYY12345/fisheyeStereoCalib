@@ -297,6 +297,15 @@ void my_cv::internal::InitExtrinsics(const cv::Mat& _imagePoints, const cv::Mat&
 	cv::Mat X_new = R * objectPoints + T * cv::Mat::ones(1, Np, CV_64FC1);  //理想相机坐标系坐标
 	//计算基础矩阵H
 	cv::Mat H = ComputeHomography(imagePointsNormalized, X_new(cv::Rect(0, 0, X_new.cols, 2)));
+	//cv::Mat obj((int)_objectPoints.total(), 1, CV_64FC2), undistorted;
+	//const cv::Vec2d* ptr = _objectPoints.ptr<cv::Vec2d>();      //图像像素坐标
+	//cv::Vec2d* ptr_d = obj.ptr<cv::Vec2d>();              //
+	//for (size_t i = 0; i < _objectPoints.total(); ++i)
+	//{
+	//	ptr_d[i] = ptr[i];
+	//}
+	//cv::Mat H = ComputeHomography(imagePointsNormalized, objectPoints(cv::Rect(0, 0, objectPoints.cols, 2)));
+
 	double sc = .5 * (norm(H.col(0)) + norm(H.col(1)));
 	H = H / sc;
 	cv::Mat u1 = H.col(0).clone();
@@ -307,6 +316,10 @@ void my_cv::internal::InitExtrinsics(const cv::Mat& _imagePoints, const cv::Mat&
 	double norm_u2 = norm(u2);
 	CV_Assert(fabs(norm_u2) > 0);
 	u2 = u2 / norm_u2;
+
+	//cv::Mat u1 = H.col(0).clone();
+	//cv::Mat u2 = H.col(1).clone();
+
 	cv::Mat u3 = u1.cross(u2);
 	cv::Mat RRR;
 	hconcat(u1, u2, RRR);

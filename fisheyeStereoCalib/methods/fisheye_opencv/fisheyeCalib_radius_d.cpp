@@ -158,7 +158,11 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 			switch (mode)
 			{
 			case STEREOGRAPHIC:
-				drdtheta = pow(1.0 / cos(theta / 2.0), 2);
+			{
+				double temp = cos(theta / 2.0);
+				temp = temp * temp;
+				drdtheta = 1.0 / temp;
+			}
 				break;
 			case EQUIDISTANCE:
 				drdtheta = 1.0;
@@ -170,7 +174,11 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 				drdtheta = cos(theta);
 				break;
 			case IDEAL_PERSPECTIVE:
-				drdtheta = pow(1.0 / cos(theta), 2);
+			{
+				double temp_ = cos(theta);
+				temp_ = temp_ * temp_;
+				drdtheta = 1.0 / temp_;
+			}
 				break;
 			}
 			cv::Vec3d drdom = drdtheta * dthetadom;
@@ -296,8 +304,7 @@ void my_cv::fisheye_r_d::distortPoints(cv::InputArray undistorted, cv::OutputArr
 			break;
 		}
 
-		double r2 = r * r, r3 = r2 * r, r4 = r2 * r2, r5 = r4 * r,
-			r6 = r3 * r3, r7 = r6 * r, r8 = r4 * r4, r9 = r8 * r;
+		double r2 = r * r, r3 = r2 * r, r5 = r3 * r2, r7 = r5 * r2, r9 = r7 * r2;
 
 		double r_d = r + k[0] * r3 + k[1] * r5 + k[2] * r7 + k[3] * r9;
 
@@ -363,7 +370,7 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 	if (!P.empty())
 	{
 		P.getMat().colRange(0, 3).convertTo(PP, CV_64F);
-		RRR = PP * RR;
+		RRR = PP * RR;//PP对应内参矩阵， RR为旋转矩阵
 	}
 
 	// start undistorting
@@ -379,6 +386,7 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 	{
 		cv::Vec2d pi = sdepth == CV_32F ? (cv::Vec2d)srcf[i] : srcd[i];  // image point
 		cv::Vec2d pw((pi[0] - c[0]) / f[0], (pi[1] - c[1]) / f[1]);      // 
+		pw[0] -= alpha * pw[1];
 
 		double scale = 1.0;
 
@@ -500,6 +508,15 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 	// will support only 2-channel data now for points
 	CV_Assert(distorted.type() == CV_32FC2 || distorted.type() == CV_64FC2);
 	undistorted.create(distorted.size(), distorted.type());
+	//if(distorted.type() == CV_32FC2)
+	//{
+	//	undistorted.create(distorted.size(), CV_32FC3);
+	//}
+	//else if(distorted.type() == CV_64FC2)
+	//{
+	//	undistorted.create(distorted.size(), CV_64FC3);
+	//}
+	
 
 	CV_Assert(D.total() == 4 && K.size() == cv::Size(3, 3) && (K.depth() == CV_32F || K.depth() == CV_64F));
 
@@ -612,14 +629,15 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 			theta = atan(r);
 			break;
 		}
-		double r_ = tan(theta);
+		double r_ = sin(theta);
 		double newScale = r_ / r_d;
-		cv::Vec2d fi = pw * newScale;
+		cv::Vec2d pfi = pw * newScale;
+		//cv::Vec3d fi = cv::Vec3d(pfi[0], pfi[1], cos(theta));
 
 		if (sdepth == CV_32F)
-			dstf[i] = fi;
+			dstf[i] = pfi;
 		else
-			dstd[i] = fi;
+			dstd[i] = pfi;
 	}
 }
 
