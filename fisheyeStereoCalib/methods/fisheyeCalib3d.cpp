@@ -1385,7 +1385,8 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 500, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
-
+	cout << "rms" << endl;
+	waitKey(0);
 	if (rms < 1)
 	{
 		FileStorage fn(cameraParaPath, FileStorage::WRITE);

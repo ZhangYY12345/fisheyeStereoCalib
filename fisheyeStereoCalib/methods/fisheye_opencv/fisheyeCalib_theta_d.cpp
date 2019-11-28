@@ -570,7 +570,6 @@ void my_cv::fisheye:: initUndistortRectifyMap(cv::InputArray K, cv::InputArray D
 
 		for (int j = 0; j < size.width; ++j)
 		{
-			distortPoints()
 			double u, v;
 			if (_w <= 0)
 			{
@@ -581,9 +580,9 @@ void my_cv::fisheye:: initUndistortRectifyMap(cv::InputArray K, cv::InputArray D
 			{
 				double x = _x / _w, y = _y / _w;
 
-				double r = sqrt(x*x + y * y);
+				double r_ = sqrt(x*x + y * y);
 
-				double theta = atan(r);
+				double theta = atan(r_);
 				if (isModeRelated)
 				{
 					switch (mode)
