@@ -97,7 +97,13 @@ typedef  enum
 	RADIUS_RD_FISHEYE_CALIB,
 }DISTORT_Mode_Fisheye;
 
-
+typedef enum
+{
+	TOP_LEFT,
+	TOP_RIGHT,
+	BOTTOM_LEFT,
+	BOTTOM_RIGHT,
+}RIGHT_COUNT_SIDE;
 //
 bool check_image(const cv::Mat &image, std::string name = "Image");
 bool check_dimensions(const cv::Mat &img1, const cv::Mat &img2);
@@ -105,6 +111,10 @@ bool check_dimensions(const cv::Mat &img1, const cv::Mat &img2);
 cv::Point2d PointF2D(cv::Point2f point);
 std::vector<cv::Point2d> VecPointF2D(std::vector<cv::Point2f> pts);
 
+
+void fisheyeModel_show(camMode mode);
+void fisheyeModel_show2(camMode mode);
+void fisheyeModel_show3(camMode mode);
 
 template<typename _Tp>
 std::vector<_Tp> convertMat2Vector(const cv::Mat mat)

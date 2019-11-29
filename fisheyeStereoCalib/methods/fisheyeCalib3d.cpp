@@ -2,6 +2,7 @@
 #include "fisheye_opencv/fisheyeCalib_theta_d.h"
 #include "fisheye_opencv/fisheyeCalib_radius_d.h"
 #include "fisheye_opencv/fisheyeCalib_radius_rd.h"
+#include <stack>
 
 using namespace cv;
 using namespace std;
@@ -983,14 +984,7 @@ bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts, douVecPt3f& pts
 	return true;
 }
 
-/**
- * \brief detecting lines for further work///methods following the function detectLine() in LineDetection.cpp
- * \param src1 
- * \param src2 
- * \param dst :image type is CV_8UC1
- * \param isHorizon
- */
-void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, bool isHorizon)
+cv::Mat detectLines_(cv::Mat& src1, cv::Mat& src2, bool isHorizon)
 {
 	// Check type of img1 and img2
 	if (src1.type() != CV_64FC1) {
@@ -1006,7 +1000,170 @@ void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, bool isHorizon)
 	cv::Mat diff = src1 - src2;
 	cv::Mat cross = cv::Mat::zeros(diff.rows, diff.cols, CV_8UC1);
 	cv::Mat cross_inv = cv::Mat::zeros(diff.rows, diff.cols, CV_8UC1);
-	double thresh = 185;//185 for 20191017
+	double thresh = 100;//185 for 20191017
+	bool positive; // Whether previous found cross point was positive
+	bool search; // Whether serching
+	bool found_first;
+	int val_now, val_prev;
+
+	if (isHorizon)
+	{
+		// search for y direction
+		for (int x = 0; x < diff.cols; x++) {
+			val_prev = diff.at<double>(0, x);
+			positive = (val_prev > 0);
+			search = false;
+			found_first = false;
+			for (int y = 1; y < diff.rows; ++y) {
+				val_now = diff.at<double>(y, x);
+				if (search && (
+					((val_now <= 0) && positive) || ((val_now >= 0) && !positive))) {// found crossed point
+					if (abs(val_now) < abs(val_prev)) {
+						if (cross.at<uchar>(y, x) != 255) {
+							cross.at<uchar>(y, x) = 255;
+						}
+					}
+					else {
+						cross.at<uchar>(y - 1, x) = 255;
+					}
+					positive = !positive;
+					search = false;
+				}
+				if (!search && abs(val_now) > thresh) {
+					search = true;
+					if (!found_first) {
+						found_first = true;
+						positive = (val_now > 0);
+					}
+				}
+				val_prev = val_now;
+			}
+		}
+
+		// search for inversed y direction
+		for (int x = 0; x < diff.cols; x++) {
+			val_prev = diff.at<double>(diff.rows - 1, x);
+			positive = (val_prev > 0);
+			search = false;
+			found_first = false;
+			for (int y = diff.rows - 2; y > 0; --y) {
+				val_now = diff.at<double>(y, x);
+				if (search && (
+					((val_now <= 0) && positive) || ((val_now >= 0) && !positive))) {// found crossed point
+					if (abs(val_now) < abs(val_prev)) {
+						if (cross_inv.at<uchar>(y, x) != 255) {
+							cross_inv.at<uchar>(y, x) = 255;
+						}
+					}
+					else {
+						cross_inv.at<uchar>(y + 1, x) = 255;
+					}
+					positive = !positive;
+					search = false;
+				}
+				if (!search && abs(val_now) > thresh) {
+					search = true;
+					if (!found_first) {
+						found_first = true;
+						positive = (val_now > 0);
+					}
+				}
+				val_prev = val_now;
+			}
+		}
+	}
+	else
+	{
+		// search for x direction
+		for (int y = 0; y < diff.rows; y++) {
+			val_prev = diff.at<double>(y, 0);
+			positive = (val_prev > 0);
+			search = false;
+			found_first = false;
+			for (int x = 1; x < diff.cols; ++x) {
+				val_now = diff.at<double>(y, x);
+				if (search && (
+					((val_now <= 0) && positive) || ((val_now >= 0) && !positive))) {// found crossed point
+					if (abs(val_now) < abs(val_prev)) {
+						cross.at<uchar>(y, x) = 255;
+					}
+					else {
+						cross.at<uchar>(y, x - 1) = 255;
+					}
+					positive = !positive;
+					search = false;
+				}
+				if (!search && abs(val_now) > thresh) {
+					search = true;
+					if (!found_first) {
+						found_first = true;
+						positive = (val_now > 0);
+					}
+				}
+				val_prev = val_now;
+			}
+		}
+
+		// search for inversed x direction
+		for (int y = 0; y < diff.rows; y++) {
+			val_prev = diff.at<double>(y, diff.cols - 1);
+			positive = (val_prev > 0);
+			search = false;
+			found_first = false;
+			for (int x = diff.cols - 2; x > 0; --x) {
+				val_now = diff.at<double>(y, x);
+				if (search && (
+					((val_now <= 0) && positive) || ((val_now >= 0) && !positive))) {// found crossed point
+					if (abs(val_now) < abs(val_prev)) {
+						cross_inv.at<uchar>(y, x) = 255;
+					}
+					else {
+						cross_inv.at<uchar>(y, x + 1) = 255;
+					}
+					positive = !positive;
+					search = false;
+				}
+				if (!search && abs(val_now) > thresh) {
+					search = true;
+					if (!found_first) {
+						found_first = true;
+						positive = (val_now > 0);
+					}
+				}
+				val_prev = val_now;
+			}
+		}
+	}
+
+	cv::Mat dst_cross;
+	cv::bitwise_and(cross, cross_inv, dst_cross);
+	return dst_cross;
+}
+
+/**
+ * \brief detecting lines for further work///methods following the function detectLine() in LineDetection.cpp
+ * \param src1 
+ * \param src2 
+ * \param dst :image type is CV_8UC1
+ * \param isHorizon
+ */
+void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, cv::Mat& dst_inv, bool isHorizon)
+{
+	// Check type of img1 and img2
+	if (src1.type() != CV_64FC1) {
+		cv::Mat tmp;
+		src1.convertTo(tmp, CV_64FC1);
+		src1 = tmp;
+	}
+	if (src2.type() != CV_64FC1) {
+		cv::Mat tmp;
+		src2.convertTo(tmp, CV_64FC1);
+		src2 = tmp;
+	}
+	cv::Mat diff = src1 - src2;
+	cv::Mat cross = cv::Mat::zeros(diff.rows, diff.cols, CV_8UC1);
+	cv::Mat cross_inv = cv::Mat::zeros(diff.rows, diff.cols, CV_8UC1);
+	double thresh = 50;//185 for 20191017
 	bool positive; // Whether previous found cross point was positive
 	bool search; // Whether serching
 	bool found_first;
@@ -1142,7 +1299,335 @@ void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, bool isHorizon)
 
 	}
 
-	cv::bitwise_and(cross, cross_inv, dst);
+	//cv::bitwise_and(cross, cross_inv, dst);
+	dst = cross.clone();
+	dst_inv = cross_inv.clone();
+}
+
+void connectEdge(cv::Mat& src, bool isHorizon)
+{
+	int width = src.cols;
+	int height = src.rows;
+
+	int half_winsize_thres = 9;
+
+	if (isHorizon)
+	{
+		for (int y = 2; y < height - 2; y++)
+		{
+			for (int x = 2; x < width - 2; x++)
+			{
+				//如果该中心点为255,则考虑它的八邻域
+				if (src.at<uchar>(y, x) == 255)
+				{
+					//检查8邻域
+					int num_8 = 0;
+					int offset_x1[2] = { -1, 1 };
+					//
+					int starty = 1;
+					for(int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+					{
+						if (src.at<uchar>(y + offset_y1, x + offset_x1[0]) == 255)
+							num_8++;
+					}
+					while(num_8 == 0 && starty < half_winsize_thres)
+					{
+						offset_x1[0]--;
+						starty++;
+						for(int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+						{
+							if (!(y + offset_y1 >= 0 && y + offset_y1 < height - 1 && x + offset_x1[0] >= 0 && x + offset_x1[0] < width - 1))
+							{
+								continue;
+							}
+							if (src.at<uchar>(y + offset_y1, x + offset_x1[0]) == 255)
+							{
+								src.at<uchar>(y + offset_y1 / 2, x + offset_x1[0] / 2) = 255;
+								if(offset_y1 / 2 <= 0 && offset_x1[0] / 2 <= 0 && starty > 2)
+								{
+									x = x + offset_x1[0] / 2 - 1;
+									y = y + offset_y1 / 2 - 1;
+								}
+								num_8++;
+								break;
+							}
+						}
+					}
+					//
+					starty = 1;
+					num_8 = 0;
+					for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+					{
+						if (src.at<uchar>(y + offset_y1, x + offset_x1[1]) == 255)
+							num_8++;
+					}
+					while (num_8 == 0 && starty < half_winsize_thres)
+					{
+						offset_x1[1]++;
+						starty++;
+						for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+						{
+							if (src.at<uchar>(y + offset_y1, x + offset_x1[1]) == 255)
+							{
+								src.at<uchar>(y + offset_y1 / 2, x + offset_x1[1] / 2) = 255;
+								num_8++;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+	}
+	else
+	{
+		for (int y = 2; y < height - 2; y++)
+		{
+			for (int x = 2; x < width - 2; x++)
+			{
+				//如果该中心点为255,则考虑它的八邻域
+				if (src.at<uchar>(y, x) == 255)
+				{
+					//检查8邻域
+					int num_8 = 0;
+					int offset_y1[2] = { -1, 1 };
+					//
+					int startx = 1;
+					for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+					{
+						if (src.at<uchar>(y + offset_y1[0], x + offset_x1) == 255)
+							num_8++;
+					}
+					while (num_8 == 0 && startx < half_winsize_thres)
+					{
+						offset_y1[0]--;
+						startx++;
+						for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+						{
+							if(!(y + offset_y1[0] >= 0 && y + offset_y1[0] < height-1 && x + offset_x1 >= 0 && x + offset_x1 < width-1))
+							{
+								continue;
+							}
+							if (src.at<uchar>(y + offset_y1[0], x + offset_x1) == 255)
+							{
+								src.at<uchar>(y + offset_y1[0] / 2, x + offset_x1 / 2) = 255;
+								if (offset_x1 / 2 <= 0 && offset_y1[0] / 2 <= 0 && startx > 2)
+								{
+									x = x + offset_x1 / 2 - 1;
+									y = y + offset_y1[0] / 2 - 1;
+								}
+								num_8++;
+								break;
+							}
+						}
+					}
+					//
+					startx = 1;
+					num_8 = 0;
+					for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+					{
+						if (src.at<uchar>(y + offset_y1[1], x + offset_x1) == 255)
+							num_8++;
+					}
+					while (num_8 == 0 && startx < half_winsize_thres)
+					{
+						offset_y1[1]++;
+						startx++;
+						for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+						{
+							if (src.at<uchar>(y + offset_y1[1], x + offset_x1) == 255)
+							{
+								src.at<uchar>(y + offset_y1[1] / 2, x + offset_x1 / 2) = 255;
+								num_8++;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+	}
+}
+
+void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon)
+{
+	int width = src.cols;
+	int height = src.rows;
+
+	int lenThres = 200;
+	int count = 0;
+	if(!lines.empty())
+	{
+		lines.clear();
+	}
+
+    cv:Mat tmp = src.clone();
+
+	if(isHorizon)
+	{
+		for(int y = 2; y < height - 2; y++)
+		{
+			for(int x = 2; x < width - 2; x++)
+			{
+				if(tmp.at<uchar>(y, x) == 255)
+				{
+					std::vector<cv::Point2i> line;
+					int max_x = x;
+					int min_x = x;
+					stack<int> p_x, p_y;
+					p_x.push(x);
+					p_y.push(y);
+					while(!p_x.empty())
+					{
+						cv::Point2i p(p_x.top(), p_y.top());
+						if(p.x > max_x)
+						{
+							max_x = p.x;
+						}
+						if(p.x < min_x)
+						{
+							min_x = p.x;
+						}
+						line.push_back(p);
+						p_x.pop(); p_y.pop();
+						if ((p.y != 0 && p.x != 0) && (tmp.at<uchar>(p.y - 1, p.x - 1) == 255)) { // Top left
+							tmp.at<uchar>(p.y - 1, p.x - 1) = 0;
+							p_x.push(p.x - 1); p_y.push(p.y - 1);
+						}
+						if ((p.y != 0) && (tmp.at<uchar>(p.y - 1, p.x) == 255)) { // Top
+							tmp.at<uchar>(p.y - 1, p.x) = 0;
+							p_x.push(p.x); p_y.push(p.y - 1);
+						}
+						if ((p.y != 0 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y - 1,p.x + 1) == 255)) { // Top right
+							tmp.at<uchar>(p.y - 1,p.x + 1) = 0;
+							p_x.push(p.x + 1); p_y.push(p.y - 1);
+						}
+						if ((p.x != 0) && (tmp.at<uchar>(p.y, p.x - 1) == 255)) { // left
+							tmp.at<uchar>(p.y, p.x - 1) = 0;
+							p_x.push(p.x - 1); p_y.push(p.y);
+						}
+						if ((p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y, p.x + 1) == 255)) { // Right
+							tmp.at<uchar>(p.y, p.x + 1) = 0;
+							p_x.push(p.x + 1); p_y.push(p.y);
+						}
+						if ((p.y != tmp.rows - 1 && p.x != 0) && (tmp.at<uchar>(p.y + 1, p.x - 1) == 255)) { // Down left
+							tmp.at<uchar>(p.y + 1, p.x - 1) = 0;
+							p_x.push(p.x - 1); p_y.push(p.y + 1);
+						}
+						if ((p.y != tmp.rows - 1) && (tmp.at<uchar>(p.y + 1, p.x) == 255)) { // Down
+							tmp.at<uchar>(p.y + 1, p.x) = 0;
+							p_x.push(p.x); p_y.push(p.y + 1);
+						}
+						if ((p.y != tmp.rows - 1 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y + 1, p.x + 1) == 255)) { // Down right
+							tmp.at<uchar>(p.y + 1, p.x + 1) = 0;
+							p_x.push(p.x + 1); p_y.push(p.y + 1);
+						}
+					}
+
+					if((max_x - min_x) < lenThres)
+					{
+						for(std::vector<cv::Point2i>::iterator it = line.begin(); it != line.end(); it++)
+						{
+							cv::Point2i pt = *it;
+							src.at<uchar>(pt.y, pt.x) = 0;
+						}
+					}
+					else
+					{
+						lines[count] = line;
+						count++;
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		for (int x = 2; x < width - 2; x++)
+		{
+			for (int y = 2; y < height - 2; y++)
+			{
+				if (tmp.at<uchar>(y, x) == 255)
+				{
+					std::vector<cv::Point2i> line;
+					int max_y = y;
+					int min_y = y;
+					stack<int> p_x, p_y;
+					p_x.push(x);
+					p_y.push(y);
+					while (!p_x.empty())
+					{
+						cv::Point2i p(p_x.top(), p_y.top());
+						if (p.y > max_y)
+						{
+							max_y = p.y;
+						}
+						if (p.y < min_y)
+						{
+							min_y = p.y;
+						}
+						line.push_back(p);
+						p_x.pop(); p_y.pop();
+						if ((p.y != 0 && p.x != 0) && (tmp.at<uchar>(p.y - 1, p.x - 1) == 255)) { // Top left
+							tmp.at<uchar>(p.y - 1, p.x - 1) = 0;
+							p_x.push(p.x - 1); p_y.push(p.y - 1);
+						}
+						if ((p.y != 0) && (tmp.at<uchar>(p.y - 1, p.x) == 255)) { // Top
+							tmp.at<uchar>(p.y - 1, p.x) = 0;
+							p_x.push(p.x); p_y.push(p.y - 1);
+						}
+						if ((p.y != 0 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y - 1, p.x + 1) == 255)) { // Top right
+							tmp.at<uchar>(p.y - 1, p.x + 1) = 0;
+							p_x.push(p.x + 1); p_y.push(p.y - 1);
+						}
+						if ((p.x != 0) && (tmp.at<uchar>(p.y, p.x - 1) == 255)) { // left
+							tmp.at<uchar>(p.y, p.x - 1) = 0;
+							p_x.push(p.x - 1); p_y.push(p.y);
+						}
+						if ((p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y, p.x + 1) == 255)) { // Right
+							tmp.at<uchar>(p.y, p.x + 1) = 0;
+							p_x.push(p.x + 1); p_y.push(p.y);
+						}
+						if ((p.y != tmp.rows - 1 && p.x != 0) && (tmp.at<uchar>(p.y + 1, p.x - 1) == 255)) { // Down left
+							tmp.at<uchar>(p.y + 1, p.x - 1) = 0;
+							p_x.push(p.x - 1); p_y.push(p.y + 1);
+						}
+						if ((p.y != tmp.rows - 1) && (tmp.at<uchar>(p.y + 1, p.x) == 255)) { // Down
+							tmp.at<uchar>(p.y + 1, p.x) = 0;
+							p_x.push(p.x); p_y.push(p.y + 1);
+						}
+						if ((p.y != tmp.rows - 1 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y + 1, p.x + 1) == 255)) { // Down right
+							tmp.at<uchar>(p.y + 1, p.x + 1) = 0;
+							p_x.push(p.x + 1); p_y.push(p.y + 1);
+						}
+					}
+
+					if ((max_y - min_y) < lenThres)
+					{
+						for (std::vector<cv::Point2i>::iterator it = line.begin(); it != line.end(); it++)
+						{
+							cv::Point2i pt = *it;
+							src.at<uchar>(pt.y, pt.x) = 0;
+						}
+					}
+					else
+					{
+						lines[count] = line;
+						count++;
+					}
+				}
+			}
+		}
+	}
+}
+
+void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon)
+{
+	connectEdge(src, isHorizon);
+	connectEdge(src, isHorizon);
+	removeShortEdges(src, lines, isHorizon);
 }
 
 /**
@@ -1151,25 +1636,276 @@ void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, bool isHorizon)
  * \param pts 
  * \param ptsReal 
  */
-void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal)
+void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vector<cv::Point3d>& ptsReal, int grid_size)
 {
-	cv::Mat lineV, lineH;
-	detectLines_(src[0], src[1], lineV, false);
-	detectLines_(src[2], src[3], lineH, true);
+	cv::Mat lineV, lineV_inv;
+	cv::Mat lineH, lineH_inv;
+	detectLines_(src[0], src[1], lineV, lineV_inv, false);
+	detectLines_(src[2], src[3], lineH, lineH_inv, true);
+
+	bitwise_and(lineV, lineV_inv, lineV);
+	bitwise_and(lineH, lineH_inv, lineH);
+
+	std::map<int, std::vector<cv::Point2i> > lines_H, lines_V;
+	post_process(lineH, lines_H, true);
+	post_process(lineV, lines_V, false);
+
+	std::map<cv::Point2i, cv::Point2d, myCmp_map>  pts_H;
 
 	cv::Mat ptsImg;
 	bitwise_and(lineH, lineV, ptsImg);
-	for(int y = 0; y < ptsImg.rows; y++)
+	//cv::Mat ptsImg_2;
+	//bitwise_not(ptsImg, ptsImg_2);
+
+	int height = ptsImg.rows;
+	int width = ptsImg.cols;
+	int half_winsize = 3;
+	cv::Mat tmp = ptsImg.clone();
+	for(int y = 0; y < height; y++)
 	{
-		for(int x = 0; x < ptsImg.cols; x++)
+		for(int x = 0; x < width; x++)
 		{
-			if(ptsImg.at<uchar>(y, x) == 255)
+			if(tmp.at<uchar>(y, x) == 255)
 			{
-				pts.push_back(Point2f(x, y));
+				int h_key = -1;
+				int v_key = -1;
+				for(auto it = lines_H.begin(); 
+					it != lines_H.end(); it++)
+				{
+					auto vec_it = find(it->second.begin(), it->second.end(), cv::Point2i(x, y));
+					if(vec_it != it->second.end())
+					{
+						h_key = it->first;
+						break;
+					}
+				}
+				for (auto it = lines_V.begin();
+					it != lines_V.end(); it++)
+				{
+					auto vec_it = find(it->second.begin(), it->second.end(), cv::Point2i(x, y));
+					if (vec_it != it->second.end())
+					{
+						v_key = it->first;
+						break;
+					}
+				}
+
+				vector<Point2i> originPts;
+				int num = 0;
+				for(int winy = -half_winsize; winy <= half_winsize; winy++)
+				{
+					for(int winx = -half_winsize; winx <= half_winsize; winx++)
+					{
+						if(!(y + winy >= 0 && y + winy < height && x + winx >= 0 && x + winx < width))
+						{
+							continue;
+						}
+						if (tmp.at<uchar>(y + winy, x + winx) == 255)
+						{
+							tmp.at<uchar>(y + winy, x + winx) = 0;
+							originPts.push_back(Point2i(x + winx, y + winy));
+							num++;
+						}
+					}
+				}
+				cv::Point2d cornerPt;
+				if(num > 1)
+				{
+					double sumX = 0.0, sumY = 0.0;
+					for(int i = 0; i < originPts.size(); i++)
+					{
+						sumX += originPts[i].x;
+						sumY += originPts[i].y;
+					}
+					cornerPt.x = sumX / num;
+					cornerPt.y = sumY / num;
+				}
+				else if(num == 1)
+				{
+					cornerPt.x = x;
+					cornerPt.y = y;
+				}
+				pts_H[cv::Point2i(h_key, v_key)] = cornerPt;
 			}
 		}
 	}
 
+	if(!pts.empty())
+	{
+		pts.clear();
+	}
+	for(auto it = pts_H.begin(); it != pts_H.end(); it++)
+	{
+		pts.push_back(it->second);
+		ptsReal.push_back(cv::Point3d(it->first.x * grid_size, it->first.y * grid_size, 0));
+	}
+}
+
+/**
+ * \brief detecting the corners when the whole view is not avaliable
+ * \param src 
+ * \param pts 
+ * \param ptsReal 
+ * \param grid_size 
+ * \param hNum
+ * \param vNum
+ * \param mode :indicate the complete side of the view
+ */
+void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vector<cv::Point3d>& ptsReal,
+	int grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode)
+{
+	cv::Mat lineV, lineV_inv;
+	cv::Mat lineH, lineH_inv;
+	detectLines_(src[0], src[1], lineV, lineV_inv, false);
+	detectLines_(src[2], src[3], lineH, lineH_inv, true);
+
+	bitwise_and(lineV, lineV_inv, lineV);
+	bitwise_and(lineH, lineH_inv, lineH);
+
+	std::map<int, std::vector<cv::Point2i> > lines_H, lines_V;
+	post_process(lineH, lines_H, true);
+	post_process(lineV, lines_V, false);
+
+	std::map<cv::Point2i, cv::Point2d, myCmp_map>  pts_H;
+
+	cv::Mat ptsImg;
+	bitwise_and(lineH, lineV, ptsImg);
+	//cv::Mat ptsImg_2;
+	//bitwise_not(ptsImg, ptsImg_2);
+
+	int height = ptsImg.rows;
+	int width = ptsImg.cols;
+
+	int max_h = -1;
+	int max_v = -1;
+
+	int half_winsize = 3;
+	cv::Mat tmp = ptsImg.clone();
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			if (tmp.at<uchar>(y, x) == 255)
+			{
+				int h_key = -1;
+				int v_key = -1;
+				for (auto it = lines_H.begin();
+					it != lines_H.end(); it++)
+				{
+					auto vec_it = find(it->second.begin(), it->second.end(), cv::Point2i(x, y));
+					if (vec_it != it->second.end())
+					{
+						h_key = it->first;
+						break;
+					}
+				}
+				for (auto it = lines_V.begin();
+					it != lines_V.end(); it++)
+				{
+					auto vec_it = find(it->second.begin(), it->second.end(), cv::Point2i(x, y));
+					if (vec_it != it->second.end())
+					{
+						v_key = it->first;
+						break;
+					}
+				}
+
+				if(max_h < h_key)
+				{
+					max_h = h_key;
+				}
+				if(max_v < v_key)
+				{
+					max_v = v_key;
+				}
+
+				vector<Point2i> originPts;
+				int num = 0;
+				for (int winy = -half_winsize; winy <= half_winsize; winy++)
+				{
+					for (int winx = -half_winsize; winx <= half_winsize; winx++)
+					{
+						if (!(y + winy >= 0 && y + winy < height && x + winx >= 0 && x + winx < width))
+						{
+							continue;
+						}
+						if (tmp.at<uchar>(y + winy, x + winx) == 255)
+						{
+							tmp.at<uchar>(y + winy, x + winx) = 0;
+							originPts.push_back(Point2i(x + winx, y + winy));
+							num++;
+						}
+					}
+				}
+				cv::Point2d cornerPt;
+				if (num > 1)
+				{
+					double sumX = 0.0, sumY = 0.0;
+					for (int i = 0; i < originPts.size(); i++)
+					{
+						sumX += originPts[i].x;
+						sumY += originPts[i].y;
+					}
+					cornerPt.x = sumX / num;
+					cornerPt.y = sumY / num;
+				}
+				else if (num == 1)
+				{
+					cornerPt.x = x;
+					cornerPt.y = y;
+				}
+				pts_H[cv::Point2i(h_key, v_key)] = cornerPt;
+			}
+		}
+	}
+
+	if (!pts.empty())
+	{
+		pts.clear();
+	}
+	switch (mode)
+	{
+	case TOP_LEFT:
+	{
+		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
+		{
+			pts.push_back(it->second);
+			ptsReal.push_back(cv::Point3d(it->first.x * grid_size, it->first.y * grid_size, 0));
+		}
+	}
+		break;
+	case TOP_RIGHT:
+	{
+		int diff_v = vNum - 1 - max_v;
+		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
+		{
+			pts.push_back(it->second);
+			ptsReal.push_back(cv::Point3d(it->first.x * grid_size, (diff_v + it->first.y) * grid_size, 0));
+		}
+	}
+		break;
+	case BOTTOM_LEFT:
+	{
+		int diff_h = hNum - 1 - max_h;
+		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
+		{
+			pts.push_back(it->second);
+			ptsReal.push_back(cv::Point3d((diff_h + it->first.x) * grid_size, it->first.y * grid_size, 0));
+		}
+	}
+		break;
+	case BOTTOM_RIGHT:
+	{
+		int diff_h = hNum - 1 - max_h;
+		int diff_v = vNum - 1 - max_v;
+		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
+		{
+			pts.push_back(it->second);
+			ptsReal.push_back(cv::Point3d((diff_h + it->first.x) * grid_size, (diff_v + it->first.y) * grid_size, 0));
+		}
+	}
+		break;
+	}
 }
 
 /**
@@ -1364,7 +2100,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	int flag = 0;
 	flag |= fisheye::CALIB_RECOMPUTE_EXTRINSIC;
 	//flag |= fisheye::CALIB_CHECK_COND;
-	//flag |= fisheye::CALIB_FIX_SKEW;
+	flag |= fisheye::CALIB_FIX_SKEW;
 	//flag |= fisheye::CALIB_FIX_K1;
 	//flag |= fisheye::CALIB_FIX_K2;
 	//flag |= fisheye::CALIB_FIX_K3;
@@ -1384,8 +2120,11 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
 	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
-		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 500, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
-	cout << "rms" << endl;
+		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 70, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
+	cout << "rms" << rms << endl;
+	cout << K << endl;
+	cout << D << endl;
+
 	waitKey(0);
 	if (rms < 1)
 	{

@@ -7,6 +7,27 @@ using namespace std;
 
 int main()
 {
+	vector<cv::Mat> imgs;
+	cv::Mat img0 = imread("D:/studying/stereo vision/research code/data/20191017-1/left/patternsImgL/3_pattern0.jpeg");
+	cvtColor(img0, img0, COLOR_BGR2GRAY);
+	cv::Mat img1 = imread("D:/studying/stereo vision/research code/data/20191017-1/left/patternsImgL/3_pattern1.jpeg");
+	cvtColor(img1, img1, COLOR_BGR2GRAY);
+	cv::Mat img2 = imread("D:/studying/stereo vision/research code/data/20191017-1/left/patternsImgL/3_pattern2.jpeg");
+	cvtColor(img2, img2, COLOR_BGR2GRAY);
+	cv::Mat img3 = imread("D:/studying/stereo vision/research code/data/20191017-1/left/patternsImgL/3_pattern3.jpeg");
+	cvtColor(img3, img3, COLOR_BGR2GRAY);
+	imgs.push_back(img0);
+	imgs.push_back(img1);
+	imgs.push_back(img2);
+	imgs.push_back(img3);
+
+	int grid_Size = 20;
+	int rowNum = 9;
+	int colNum = 16;
+	vector<cv::Point2d> ptsImg;
+	vector<cv::Point3d> ptsObj;
+	detectPts(imgs, ptsImg, ptsObj, grid_Size, rowNum, colNum);
+	//fisheyeModel_show2(IDEAL_PERSPECTIVE);
 	//createStripePic_withSquare();
 	//createCalibPicSquare();
 

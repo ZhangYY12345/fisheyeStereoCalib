@@ -34,9 +34,31 @@ bool ptsCalib_Single(std::string imgFilePath, cv::Size& imgSize, douVecPt2f& pts
 bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts,
 	douVecPt3f& ptsReal, int corRowNum, int corColNum);
 
-void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, bool isHorizon);
-void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal);
-bool ptsCalib_mine();
+//
+struct myCmp_map
+{
+	bool operator() (const cv::Point2i& node1, const cv::Point2i& node2) const
+	{
+		if (node1.x < node2.x)
+		{
+			return true;
+		}
+		if (node1.x == node2.x)
+		{
+			if (node1.y < node2.y)
+				return true;
+		}
+		return false;
+	}
+};
+
+cv::Mat detectLines_(cv::Mat& src1, cv::Mat& src2, bool isHorizon);
+void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, cv::Mat& dst_inv, bool isHorizon);
+void connectEdge(cv::Mat& src, bool isHorizon = true);
+void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true);
+void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true);
+void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vector<cv::Point3d>& ptsReal, int grid_size);
+void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vector<cv::Point3d>& ptsReal, int grid_size, int rowNum, int colNum, RIGHT_COUNT_SIDE mode);
 
 //
 double stereoCamCalibration(std::string imgFilePath, std::string cameraParaPath);

@@ -60,7 +60,6 @@ void Pattern::generate()
     patterns[3] = ~patterns[2];
     cv::blur(patterns[2], patterns[2], cv::Size2i(1,slope+1));
     cv::blur(patterns[3], patterns[3], cv::Size2i(1,slope+1));
-
 }
 
 void Pattern::save(std::string dir)
