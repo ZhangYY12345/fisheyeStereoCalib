@@ -3,6 +3,7 @@
 #include "fisheye_opencv/fisheyeCalib_radius_d.h"
 #include "fisheye_opencv/fisheyeCalib_radius_rd.h"
 #include <stack>
+#include "fisheyeLib/calib_libs/tinyxml2.h"
 
 using namespace cv;
 using namespace std;
@@ -1336,7 +1337,7 @@ void connectEdge(cv::Mat& src, bool isHorizon)
 						starty++;
 						for(int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
 						{
-							if (!(y + offset_y1 >= 0 && y + offset_y1 < height - 1 && x + offset_x1[0] >= 0 && x + offset_x1[0] < width - 1))
+							if (!(y + offset_y1 >= 0 && y + offset_y1 < height && x + offset_x1[0] >= 0 && x + offset_x1[0] < width))
 							{
 								continue;
 							}
@@ -1367,6 +1368,10 @@ void connectEdge(cv::Mat& src, bool isHorizon)
 						starty++;
 						for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
 						{
+							if (!(y + offset_y1 >= 0 && y + offset_y1 < height && x + offset_x1[1] >= 0 && x + offset_x1[1] < width))
+							{
+								continue;
+							}
 							if (src.at<uchar>(y + offset_y1, x + offset_x1[1]) == 255)
 							{
 								src.at<uchar>(y + offset_y1 / 2, x + offset_x1[1] / 2) = 255;
@@ -1405,7 +1410,7 @@ void connectEdge(cv::Mat& src, bool isHorizon)
 						startx++;
 						for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
 						{
-							if(!(y + offset_y1[0] >= 0 && y + offset_y1[0] < height-1 && x + offset_x1 >= 0 && x + offset_x1 < width-1))
+							if(!(y + offset_y1[0] >= 0 && y + offset_y1[0] < height && x + offset_x1 >= 0 && x + offset_x1 < width))
 							{
 								continue;
 							}
@@ -1436,6 +1441,10 @@ void connectEdge(cv::Mat& src, bool isHorizon)
 						startx++;
 						for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
 						{
+							if (!(y + offset_y1[1] >= 0 && y + offset_y1[1] < height && x + offset_x1 >= 0 && x + offset_x1 < width))
+							{
+								continue;
+							}
 							if (src.at<uchar>(y + offset_y1[1], x + offset_x1) == 255)
 							{
 								src.at<uchar>(y + offset_y1[1] / 2, x + offset_x1 / 2) = 255;
@@ -1456,7 +1465,7 @@ void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& li
 	int width = src.cols;
 	int height = src.rows;
 
-	int lenThres = 200;
+	int lenThres = 500;
 	int count = 0;
 	if(!lines.empty())
 	{
@@ -1636,7 +1645,7 @@ void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines,
  * \param pts 
  * \param ptsReal 
  */
-void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vector<cv::Point3d>& ptsReal, int grid_size)
+void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, int grid_size)
 {
 	cv::Mat lineV, lineV_inv;
 	cv::Mat lineH, lineH_inv;
@@ -1708,7 +1717,7 @@ void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vec
 						}
 					}
 				}
-				cv::Point2d cornerPt;
+				cv::Point2f cornerPt;
 				if(num > 1)
 				{
 					double sumX = 0.0, sumY = 0.0;
@@ -1737,7 +1746,7 @@ void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vec
 	for(auto it = pts_H.begin(); it != pts_H.end(); it++)
 	{
 		pts.push_back(it->second);
-		ptsReal.push_back(cv::Point3d(it->first.x * grid_size, it->first.y * grid_size, 0));
+		ptsReal.push_back(cv::Point3f(it->first.x * grid_size * 1.0, it->first.y * grid_size * 1.0, 0));
 	}
 }
 
@@ -1751,7 +1760,7 @@ void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vec
  * \param vNum
  * \param mode :indicate the complete side of the view
  */
-void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vector<cv::Point3d>& ptsReal,
+void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal,
 	int grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode)
 {
 	cv::Mat lineV, lineV_inv;
@@ -1766,7 +1775,7 @@ void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vec
 	post_process(lineH, lines_H, true);
 	post_process(lineV, lines_V, false);
 
-	std::map<cv::Point2i, cv::Point2d, myCmp_map>  pts_H;
+	std::map<cv::Point2i, cv::Point2f, myCmp_map>  pts_H;
 
 	cv::Mat ptsImg;
 	bitwise_and(lineH, lineV, ptsImg);
@@ -1837,7 +1846,7 @@ void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vec
 						}
 					}
 				}
-				cv::Point2d cornerPt;
+				cv::Point2f cornerPt;
 				if (num > 1)
 				{
 					double sumX = 0.0, sumY = 0.0;
@@ -1870,7 +1879,7 @@ void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vec
 		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
 		{
 			pts.push_back(it->second);
-			ptsReal.push_back(cv::Point3d(it->first.x * grid_size, it->first.y * grid_size, 0));
+			ptsReal.push_back(cv::Point3f(it->first.x * grid_size, it->first.y * grid_size, 0));
 		}
 	}
 		break;
@@ -1880,7 +1889,7 @@ void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vec
 		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
 		{
 			pts.push_back(it->second);
-			ptsReal.push_back(cv::Point3d(it->first.x * grid_size, (diff_v + it->first.y) * grid_size, 0));
+			ptsReal.push_back(cv::Point3f(it->first.x * grid_size, (diff_v + it->first.y) * grid_size, 0));
 		}
 	}
 		break;
@@ -1890,7 +1899,7 @@ void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vec
 		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
 		{
 			pts.push_back(it->second);
-			ptsReal.push_back(cv::Point3d((diff_h + it->first.x) * grid_size, it->first.y * grid_size, 0));
+			ptsReal.push_back(cv::Point3f((diff_h + it->first.x) * grid_size, it->first.y * grid_size, 0));
 		}
 	}
 		break;
@@ -1901,11 +1910,236 @@ void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vec
 		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
 		{
 			pts.push_back(it->second);
-			ptsReal.push_back(cv::Point3d((diff_h + it->first.x) * grid_size, (diff_v + it->first.y) * grid_size, 0));
+			ptsReal.push_back(cv::Point3f((diff_h + it->first.x) * grid_size, (diff_v + it->first.y) * grid_size, 0));
 		}
 	}
 		break;
 	}
+}
+
+void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SIDE, vector<vector<std::string> > >& path_)
+{
+	tinyxml2::XMLDocument doc;
+	doc.LoadFile(xmlPath.c_str());
+	tinyxml2::XMLElement *root = doc.FirstChildElement("all");
+	imgSize.width = atoi(root->FirstChildElement("img_width")->GetText());
+	imgSize.height = atoi(root->FirstChildElement("img_height")->GetText());
+
+
+	vector<vector<std::string> > imgPath_tl;
+	tinyxml2::XMLElement *root_tl = root->FirstChildElement("images_tl");
+	tinyxml2::XMLElement *node_tl = root_tl->FirstChildElement("pair");
+	while (node_tl) {
+		vector<string> filenames(4);
+
+		tinyxml2::XMLElement *filename = node_tl->FirstChildElement("pattern");
+		int count;
+		for (count = 0; count < 4; ++count) {
+			if (!filename) {
+				break;
+			}
+			filenames[count] = std::string(filename->GetText());
+			filename = filename->NextSiblingElement("pattern");
+		}
+		imgPath_tl.push_back(filenames);
+		node_tl = node_tl->NextSiblingElement("pair");
+	}
+	if(!imgPath_tl.empty())
+	{
+		path_[TOP_LEFT] = imgPath_tl;
+	}
+
+
+	vector<vector<std::string> > imgPath_tr;
+	tinyxml2::XMLElement *root_tr = root->FirstChildElement("images_tr");
+	tinyxml2::XMLElement *node_tr = root_tr->FirstChildElement("pair");
+	while (node_tr) {
+		vector<string> filenames(4);
+
+		tinyxml2::XMLElement *filename = node_tr->FirstChildElement("pattern");
+		int count;
+		for (count = 0; count < 4; ++count) {
+			if (!filename) {
+				break;
+			}
+			filenames[count] = std::string(filename->GetText());
+			filename = filename->NextSiblingElement("pattern");
+		}
+		imgPath_tr.push_back(filenames);
+		node_tr = node_tr->NextSiblingElement("pair");
+	}
+	if (!imgPath_tr.empty())
+	{
+		path_[TOP_RIGHT] = imgPath_tr;
+	}
+
+	vector<vector<std::string> > imgPath_bl;
+	tinyxml2::XMLElement *root_bl = root->FirstChildElement("images_bl");
+	tinyxml2::XMLElement *node_bl = root_bl->FirstChildElement("pair");
+	while (node_bl) {
+		vector<string> filenames(4);
+
+		tinyxml2::XMLElement *filename = node_bl->FirstChildElement("pattern");
+		int count;
+		for (count = 0; count < 4; ++count) {
+			if (!filename) {
+				break;
+			}
+			filenames[count] = std::string(filename->GetText());
+			filename = filename->NextSiblingElement("pattern");
+		}
+		imgPath_bl.push_back(filenames);
+		node_bl = node_bl->NextSiblingElement("pair");
+	}
+	if (!imgPath_bl.empty())
+	{
+		path_[BOTTOM_LEFT] = imgPath_bl;
+	}
+
+	vector<vector<std::string> > imgPath_br;
+	tinyxml2::XMLElement *root_br = root->FirstChildElement("images_br");
+	tinyxml2::XMLElement *node_br = root_br->FirstChildElement("pair");
+	while (node_br) {
+		vector<string> filenames(4);
+
+		tinyxml2::XMLElement *filename = node_br->FirstChildElement("pattern");
+		int count;
+		for (count = 0; count < 4; ++count) {
+			if (!filename) {
+				break;
+			}
+			filenames[count] = std::string(filename->GetText());
+			filename = filename->NextSiblingElement("pattern");
+		}
+		imgPath_br.push_back(filenames);
+		node_br = node_br->NextSiblingElement("pair");
+	}
+	if (!imgPath_br.empty())
+	{
+		path_[BOTTOM_RIGHT] = imgPath_br;
+	}
+}
+
+bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pts, douVecPt3f& ptsReal, int gridSize,
+	int hNum, int vNum)
+{
+	map<RIGHT_COUNT_SIDE, vector<vector<std::string> > > imgPaths;
+	loadXML_imgPath(xmlFilePath, imgSize, imgPaths);
+
+	if(!pts.empty())
+	{
+		pts.clear();
+	}
+	if(!ptsReal.empty())
+	{
+		ptsReal.clear();
+	}
+
+	for(auto it = imgPaths.begin(); it != imgPaths.end(); it++)
+	{
+		if(it->first == TOP_LEFT)
+		{
+			for(auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
+			{
+				vector<cv::Point2f> oneImgPts;
+				vector<cv::Point3f> oneObjPts;
+
+				if((*it_1).size() != 4)
+				{
+					continue;
+				}
+
+				vector<cv::Mat> oneImgs;
+				for(int i = 0; i < 4; i++)
+				{
+					cv::Mat img = imread((*it_1)[i]);
+					cvtColor(img, img, COLOR_BGR2GRAY);
+					oneImgs.push_back(img);
+				}
+
+				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, TOP_LEFT);
+				pts.push_back(oneImgPts);
+				ptsReal.push_back(oneObjPts);
+			}
+		}
+		else if(it->first == TOP_RIGHT)
+		{
+			for (auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
+			{
+				vector<cv::Point2f> oneImgPts;
+				vector<cv::Point3f> oneObjPts;
+
+				if ((*it_1).size() != 4)
+				{
+					continue;
+				}
+
+				vector<cv::Mat> oneImgs;
+				for (int i = 0; i < 4; i++)
+				{
+					cv::Mat img = imread((*it_1)[i]);
+					cvtColor(img, img, COLOR_BGR2GRAY);
+					oneImgs.push_back(img);
+				}
+
+				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, TOP_RIGHT);
+				pts.push_back(oneImgPts);
+				ptsReal.push_back(oneObjPts);
+			}
+		}
+		else if(it->first == BOTTOM_LEFT)
+		{
+			for (auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
+			{
+				vector<cv::Point2f> oneImgPts;
+				vector<cv::Point3f> oneObjPts;
+
+				if ((*it_1).size() != 4)
+				{
+					continue;
+				}
+
+				vector<cv::Mat> oneImgs;
+				for (int i = 0; i < 4; i++)
+				{
+					cv::Mat img = imread((*it_1)[i]);
+					cvtColor(img, img, COLOR_BGR2GRAY);
+					oneImgs.push_back(img);
+				}
+
+				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, BOTTOM_LEFT);
+				pts.push_back(oneImgPts);
+				ptsReal.push_back(oneObjPts);
+			}
+		}
+		else if(it->first == BOTTOM_RIGHT)
+		{
+			for (auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
+			{
+				vector<cv::Point2f> oneImgPts;
+				vector<cv::Point3f> oneObjPts;
+
+				if ((*it_1).size() != 4)
+				{
+					continue;
+				}
+
+				vector<cv::Mat> oneImgs;
+				for (int i = 0; i < 4; i++)
+				{
+					cv::Mat img = imread((*it_1)[i]);
+					cvtColor(img, img, COLOR_BGR2GRAY);
+					oneImgs.push_back(img);
+				}
+
+				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, BOTTOM_RIGHT);
+				pts.push_back(oneImgPts);
+				ptsReal.push_back(oneObjPts);
+			}
+		}
+	}
+
+	return(!(pts.empty() || ptsReal.empty() || pts.size() != ptsReal.size()));
 }
 
 /**
@@ -2086,10 +2320,13 @@ double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPa
 double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath)
 {
 	cv::Size imgSize;
+	//std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
+	//std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
+	//bool isSuc = ptsCalib_Single(imgFilePath, imgSize, cornerPtsVec, objPts3d, 6, 9);
 	std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
-	std::vector<std::vector<Point3f> > objPts3d;					 	//calculated coordination of corners in world coordinate system
-	bool isSuc = ptsCalib_Single(imgFilePath, imgSize, cornerPtsVec, objPts3d, 6, 9);
-	
+	std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
+	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, 20, 9, 16);
+
 	if (!isSuc)
 	{
 		cout << "points detection failed." << endl;
@@ -2118,7 +2355,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
-	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,
+	double rms = cv::fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 70, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	cout << "rms" << rms << endl;

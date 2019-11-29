@@ -57,8 +57,13 @@ void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, cv::Mat& dst_inv, bo
 void connectEdge(cv::Mat& src, bool isHorizon = true);
 void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true);
 void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true);
-void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vector<cv::Point3d>& ptsReal, int grid_size);
-void detectPts(std::vector<cv::Mat> src, std::vector<cv::Point2d>& pts, std::vector<cv::Point3d>& ptsReal, int grid_size, int rowNum, int colNum, RIGHT_COUNT_SIDE mode);
+void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, int grid_size);
+void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, 
+	int grid_size, int rowNum, int colNum, RIGHT_COUNT_SIDE mode);
+
+void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, std::map<RIGHT_COUNT_SIDE, std::vector<std::vector<std::string> > >& path_);
+bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize,
+	douVecPt2f& pts, douVecPt3f& ptsReal, int gridSize, int hNum, int vNum);
 
 //
 double stereoCamCalibration(std::string imgFilePath, std::string cameraParaPath);

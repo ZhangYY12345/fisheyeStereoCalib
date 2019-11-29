@@ -7,6 +7,7 @@ using namespace std;
 
 int main()
 {
+	/*
 	vector<cv::Mat> imgs;
 	cv::Mat img0 = imread("D:/studying/stereo vision/research code/data/20191017-1/left/patternsImgL/3_pattern0.jpeg");
 	cvtColor(img0, img0, COLOR_BGR2GRAY);
@@ -26,7 +27,9 @@ int main()
 	int colNum = 16;
 	vector<cv::Point2d> ptsImg;
 	vector<cv::Point3d> ptsObj;
-	detectPts(imgs, ptsImg, ptsObj, grid_Size, rowNum, colNum);
+	detectPts(imgs, ptsImg, ptsObj, grid_Size, rowNum, colNum, TOP_LEFT);
+	*/
+
 	//fisheyeModel_show2(IDEAL_PERSPECTIVE);
 	//createStripePic_withSquare();
 	//createCalibPicSquare();
@@ -120,7 +123,8 @@ int main()
 	//std::string imgFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera";
 	//std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera\\stereoCalibrateData20190710.xml";
 
-	double singleRms = fisheyeCamCalibSingle(imgFilePath, xmlFilePath);
+	std::string xmlpath_img = "D:/studying/stereo vision/research code/fisheye-stereo-calibrate/fisheyeStereoCalib/fisheyeStereoCalib/fisheyeStereoCalib/patternsL_corner_detection.xml";
+	double singleRms = fisheyeCamCalibSingle(xmlpath_img, xmlFilePath);
 
 	cv::Mat K, D;
 	cv::Size imgSize;

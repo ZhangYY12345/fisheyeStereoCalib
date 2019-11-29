@@ -7,6 +7,9 @@
 
 typedef  std::vector<std::vector<cv::Point2f> >  douVecPt2f;
 typedef  std::vector<std::vector<cv::Point3f> >  douVecPt3f;
+typedef  std::vector<std::vector<cv::Point2d> >  douVecPt2d;
+typedef  std::vector<std::vector<cv::Point3d> >  douVecPt3d;
+
 
 enum DisparityType
 {
