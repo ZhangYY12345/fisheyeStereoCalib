@@ -985,6 +985,62 @@ bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts, douVecPt3f& pts
 	return true;
 }
 
+void createMask_lines(cv::Mat& dst)
+{
+	vector<vector<cv::Point2i> > contours;
+	vector<cv::Point2i> oneContour;
+
+	cv::Point2i p0(2559, 490);
+	cv::Point2i p00(2433, 490);
+	cv::Point2i p1(2418, 510);
+	cv::Point2i p2(2424, 577);
+	cv::Point2i p3(2414, 599);
+	cv::Point2i p4(2400, 666);
+	cv::Point2i p5(2399, 712);
+	cv::Point2i p6(2400, 742);
+	cv::Point2i p7(2401, 768);
+	cv::Point2i p8(2402, 779);
+	cv::Point2i p9(2404, 800);
+	cv::Point2i p10(2407, 815);
+	cv::Point2i p11(2409, 834);
+	cv::Point2i p12(2416, 862);
+	cv::Point2i p13(2425, 885);
+	cv::Point2i p14(2425, 891);
+	cv::Point2i p15(2418, 935);
+	cv::Point2i p16(2424, 962);
+	cv::Point2i p17(2559, 962);
+
+	oneContour.push_back(p0); 
+	oneContour.push_back(p00);
+	oneContour.push_back(p1);
+	oneContour.push_back(p2);
+	oneContour.push_back(p3);
+	oneContour.push_back(p4);
+	oneContour.push_back(p5);
+	oneContour.push_back(p6);
+	oneContour.push_back(p7);
+	oneContour.push_back(p8);
+	oneContour.push_back(p9);
+	oneContour.push_back(p10);
+	oneContour.push_back(p11);
+	oneContour.push_back(p12);
+	oneContour.push_back(p13);
+	oneContour.push_back(p14);
+	oneContour.push_back(p15);
+	oneContour.push_back(p16);
+	oneContour.push_back(p17);
+
+	contours.push_back(oneContour);
+
+	int width = 2560;
+	int height = 1440;
+	cv::Mat img = cv::Mat::zeros(height, width, CV_8UC1);
+
+	drawContours(img, contours, -1, 255, FILLED);
+	//imwrite("img_.jpg", img);
+	bitwise_not(img, dst);
+}
+
 cv::Mat detectLines_(cv::Mat& src1, cv::Mat& src2, bool isHorizon)
 {
 	// Check type of img1 and img2
@@ -1761,7 +1817,7 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
  * \param mode :indicate the complete side of the view
  */
 void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal,
-	int grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode)
+	int grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode, cv::Mat mask)
 {
 	cv::Mat lineV, lineV_inv;
 	cv::Mat lineH, lineH_inv;
@@ -1771,6 +1827,11 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 	bitwise_and(lineV, lineV_inv, lineV);
 	bitwise_and(lineH, lineH_inv, lineH);
 
+	if(!mask.empty())
+	{
+		bitwise_and(lineV, mask, lineV);
+		bitwise_and(lineH, mask, lineH);
+	}
 	std::map<int, std::vector<cv::Point2i> > lines_H, lines_V;
 	post_process(lineH, lines_H, true);
 	post_process(lineV, lines_V, false);
@@ -2021,7 +2082,7 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SID
 }
 
 bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pts, douVecPt3f& ptsReal, int gridSize,
-	int hNum, int vNum)
+	int hNum, int vNum, cv::Mat mask)
 {
 	map<RIGHT_COUNT_SIDE, vector<vector<std::string> > > imgPaths;
 	loadXML_imgPath(xmlFilePath, imgSize, imgPaths);
@@ -2057,7 +2118,7 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 					oneImgs.push_back(img);
 				}
 
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, TOP_LEFT);
+				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, TOP_LEFT, mask);
 				pts.push_back(oneImgPts);
 				ptsReal.push_back(oneObjPts);
 			}
@@ -2082,7 +2143,7 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 					oneImgs.push_back(img);
 				}
 
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, TOP_RIGHT);
+				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, TOP_RIGHT, mask);
 				pts.push_back(oneImgPts);
 				ptsReal.push_back(oneObjPts);
 			}
@@ -2107,7 +2168,7 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 					oneImgs.push_back(img);
 				}
 
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, BOTTOM_LEFT);
+				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, BOTTOM_LEFT, mask);
 				pts.push_back(oneImgPts);
 				ptsReal.push_back(oneObjPts);
 			}
@@ -2132,7 +2193,7 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 					oneImgs.push_back(img);
 				}
 
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, BOTTOM_RIGHT);
+				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, BOTTOM_RIGHT, mask);
 				pts.push_back(oneImgPts);
 				ptsReal.push_back(oneObjPts);
 			}
@@ -2323,9 +2384,12 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
 	//std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
 	//bool isSuc = ptsCalib_Single(imgFilePath, imgSize, cornerPtsVec, objPts3d, 6, 9);
+	
+	cv::Mat mask_;
+	createMask_lines(mask_);
 	std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
-	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, 20, 9, 16);
+	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, 20, 9, 16, mask_);
 
 	if (!isSuc)
 	{
@@ -2337,7 +2401,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	int flag = 0;
 	flag |= fisheye::CALIB_RECOMPUTE_EXTRINSIC;
 	//flag |= fisheye::CALIB_CHECK_COND;
-	flag |= fisheye::CALIB_FIX_SKEW;
+	//flag |= fisheye::CALIB_FIX_SKEW;
 	//flag |= fisheye::CALIB_FIX_K1;
 	//flag |= fisheye::CALIB_FIX_K2;
 	//flag |= fisheye::CALIB_FIX_K3;
@@ -2355,9 +2419,9 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
-	double rms = cv::fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,
+	double rms = my_cv::fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
-		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 70, 1e-6));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
+		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 7000, 1e-8));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	cout << "rms" << rms << endl;
 	cout << K << endl;
 	cout << D << endl;

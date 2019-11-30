@@ -52,6 +52,7 @@ struct myCmp_map
 	}
 };
 
+void createMask_lines(cv::Mat& dst);
 cv::Mat detectLines_(cv::Mat& src1, cv::Mat& src2, bool isHorizon);
 void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, cv::Mat& dst_inv, bool isHorizon);
 void connectEdge(cv::Mat& src, bool isHorizon = true);
@@ -59,11 +60,11 @@ void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& li
 void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true);
 void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, int grid_size);
 void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, 
-	int grid_size, int rowNum, int colNum, RIGHT_COUNT_SIDE mode);
+	int grid_size, int rowNum, int colNum, RIGHT_COUNT_SIDE mode, cv::Mat mask = cv::Mat::Mat());
 
 void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, std::map<RIGHT_COUNT_SIDE, std::vector<std::vector<std::string> > >& path_);
 bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize,
-	douVecPt2f& pts, douVecPt3f& ptsReal, int gridSize, int hNum, int vNum);
+	douVecPt2f& pts, douVecPt3f& ptsReal, int gridSize, int hNum, int vNum, cv::Mat mask = cv::Mat::Mat());
 
 //
 double stereoCamCalibration(std::string imgFilePath, std::string cameraParaPath);
