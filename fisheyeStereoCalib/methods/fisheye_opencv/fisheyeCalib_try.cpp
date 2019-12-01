@@ -66,11 +66,20 @@ void my_cv::internal::IntrinsicParams::Init(const cv::Vec2d& _f, const cv::Vec2d
 	this->alpha = _alpha;
 }
 
-void my_cv::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
+void my_cv::internal::projectPoints(cv::InputOutputArray objectPoints, cv::InputOutputArray imagePoints,
 	cv::InputArray _rvec, cv::InputArray _tvec,
 	const IntrinsicParams& param, cv::OutputArray jacobian, DISTORT_Mode_Fisheye distortMode)
 {
-	CV_Assert(!objectPoints.empty() && (objectPoints.type() == CV_32FC3 || objectPoints.type() == CV_64FC3));
+	if (distortMode == ORIGIN_FISHEYE_CALIB || distortMode == THETA_D_FISHEYE_CALIB
+		|| distortMode == RADIUS_D_FISHEYE_CALIB)
+	{
+		CV_Assert(!objectPoints.empty() && (objectPoints.type() == CV_32FC3 || objectPoints.type() == CV_64FC3));
+	}
+	else if(distortMode == RADIUS_RD_FISHEYE_CALIB)
+	{
+		CV_Assert(!imagePoints.empty() && (imagePoints.type() == CV_32FC2 || imagePoints.type() == CV_64FC2));
+	}
+
 	cv::Matx33d K(param.f[0], param.f[0] * param.alpha, param.c[0],
 		0, param.f[1], param.c[1],
 		0, 0, 1);
@@ -86,10 +95,11 @@ void my_cv::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray
 		my_cv::fisheye_r_d::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian, cur_fisheye_mode);//////
 		break;
 	case RADIUS_RD_FISHEYE_CALIB:
-		my_cv::fisheye_r_rd::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian, cur_fisheye_mode);//////
+		my_cv::fisheye_r_rd::projectPoints(imagePoints, objectPoints, _rvec, _tvec, K, param.k, param.alpha, jacobian, cur_fisheye_mode);//////
 		break;
 	}
 }
+
 
 void my_cv::internal::ComputeExtrinsicRefine(const cv::Mat& imagePoints, const cv::Mat& objectPoints, cv::Mat& rvec,
 	cv::Mat&  tvec, cv::Mat& J, const int MaxIter,
@@ -103,34 +113,70 @@ void my_cv::internal::ComputeExtrinsicRefine(const cv::Mat& imagePoints, const c
 	double change = 1;
 	int iter = 0;
 
-	while (change > 1e-10 && iter < MaxIter)
+	if (distortMode != RADIUS_RD_FISHEYE_CALIB)
 	{
-		std::vector<cv::Point2d> x;
-		cv::Mat jacobians;
-		projectPoints(objectPoints, x, rvec, tvec, param, jacobians, distortMode);
-
-		cv::Mat ex = imagePoints - cv::Mat(x).t();
-		ex = ex.reshape(1, 2);
-
-		J = jacobians.colRange(8, 14).clone();
-
-		cv::SVD svd(J, cv::SVD::NO_UV);
-		double condJJ = svd.w.at<double>(0) / svd.w.at<double>(5);
-
-		if (condJJ > thresh_cond)
-			change = 0;
-		else
+		while (change > 1e-10 && iter < MaxIter)
 		{
-			cv::Vec6d param_innov;
-			solve(J, ex.reshape(1, (int)ex.total()), param_innov, cv::DECOMP_SVD + cv::DECOMP_NORMAL);
+			std::vector<cv::Point2d> x;
+			cv::Mat jacobians;
+			projectPoints(objectPoints, x, rvec, tvec, param, jacobians, distortMode);
 
-			cv::Vec6d param_up = extrinsics + param_innov;
-			change = cv::norm(param_innov) / cv::norm(param_up);
-			extrinsics = param_up;
-			iter = iter + 1;
+			cv::Mat ex = imagePoints - cv::Mat(x).t();
+			ex = ex.reshape(1, 2);
 
-			rvec = cv::Mat(cv::Vec3d(extrinsics.val));
-			tvec = cv::Mat(cv::Vec3d(extrinsics.val + 3));
+			J = jacobians.colRange(8, 14).clone();
+
+			cv::SVD svd(J, cv::SVD::NO_UV);
+			double condJJ = svd.w.at<double>(0) / svd.w.at<double>(5);
+
+			if (condJJ > thresh_cond)
+				change = 0;
+			else
+			{
+				cv::Vec6d param_innov;
+				solve(J, ex.reshape(1, (int)ex.total()), param_innov, cv::DECOMP_SVD + cv::DECOMP_NORMAL);
+
+				cv::Vec6d param_up = extrinsics + param_innov;
+				change = cv::norm(param_innov) / cv::norm(param_up);
+				extrinsics = param_up;
+				iter = iter + 1;
+
+				rvec = cv::Mat(cv::Vec3d(extrinsics.val));
+				tvec = cv::Mat(cv::Vec3d(extrinsics.val + 3));
+			}
+		}
+	}
+	else
+	{
+		while (change > 1e-10 && iter < MaxIter)
+		{
+			std::vector<cv::Point3d> x;
+			cv::Mat jacobians;
+			projectPoints(x, imagePoints, rvec, tvec, param, jacobians, distortMode);
+
+			cv::Mat ex = objectPoints - cv::Mat(x).t();
+			ex = ex.reshape(1, 3);
+
+			J = jacobians.colRange(8, 14).clone();
+
+			cv::SVD svd(J, cv::SVD::NO_UV);
+			double condJJ = svd.w.at<double>(0) / svd.w.at<double>(5);
+
+			if (condJJ > thresh_cond)
+				change = 0;
+			else
+			{
+				cv::Vec6d param_innov;
+				solve(J, ex.reshape(1, (int)ex.total()), param_innov, cv::DECOMP_SVD + cv::DECOMP_NORMAL);
+
+				cv::Vec6d param_up = extrinsics + param_innov;
+				change = cv::norm(param_innov) / cv::norm(param_up);
+				extrinsics = param_up;
+				iter = iter + 1;
+
+				rvec = cv::Mat(cv::Vec3d(extrinsics.val));
+				tvec = cv::Mat(cv::Vec3d(extrinsics.val + 3));
+			}
 		}
 	}
 }
@@ -387,44 +433,90 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 	JJ2 = cv::Mat::zeros(9 + 6 * n, 9 + 6 * n, CV_64FC1);
 	ex3 = cv::Mat::zeros(9 + 6 * n, 1, CV_64FC1);
 
-	for (int image_idx = 0; image_idx < n; ++image_idx)
+	if (distortMode != RADIUS_RD_FISHEYE_CALIB)
 	{
-		cv::Mat image, object;
-		objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
-		imagePoints.getMat(image_idx).convertTo(image, CV_64FC2);
-
-		bool imT = image.rows < image.cols;
-		cv::Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
-
-		std::vector<cv::Point2d> x;
-		cv::Mat jacobians;
-		projectPoints(object, x, om, T, param, jacobians, distortMode);
-		cv::Mat exkk = (imT ? image.t() : image) - cv::Mat(x);
-
-		cv::Mat A(jacobians.rows, 9, CV_64FC1);
-		jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
-		jacobians.col(14).copyTo(A.col(4));//alpha
-		jacobians.colRange(4, 8).copyTo(A.colRange(5, 9));//k
-
-		A = A.t();
-
-		cv::Mat B = jacobians.colRange(8, 14).clone();
-		B = B.t();
-
-		JJ2(cv::Rect(0, 0, 9, 9)) += A * A.t();
-		JJ2(cv::Rect(9 + 6 * image_idx, 9 + 6 * image_idx, 6, 6)) = B * B.t();
-
-		JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)) = A * B.t();
-		JJ2(cv::Rect(0, 9 + 6 * image_idx, 9, 6)) = JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)).t();
-
-		ex3.rowRange(0, 9) += A * exkk.reshape(1, 2 * exkk.rows);
-		ex3.rowRange(9 + 6 * image_idx, 9 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 2 * exkk.rows);
-
-		if (check_cond)
+		for (int image_idx = 0; image_idx < n; ++image_idx)
 		{
-			cv::Mat JJ_kk = B.t();
-			cv::SVD svd(JJ_kk, cv::SVD::NO_UV);
-			CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
+			cv::Mat image, object;
+			objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
+			imagePoints.getMat(image_idx).convertTo(image, CV_64FC2);
+
+			bool imT = image.rows < image.cols;
+			cv::Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
+
+			std::vector<cv::Point2d> x;
+			cv::Mat jacobians;
+			projectPoints(object, x, om, T, param, jacobians, distortMode);
+			cv::Mat exkk = (imT ? image.t() : image) - cv::Mat(x);
+
+			cv::Mat A(jacobians.rows, 9, CV_64FC1);
+			jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
+			jacobians.col(14).copyTo(A.col(4));//alpha
+			jacobians.colRange(4, 8).copyTo(A.colRange(5, 9));//k
+
+			A = A.t();
+
+			cv::Mat B = jacobians.colRange(8, 14).clone();
+			B = B.t();
+
+			JJ2(cv::Rect(0, 0, 9, 9)) += A * A.t();
+			JJ2(cv::Rect(9 + 6 * image_idx, 9 + 6 * image_idx, 6, 6)) = B * B.t();
+
+			JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)) = A * B.t();
+			JJ2(cv::Rect(0, 9 + 6 * image_idx, 9, 6)) = JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)).t();
+
+			ex3.rowRange(0, 9) += A * exkk.reshape(1, 2 * exkk.rows);
+			ex3.rowRange(9 + 6 * image_idx, 9 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 2 * exkk.rows);
+
+			if (check_cond)
+			{
+				cv::Mat JJ_kk = B.t();
+				cv::SVD svd(JJ_kk, cv::SVD::NO_UV);
+				CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
+			}
+		}
+	}
+	else
+	{
+		for (int image_idx = 0; image_idx < n; ++image_idx)
+		{
+			cv::Mat image, object;
+			objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
+			imagePoints.getMat(image_idx).convertTo(image, CV_64FC2);
+
+			bool objT = object.rows < object.cols;
+			cv::Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
+
+			std::vector<cv::Point3d> x;
+			cv::Mat jacobians;
+			projectPoints(x, image, om, T, param, jacobians, distortMode);
+			cv::Mat exkk = (objT ? object.t() : object) - cv::Mat(x);
+
+			cv::Mat A(jacobians.rows, 9, CV_64FC1);
+			jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
+			jacobians.col(14).copyTo(A.col(4));//alpha
+			jacobians.colRange(4, 8).copyTo(A.colRange(5, 9));//k
+
+			A = A.t();
+
+			cv::Mat B = jacobians.colRange(8, 14).clone();
+			B = B.t();
+
+			JJ2(cv::Rect(0, 0, 9, 9)) += A * A.t();
+			JJ2(cv::Rect(9 + 6 * image_idx, 9 + 6 * image_idx, 6, 6)) = B * B.t();
+
+			JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)) = A * B.t();
+			JJ2(cv::Rect(0, 9 + 6 * image_idx, 9, 6)) = JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)).t();
+
+			ex3.rowRange(0, 9) += A * exkk.reshape(1, 3 * exkk.rows);
+			ex3.rowRange(9 + 6 * image_idx, 9 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 3 * exkk.rows);
+
+			if (check_cond)
+			{
+				cv::Mat JJ_kk = B.t();
+				cv::SVD svd(JJ_kk, cv::SVD::NO_UV);
+				CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
+			}
 		}
 	}
 
@@ -446,12 +538,65 @@ void my_cv::internal::EstimateUncertainties(cv::InputArrayOfArrays objectPoints,
 	CV_Assert(!omc.empty() && omc.type() == CV_64FC3);
 	CV_Assert(!Tc.empty() && Tc.type() == CV_64FC3);
 
+	if (distortMode != RADIUS_RD_FISHEYE_CALIB)
+	{
+		int total_ex = 0;
+		for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
+		{
+			total_ex += (int)objectPoints.getMat(image_idx).total();
+		}
+		cv::Mat ex(total_ex, 1, CV_64FC2);
+		int insert_idx = 0;
+		for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
+		{
+			cv::Mat image, object;
+			objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
+			imagePoints.getMat(image_idx).convertTo(image, CV_64FC2);
+
+			bool imT = image.rows < image.cols;
+
+			cv::Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
+
+			std::vector<cv::Point2d> x;
+			projectPoints(object, x, om, T, params, cv::noArray(), distortMode);
+			cv::Mat ex_ = (imT ? image.t() : image) - cv::Mat(x);
+			ex_.copyTo(ex.rowRange(insert_idx, insert_idx + ex_.rows));
+			insert_idx += ex_.rows;
+		}
+
+		meanStdDev(ex, cv::noArray(), std_err);
+		std_err *= sqrt((double)ex.total() / ((double)ex.total() - 1.0));
+
+		cv::Vec<double, 1> sigma_x;
+		meanStdDev(ex.reshape(1, 1), cv::noArray(), sigma_x);
+		sigma_x *= sqrt(2.0 * (double)ex.total() / (2.0 * (double)ex.total() - 1.0));
+
+		cv::Mat JJ2, ex3;
+		ComputeJacobians(objectPoints, imagePoints, params, omc, Tc, check_cond, thresh_cond, JJ2, ex3, distortMode);
+
+		sqrt(JJ2.inv(), JJ2);
+
+		errors = 3 * sigma_x(0) * JJ2.diag();
+		rms = sqrt(norm(ex, cv::NORM_L2SQR) / ex.total());
+	}
+}
+
+void my_cv::internal::EstimateUncertainties_rd(cv::InputArrayOfArrays objectPoints, cv::InputArrayOfArrays imagePoints,
+	const IntrinsicParams& params, cv::InputArray omc, cv::InputArray Tc, IntrinsicParams& errors, cv::Vec3d& std_err,
+	double thresh_cond, int check_cond, double& rms, DISTORT_Mode_Fisheye distortMode)
+{
+	CV_Assert(!objectPoints.empty() && (objectPoints.type() == CV_32FC3 || objectPoints.type() == CV_64FC3));
+	CV_Assert(!imagePoints.empty() && (imagePoints.type() == CV_32FC2 || imagePoints.type() == CV_64FC2));
+
+	CV_Assert(!omc.empty() && omc.type() == CV_64FC3);
+	CV_Assert(!Tc.empty() && Tc.type() == CV_64FC3);
+
 	int total_ex = 0;
 	for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
 	{
 		total_ex += (int)objectPoints.getMat(image_idx).total();
 	}
-	cv::Mat ex(total_ex, 1, CV_64FC2);
+	cv::Mat ex(total_ex, 1, CV_64FC3);
 	int insert_idx = 0;
 	for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
 	{
@@ -459,13 +604,13 @@ void my_cv::internal::EstimateUncertainties(cv::InputArrayOfArrays objectPoints,
 		objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
 		imagePoints.getMat(image_idx).convertTo(image, CV_64FC2);
 
-		bool imT = image.rows < image.cols;
+		bool objT = object.rows < object.cols;
 
 		cv::Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
 
-		std::vector<cv::Point2d> x;
-		projectPoints(object, x, om, T, params, cv::noArray(), distortMode);
-		cv::Mat ex_ = (imT ? image.t() : image) - cv::Mat(x);
+		std::vector<cv::Point3d> x;
+		projectPoints(x, image, om, T, params, cv::noArray(), distortMode);
+		cv::Mat ex_ = (objT ? object.t() : object) - cv::Mat(x);
 		ex_.copyTo(ex.rowRange(insert_idx, insert_idx + ex_.rows));
 		insert_idx += ex_.rows;
 	}
@@ -475,7 +620,7 @@ void my_cv::internal::EstimateUncertainties(cv::InputArrayOfArrays objectPoints,
 
 	cv::Vec<double, 1> sigma_x;
 	meanStdDev(ex.reshape(1, 1), cv::noArray(), sigma_x);
-	sigma_x *= sqrt(2.0 * (double)ex.total() / (2.0 * (double)ex.total() - 1.0));
+	sigma_x *= sqrt(3.0 * (double)ex.total() / (3.0 * (double)ex.total() - 1.0));
 
 	cv::Mat JJ2, ex3;
 	ComputeJacobians(objectPoints, imagePoints, params, omc, Tc, check_cond, thresh_cond, JJ2, ex3, distortMode);

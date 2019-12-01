@@ -7,9 +7,9 @@ namespace my_cv
 {
 	namespace fisheye_r_rd
 	{
-		CV_EXPORTS void projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints, const cv::Affine3d& affine,
+		CV_EXPORTS void projectPoints(cv::InputArray imagePoints, cv::OutputArray objectPoints, const cv::Affine3d& affine,
 			cv::InputArray K, cv::InputArray D, double alpha = 0, cv::OutputArray jacobian = cv::noArray(), camMode mode = STEREOGRAPHIC);
-		CV_EXPORTS_W void projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints, cv::InputArray rvec, cv::InputArray tvec,
+		CV_EXPORTS_W void projectPoints(cv::InputArray imagePoints, cv::OutputArray objectPoints, cv::InputArray rvec, cv::InputArray tvec,
 			cv::InputArray K, cv::InputArray D, double alpha = 0, cv::OutputArray jacobian = cv::noArray(), camMode mode = STEREOGRAPHIC);
 
 		CV_EXPORTS_W void distortPoints(cv::InputArray undistorted, cv::OutputArray distorted, cv::InputArray K, cv::InputArray D, double alpha = 0, camMode mode = STEREOGRAPHIC);

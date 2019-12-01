@@ -59,7 +59,7 @@ namespace my_cv
 			IntrinsicParams& operator =(const cv::Mat& a);
 			void Init(const cv::Vec2d& f, const cv::Vec2d& c, const cv::Vec4d& k = cv::Vec4d(0, 0, 0, 0), const double& alpha = 0);
 		};
-		void projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
+		void projectPoints(cv::InputOutputArray objectPoints, cv::InputOutputArray imagePoints,
 			cv::InputArray _rvec, cv::InputArray _tvec,
 			const IntrinsicParams& param, cv::OutputArray jacobian, DISTORT_Mode_Fisheye distortMode);
 
@@ -87,6 +87,10 @@ namespace my_cv
 		CV_EXPORTS void  EstimateUncertainties(cv::InputArrayOfArrays objectPoints, cv::InputArrayOfArrays imagePoints,
 			const IntrinsicParams& params, cv::InputArray omc, cv::InputArray Tc,
 			IntrinsicParams& errors, cv::Vec2d& std_err, double thresh_cond, int check_cond, double& rms,
+			DISTORT_Mode_Fisheye distortMode);
+		CV_EXPORTS void  EstimateUncertainties_rd(cv::InputArrayOfArrays objectPoints, cv::InputArrayOfArrays imagePoints,
+			const IntrinsicParams& params, cv::InputArray omc, cv::InputArray Tc,
+			IntrinsicParams& errors, cv::Vec3d& std_err, double thresh_cond, int check_cond, double& rms,
 			DISTORT_Mode_Fisheye distortMode);
 
 		void dAB(cv::InputArray A, cv::InputArray B, cv::OutputArray dABdA, cv::OutputArray dABdB);
