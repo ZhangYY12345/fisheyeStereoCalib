@@ -56,8 +56,9 @@ void createMask_lines(cv::Mat& dst);
 cv::Mat detectLines_(cv::Mat& src1, cv::Mat& src2, bool isHorizon);
 void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, cv::Mat& dst_inv, bool isHorizon);
 void connectEdge(cv::Mat& src, bool isHorizon = true);
-void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true);
-void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true);
+void myGetLines(cv::Mat& src, cv::Mat& tmp, cv::Point2i startPt, std::vector<cv::Point2i>& oneLine, int lenThres, bool isHorizon = true);
+void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true, RIGHT_COUNT_SIDE mode = TOP_LEFT);
+void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true, RIGHT_COUNT_SIDE mode = TOP_LEFT);
 void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, int grid_size);
 void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, 
 	int grid_size, int rowNum, int colNum, RIGHT_COUNT_SIDE mode, cv::Mat mask = cv::Mat::Mat());

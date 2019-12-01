@@ -1,5 +1,6 @@
 #include "fisheyeCalib_theta_d.h"
 #include "fisheyeCalib_try.h"
+#include "../polynomial-solve/root_finder.h"
 
 extern camMode cur_fisheye_mode;
 
@@ -33,7 +34,6 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 	cv::Vec2d f, c;
 	if (_K.depth() == CV_32F)
 	{
-
 		cv::Matx33f K = _K.getMat();
 		f = cv::Vec2f(K(0, 0), K(1, 1));
 		c = cv::Vec2f(K(0, 2), K(1, 2));
@@ -78,32 +78,14 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 		double r_ = std::sqrt(r_2);
 
 		// Angle of the incoming ray:
-		double theta;
-		theta = atan(r_);
+		double theta = getTheta(r_, IDEAL_PERSPECTIVE);
 
 		double theta2 = theta * theta, theta3 = theta2 * theta, theta4 = theta2 * theta2, theta5 = theta4 * theta,
 			theta6 = theta3 * theta3, theta7 = theta6 * theta, theta8 = theta4 * theta4, theta9 = theta8 * theta;
 
 		double theta_d = theta + k[0] * theta3 + k[1] * theta5 + k[2] * theta7 + k[3] * theta9;
 
-		double r_d;
-		switch (mode)
-		{
-		case STEREOGRAPHIC:
-			r_d = 2 * tan(theta_d / 2);		//r = 2f * tan(theta / 2)
-			break;
-		case EQUIDISTANCE:
-			r_d = theta_d;						// r = f * theta
-			break;
-		case EQUISOLID:
-			r_d = 2 * sin(theta_d / 2);		// r = 2f * sin(theta / 2)
-			break;
-		case ORTHOGONAL:
-			r_d = sin(theta_d);				// r = f * sin(theta)
-			break;
-		default:
-			r_d = tan(theta_d);				//r = f * tan(theta)
-		}
+		double r_d = getR(theta_d, mode);
 
 		double inv_r_ = r_ > 1e-8 ? 1.0 / r_ : 1;
 		double cdist = r_ > 1e-8 ? r_d * inv_r_ : 1;
@@ -285,31 +267,7 @@ void my_cv::fisheye::distortPoints(cv::InputArray undistorted, cv::OutputArray d
 		double r_ = std::sqrt(r_2);
 
 		// Angle of the incoming ray:
-		double theta;
-		if (isModeRelated)
-		{
-			switch (mode)
-			{
-			case STEREOGRAPHIC:
-				theta = 2 * atan(r_ / 2);		//r = 2f * tan(theta / 2)
-				break;
-			case EQUIDISTANCE:
-				theta = r_;						// r = f * theta
-				break;
-			case EQUISOLID:
-				theta = 2 * asin(r_ / 2);		// r = 2f * sin(theta / 2)
-				break;
-			case ORTHOGONAL:
-				theta = asin(r_);				// r = f * sin(theta)
-				break;
-			default:
-				theta = atan(r_);				//r = f * tan(theta)
-			}
-		}
-		else
-		{
-			theta = atan(r_);
-		}
+		double theta = getTheta(r_, IDEAL_PERSPECTIVE);
 
 
 		double theta2 = theta * theta, theta3 = theta2 * theta, theta4 = theta2 * theta2, theta5 = theta4 * theta,
@@ -317,24 +275,7 @@ void my_cv::fisheye::distortPoints(cv::InputArray undistorted, cv::OutputArray d
 
 		double theta_d = theta + k[0] * theta3 + k[1] * theta5 + k[2] * theta7 + k[3] * theta9;
 
-		double r_d;
-		switch (mode)
-		{
-		case STEREOGRAPHIC:
-			r_d = 2 * tan(theta_d / 2);		//r = 2f * tan(theta / 2)
-			break;
-		case EQUIDISTANCE:
-			r_d = theta_d;						// r = f * theta
-			break;
-		case EQUISOLID:
-			r_d = 2 * sin(theta_d / 2);		// r = 2f * sin(theta / 2)
-			break;
-		case ORTHOGONAL:
-			r_d = sin(theta_d);				// r = f * sin(theta)
-			break;
-		default:
-			r_d = tan(theta_d);				//r = f * tan(theta)
-		}
+		double r_d = getR(theta_d, mode);
 
 		double inv_r_ = r_ > 1e-8 ? 1.0 / r_ : 1;
 		double cdist = r_ > 1e-8 ? r_d * inv_r_ : 1;
@@ -421,74 +362,41 @@ void my_cv::fisheye::undistortPoints(cv::InputArray distorted, cv::OutputArray u
 
 		double r_ = sqrt(pw[0] * pw[0] + pw[1] * pw[1]);
 
-		double theta_d;
-		if (isModeRelated)
-		{
-			switch (mode)
-			{
-			case STEREOGRAPHIC:
-				theta_d = 2 * atan(r_ / 2);		//r = 2f * tan(theta / 2)
-				break;
-			case EQUIDISTANCE:
-				theta_d = r_;						// r = f * theta
-				break;
-			case EQUISOLID:
-				theta_d = 2 * asin(r_ / 2);		// r = 2f * sin(theta / 2)
-				break;
-			case ORTHOGONAL:
-				theta_d = asin(r_);				// r = f * sin(theta)
-				break;
-			default:
-				theta_d = atan(r_);				//r = f * tan(theta)
-			}
-		}
-		else
-		{
-			theta_d = atan(r_);
-		}
+		double theta_d = getTheta(r_, mode);
+		
 		// the current camera model is only valid up to 180 FOV
 		// for larger FOV the loop below does not converge
 		// clip values so we still get plausible results for super fisheye images > 180 grad
 		theta_d = std::min(std::max(-CV_PI / 2., theta_d), CV_PI / 2.);
 
-		double theta;
+		double theta = theta_d;
 		if (theta_d > 1e-8)
 		{
-			// compensate distortion iteratively
-			theta = theta_d;
+			Eigen::VectorXd coeffs(10);
+			coeffs(9) = -theta_d;
+			coeffs(8) = 1;
+			coeffs(7) = coeffs(5) = coeffs(3) = coeffs(1) = 0;
+			coeffs(6) = k[0];
+			coeffs(4) = k[1];
+			coeffs(2) = k[2];
+			coeffs(0) = k[3];
 
-			const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
-			for (int j = 0; j < 10; j++)
+			std::set<double> theta_s;
+			theta_s = RootFinder::solvePolyInterval(coeffs, -INFINITY, INFINITY, 1e-8, false);
+			double diff_r = INFINITY;
+			for (std::set<double>::iterator theta_si = theta_s.begin(); theta_si != theta_s.end(); theta_si++)
 			{
-				double theta2 = theta * theta, theta4 = theta2 * theta2, theta6 = theta4 * theta2, theta8 = theta6 * theta2;
-				double k0_theta2 = k[0] * theta2, k1_theta4 = k[1] * theta4, k2_theta6 = k[2] * theta6, k3_theta8 = k[3] * theta8;
-				/* new_theta = theta - theta_fix, theta_fix = f0(theta) / f0'(theta) *///牛顿迭代法求解多项式
-				double theta_fix = (theta * (1 + k0_theta2 + k1_theta4 + k2_theta6 + k3_theta8) - theta_d) /
-					(1 + 3 * k0_theta2 + 5 * k1_theta4 + 7 * k2_theta6 + 9 * k3_theta8);
-				theta = theta - theta_fix;
-				if (fabs(theta_fix) < EPS)
-					break;
+				double cur_diff = fabs(theta_d - *theta_si);
+				if (cur_diff < diff_r)
+				{
+					diff_r = cur_diff;
+					theta = *theta_si;
+				}
 			}
 		}
 
 		double r;
-		switch (mode)
-		{
-		case STEREOGRAPHIC:
-			r = 2 * tan(theta / 2);		//r = 2f * tan(theta / 2)
-			break;
-		case EQUIDISTANCE:
-			r = theta;						// r = f * theta
-			break;
-		case EQUISOLID:
-			r = 2 * sin(theta / 2);		// r = 2f * sin(theta / 2)
-			break;
-		case ORTHOGONAL:
-			r = sin(theta);				// r = f * sin(theta)
-			break;
-		default:
-			r = tan(theta);				//r = f * tan(theta)
-		}
+		r = getR(theta, IDEAL_PERSPECTIVE);
 
 		scale = 1.0 * r / r_;
 		cv::Vec2d pu = pw * scale; //undistorted point,图像物理坐标系

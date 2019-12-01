@@ -5,7 +5,7 @@
 #include "fisheyeCalib_radius_d.h"
 #include "fisheyeCalib_radius_rd.h"
 
-camMode cur_fisheye_mode = STEREOGRAPHIC;
+camMode cur_fisheye_mode = EQUIDISTANCE;
 
 my_cv::internal::IntrinsicParams::IntrinsicParams() :
 	f(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec4d::all(0)), alpha(0), isEstimate(9, 0)
@@ -603,4 +603,52 @@ cv::Vec3d my_cv::internal::median3d(cv::InputArray m)
 	CV_Assert(m.depth() == CV_64F && m.getMat().rows == 1);
 	cv::Mat M = cv::Mat(m.getMat().t()).reshape(1).t();
 	return cv::Vec3d(median(M.row(0)), median(M.row(1)), median(M.row(2)));
+}
+
+double getR(double theta, camMode mode)
+{
+	double r;
+	switch (mode)
+	{
+	case STEREOGRAPHIC:
+		r = 2 * tan(theta / 2.0);
+		break;
+	case EQUIDISTANCE:
+		r = theta;
+		break;
+	case EQUISOLID:
+		r = 2 * sin(theta / 2.0);
+		break;
+	case ORTHOGONAL:
+		r = sin(theta);
+		break;
+	case IDEAL_PERSPECTIVE:
+		r = tan(theta);
+		break;
+	}
+	return r;
+}
+
+double getTheta(double r, camMode mode)
+{
+	double theta;
+	switch (mode)
+	{
+	case STEREOGRAPHIC:
+		theta = 2 * atan(r / 2.0);
+		break;
+	case EQUIDISTANCE:
+		theta = r;
+		break;
+	case EQUISOLID:
+		theta = 2 * asin(r / 2.0);
+		break;
+	case ORTHOGONAL:
+		theta = asin(r);
+		break;
+	case IDEAL_PERSPECTIVE:
+		theta = atan(r);
+		break;
+	}
+	return theta;
 }

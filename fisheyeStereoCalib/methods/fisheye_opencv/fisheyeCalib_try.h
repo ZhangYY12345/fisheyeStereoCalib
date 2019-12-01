@@ -103,3 +103,6 @@ namespace my_cv
 
 	}
 }
+
+double getR(double theta, camMode mode);
+double getTheta(double r, camMode mode);

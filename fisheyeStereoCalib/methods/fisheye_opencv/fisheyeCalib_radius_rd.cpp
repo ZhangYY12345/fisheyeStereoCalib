@@ -83,25 +83,8 @@ void my_cv::fisheye_r_rd::projectPoints(cv::InputArray objectPoints, cv::OutputA
 		double r = r_d + k[0] * r_d3 + k[1] * r_d5 + k[2] * r_d7 + k[3] * r_d9;
 
 		cv::Vec2d x_ = x_d / r_d;
-		double theta;
-		switch (mode)
-		{
-		case STEREOGRAPHIC:
-			theta = 2 * atan(r / 2.0);
-			break;
-		case EQUIDISTANCE:
-			theta = r;
-			break;
-		case EQUISOLID:
-			theta = 2 * asin(r / 2.0);
-			break;
-		case ORTHOGONAL:
-			theta = asin(r);
-			break;
-		case IDEAL_PERSPECTIVE:
-			theta = atan(r);
-			break;
-		}
+		double theta = getTheta(r, mode);
+
 		cv::Vec3d Y(sin(theta) * x_[0], sin(theta) * x_[1], cos(theta));
 
 		cv::Vec3d final_Y = aff * Y;//aff 表示 ( X_w = R * X_c + t ) 对应的[R t]
@@ -400,25 +383,7 @@ void my_cv::fisheye_r_rd::undistortPoints(cv::InputArray distorted, cv::OutputAr
 		double r_d3 = r_d2 * r_d, r_d5 = r_d3 * r_d2, r_d7 = r_d5 * r_d2, r_d9 = r_d7 * r_d2;
 		double r = r_d + k[0] * r_d3 + k[1] * r_d5 + k[2] * r_d7 + k[3] * r_d9;
 
-		double theta;
-		switch (mode)
-		{
-		case STEREOGRAPHIC:
-			theta = 2 * atan(r / 2.0);
-			break;
-		case EQUIDISTANCE:
-			theta = r;
-			break;
-		case EQUISOLID:
-			theta = 2 * asin(r / 2.0);
-			break;
-		case ORTHOGONAL:
-			theta = asin(r);
-			break;
-		case IDEAL_PERSPECTIVE:
-			theta = atan(r);
-			break;
-		}
+		double theta = getTheta(r, mode);
 
 		// the current camera model is only valid up to 180 FOV
 		// for larger FOV the loop below does not converge
@@ -433,26 +398,8 @@ void my_cv::fisheye_r_rd::undistortPoints(cv::InputArray distorted, cv::OutputAr
 		cv::Vec2d new_Xc = cv::Vec2d(pr[0] / pr[2], pr[1] / pr[2]);
 		double new_r_2 = new_Xc.dot(new_Xc);
 		double new_r_ = sqrt(new_r_2);
-		double new_theta = atan(new_r_);
-		double new_r;
-		switch (mode)
-		{
-		case STEREOGRAPHIC:
-			new_r = 2 * tan(new_theta / 2.0);
-			break;
-		case EQUIDISTANCE:
-			new_r = new_theta;
-			break;
-		case EQUISOLID:
-			new_r = 2 * sin(new_theta / 2.0);
-			break;
-		case ORTHOGONAL:
-			new_r = sin(new_theta);
-			break;
-		case IDEAL_PERSPECTIVE:
-			new_r = tan(new_theta);
-			break;
-		}
+		double new_theta = getTheta(new_r_, IDEAL_PERSPECTIVE);
+		double new_r = getR(new_theta, mode);
 		cv::Vec2d new_pu = new_r * pu;
 		cv::Vec2d xd3(new_pu[0] + alpha * new_pu[1], new_pu[1]);
 		cv::Vec2d fi(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
@@ -547,50 +494,18 @@ void my_cv::fisheye_r_rd::initUndistortRectifyMap(cv::InputArray K, cv::InputArr
 			double r2 = px.dot(px);
 			double r = std::sqrt(r2);
 			cv::Vec2d pu = px / (1.0 * r);
-			double theta;
-			switch(mode)
-			{
-			case STEREOGRAPHIC:
-				theta = 2 * atan(r / 2.0);
-				break;
-			case EQUIDISTANCE:
-				theta = r;
-				break;
-			case EQUISOLID:
-				theta = 2 * asin(r / 2.0);
-				break;
-			case ORTHOGONAL:
-				theta = asin(r);
-				break;
-			case IDEAL_PERSPECTIVE:
-				theta = atan(r);
-				break;
-			}
+			double theta = getTheta(r, mode);
 			// 旋转后的相机坐标系坐标
 			cv::Vec3d pr = iR * cv::Vec3d(sin(theta) * pu[0], sin(theta) * pu[1], cos(theta)); // rotated point optionally multiplied by new camera matrix
+			if(pr[2] < DBL_MIN)
+			{
+				pr[2] = 1.0;
+			}
 			cv::Vec2d new_Xc = cv::Vec2d(pr[0] / pr[2], pr[1] / pr[2]);
 			double new_r_2 = new_Xc.dot(new_Xc);
 			double new_r_ = sqrt(new_r_2);
-			double new_theta = atan(new_r_);
-			double new_r = new_theta;
-			switch (mode)
-			{
-			case STEREOGRAPHIC:
-				new_r = 2 * tan(new_theta / 2.0);
-				break;
-			case EQUIDISTANCE:
-				new_r = new_theta;
-				break;
-			case EQUISOLID:
-				new_r = 2 * sin(new_theta / 2.0);
-				break;
-			case ORTHOGONAL:
-				new_r = sin(new_theta);
-				break;
-			case IDEAL_PERSPECTIVE:
-				new_r = tan(new_theta);
-				break;
-			}
+			double new_theta = getTheta(new_r_, IDEAL_PERSPECTIVE);
+			double new_r = getR(new_theta, mode);
 
 			double r_d = new_r;
 			{

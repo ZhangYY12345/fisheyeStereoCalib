@@ -79,26 +79,8 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 
 		double r_2 = x.dot(x);
 		double r_ = std::sqrt(r_2);
-		double theta = atan(r_);
-		double r;
-		switch (mode)
-		{
-		case STEREOGRAPHIC:
-			r = 2.0 * tan(theta / 2.0);
-			break;
-		case EQUIDISTANCE:
-			r = theta;
-			break;
-		case EQUISOLID:
-			r = 2.0 * sin(theta / 2.0);
-			break;
-		case ORTHOGONAL:
-			r = sin(theta);
-			break;
-		case IDEAL_PERSPECTIVE:
-			r = tan(theta);
-			break;
-		}
+		double theta = getTheta(r_, IDEAL_PERSPECTIVE);
+		double r = getR(theta, mode);
 
 		// r_d = r(1 + k[0] * r^2 + k[1] * r^4 + k[2] * r^6 + k[3] * r^8)
 		double r2 = r * r, r3 = r2 * r, r4 = r2 * r2, r5 = r4 * r,
@@ -283,26 +265,8 @@ void my_cv::fisheye_r_d::distortPoints(cv::InputArray undistorted, cv::OutputArr
 
 		double r_2 = x.dot(x);
 		double r_ = std::sqrt(r_2);
-		double theta = atan(r_);
-		double r;
-		switch (mode)
-		{
-		case STEREOGRAPHIC:
-			r = 2 * tan(theta / 2.0);
-			break;
-		case EQUIDISTANCE:
-			r = theta;
-			break;
-		case EQUISOLID:
-			r = 2 * sin(theta / 2.0);
-			break;
-		case ORTHOGONAL:
-			r = sin(theta);
-			break;
-		case IDEAL_PERSPECTIVE:
-			r = tan(theta);
-			break;
-		}
+		double theta = getTheta(r_, IDEAL_PERSPECTIVE);
+		double r = getR(theta, mode);
 
 		double r2 = r * r, r3 = r2 * r, r5 = r3 * r2, r7 = r5 * r2, r9 = r7 * r2;
 
@@ -419,18 +383,6 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 					r = *r_si;
 				}
 			}
-			//const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
-			//while(true)
-			//{
-			//	double r2 = r * r, r4 = r2 * r2, r6 = r4 * r2, r8 = r6 * r2;
-			//	double k0_r2 = k[0] * r2, k1_r4 = k[1] * r4, k2_r6 = k[2] * r6, k3_r8 = k[3] * r8;
-			//	/* new_r = r - r_fix, r_fix = f0(r) / f0'(r) *///牛顿迭代法求解多项式
-			//	double r_fix = (r * (1 + k0_r2 + k1_r4 + k2_r6 + k3_r8) - r_d) /
-			//		(1 + 3 * k0_r2 + 5 * k1_r4 + 7 * k2_r6 + 9 * k3_r8);
-			//	r = r - r_fix;
-			//	if (fabs(r_fix) < EPS)
-			//		break;
-			//}
 
 			scale = r / r_d;
 		}
@@ -438,51 +390,17 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 		cv::Vec2d pu = pw * scale; //undistorted point in the image space
 
 		// reproject
-		double theta;
-		switch (mode)
-		{
-		case STEREOGRAPHIC:
-			theta = 2 * atan(r / 2.0);
-			break;
-		case EQUIDISTANCE:
-			theta = r;
-			break;
-		case EQUISOLID:
-			theta = 2 * asin(r / 2.0);
-			break;
-		case ORTHOGONAL:
-			theta = asin(r);
-			break;
-		case IDEAL_PERSPECTIVE:
-			theta = atan(r);
-			break;
-		}
+		double theta = getTheta(r, mode);
+
 		cv::Vec2d pfi = pw / r_d;
 		cv::Vec3d pr3d = cv::Vec3d(sin(theta) * pfi[0], sin(theta) * pfi[1], cos(theta));
 		cv::Vec3d rotate_pr3d = RR * pr3d;
 		cv::Vec2d new_Xc = cv::Vec2d(rotate_pr3d[0] / rotate_pr3d[2], rotate_pr3d[1] / rotate_pr3d[2]);
 		double new_r_2 = new_Xc.dot(new_Xc);
 		double new_r_ = sqrt(new_r_2);
-		double new_theta = atan(new_r_);
-		double new_r;
-		switch (mode)
-		{
-		case STEREOGRAPHIC:
-			new_r = 2 * tan(new_theta / 2.0);
-			break;
-		case EQUIDISTANCE:
-			new_r = new_theta;
-			break;
-		case EQUISOLID:
-			new_r = 2 * sin(new_theta / 2.0);
-			break;
-		case ORTHOGONAL:
-			new_r = sin(new_theta);
-			break;
-		case IDEAL_PERSPECTIVE:
-			new_r = tan(new_theta);
-			break;
-		}
+		double new_theta = getTheta(new_r_, IDEAL_PERSPECTIVE);
+		double new_r = getR(new_theta, mode);
+
 		cv::Vec2d new_pu = new_r * pfi;
 		cv::Vec2d xd3(new_pu[0] + alpha * new_pu[1], new_pu[1]);
 		cv::Vec2d fi(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
@@ -585,22 +503,6 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 					r = *r_si;
 				}
 			}
-
-			//// compensate distortion iteratively
-			//r = r_d;
-
-			//const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
-			//while (true)
-			//{
-			//	double r2 = r * r, r4 = r2 * r2, r6 = r4 * r2, r8 = r6 * r2;
-			//	double k0_r2 = k[0] * r2, k1_r4 = k[1] * r4, k2_r6 = k[2] * r6, k3_r8 = k[3] * r8;
-			//	/* new_r = r - r_fix, r_fix = f0(r) / f0'(r) *///牛顿迭代法求解多项式
-			//	double r_fix = (r * (1 + k0_r2 + k1_r4 + k2_r6 + k3_r8) - r_d) /
-			//		(1 + 3 * k0_r2 + 5 * k1_r4 + 7 * k2_r6 + 9 * k3_r8);
-			//	r = r - r_fix;
-			//	if (fabs(r_fix) < EPS)
-			//		break;
-			//}
 		}
 
 		//cv::Vec2d pu = pw / r_d; //undistorted point in the image space
@@ -610,26 +512,9 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 		//	dstd[i] = pu;
 
 		// reproject
-		double theta;
-		switch (mode)
-		{
-		case STEREOGRAPHIC:
-			theta = 2 * atan(r / 2.0);
-			break;
-		case EQUIDISTANCE:
-			theta = r;
-			break;
-		case EQUISOLID:
-			theta = 2 * asin(r / 2.0);
-			break;
-		case ORTHOGONAL:
-			theta = asin(r);
-			break;
-		case IDEAL_PERSPECTIVE:
-			theta = atan(r);
-			break;
-		}
-		double r_ = sin(theta);
+		double theta = getTheta(r, mode);
+
+		double r_ = getR(theta, IDEAL_PERSPECTIVE);
 		double newScale = r_ / r_d;
 		cv::Vec2d pfi = pw * newScale;
 		//cv::Vec3d fi = cv::Vec3d(pfi[0], pfi[1], cos(theta));
@@ -1024,7 +909,7 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 		ComputeJacobians(objectPoints, imagePoints, finalParam, omc, Tc, check_cond, thresh_cond, JJ2, ex3, RADIUS_D_FISHEYE_CALIB);
 
 		cv::Mat G;
-		int a = solve(JJ2, ex3, G, cv::DECOMP_QR);
+		int a = solve(JJ2, ex3, G, cv::DECOMP_SVD);
 		currentParam = finalParam + alpha_smooth2 * G;
 
 		//for(int image_idx = 0; image_idx < objectPoints.total(); image_idx++)

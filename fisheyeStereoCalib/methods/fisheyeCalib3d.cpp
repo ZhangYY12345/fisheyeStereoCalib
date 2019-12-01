@@ -988,49 +988,119 @@ bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts, douVecPt3f& pts
 void createMask_lines(cv::Mat& dst)
 {
 	vector<vector<cv::Point2i> > contours;
-	vector<cv::Point2i> oneContour;
+	{
+		vector<cv::Point2i> oneContour;
 
-	cv::Point2i p0(2559, 490);
-	cv::Point2i p00(2433, 490);
-	cv::Point2i p1(2418, 510);
-	cv::Point2i p2(2424, 577);
-	cv::Point2i p3(2414, 599);
-	cv::Point2i p4(2400, 666);
-	cv::Point2i p5(2399, 712);
-	cv::Point2i p6(2400, 742);
-	cv::Point2i p7(2401, 768);
-	cv::Point2i p8(2402, 779);
-	cv::Point2i p9(2404, 800);
-	cv::Point2i p10(2407, 815);
-	cv::Point2i p11(2409, 834);
-	cv::Point2i p12(2416, 862);
-	cv::Point2i p13(2425, 885);
-	cv::Point2i p14(2425, 891);
-	cv::Point2i p15(2418, 935);
-	cv::Point2i p16(2424, 962);
-	cv::Point2i p17(2559, 962);
+		cv::Point2i p1(2559, 0);
+		cv::Point2i p2(2061, 0);
+		cv::Point2i p3(2070, 12);
+		cv::Point2i p4(2086, 31);
+		cv::Point2i p5(2116, 61);
+		cv::Point2i p6(2141, 88);
+		cv::Point2i p7(2179, 130);
+		cv::Point2i p8(2246, 217);
+		cv::Point2i p9(2314, 324);
+		cv::Point2i p10(2329, 345);
+		cv::Point2i p11(2346, 362);
+		cv::Point2i p12(2397, 391);
+		cv::Point2i p13(2425, 499);
+		cv::Point2i p14(2418, 510);
+		cv::Point2i p15(2424, 577);
+		cv::Point2i p16(2414, 599);
+		cv::Point2i p17(2400, 666);
+		cv::Point2i p18(2399, 712);
+		cv::Point2i p19(2400, 742);
+		cv::Point2i p20(2401, 768);
+		cv::Point2i p21(2402, 779);
+		cv::Point2i p22(2404, 800);
+		cv::Point2i p23(2407, 815);
+		cv::Point2i p24(2409, 834);
+		cv::Point2i p25(2416, 862);
+		cv::Point2i p26(2425, 885);
+		cv::Point2i p27(2425, 891);
+		cv::Point2i p28(2418, 935);
+		cv::Point2i p29(2424, 962);
+		cv::Point2i p30(2403, 1050);
+		cv::Point2i p31(2302, 1303);
+		cv::Point2i p32(2221, 1439);
+		cv::Point2i p33(2559, 1439);
 
-	oneContour.push_back(p0); 
-	oneContour.push_back(p00);
-	oneContour.push_back(p1);
-	oneContour.push_back(p2);
-	oneContour.push_back(p3);
-	oneContour.push_back(p4);
-	oneContour.push_back(p5);
-	oneContour.push_back(p6);
-	oneContour.push_back(p7);
-	oneContour.push_back(p8);
-	oneContour.push_back(p9);
-	oneContour.push_back(p10);
-	oneContour.push_back(p11);
-	oneContour.push_back(p12);
-	oneContour.push_back(p13);
-	oneContour.push_back(p14);
-	oneContour.push_back(p15);
-	oneContour.push_back(p16);
-	oneContour.push_back(p17);
+		oneContour.push_back(p1);
+		oneContour.push_back(p2);
+		oneContour.push_back(p3);
+		oneContour.push_back(p4);
+		oneContour.push_back(p5);
+		oneContour.push_back(p6);
+		oneContour.push_back(p7);
+		oneContour.push_back(p8);
+		oneContour.push_back(p9);
+		oneContour.push_back(p10);
+		oneContour.push_back(p11);
+		oneContour.push_back(p12);
+		oneContour.push_back(p13);
+		oneContour.push_back(p14);
+		oneContour.push_back(p15);
+		oneContour.push_back(p16);
+		oneContour.push_back(p17);
+		oneContour.push_back(p18);
+		oneContour.push_back(p19);
+		oneContour.push_back(p20);
+		oneContour.push_back(p21);
+		oneContour.push_back(p22);
+		oneContour.push_back(p23);
+		oneContour.push_back(p24);
+		oneContour.push_back(p25);
+		oneContour.push_back(p26);
+		oneContour.push_back(p27);
+		oneContour.push_back(p28);
+		oneContour.push_back(p29);
+		oneContour.push_back(p30);
+		oneContour.push_back(p31);
+		oneContour.push_back(p32);
+		oneContour.push_back(p33);
 
-	contours.push_back(oneContour);
+		contours.push_back(oneContour);
+	}
+	//
+	{
+		vector<cv::Point2i> oneContour;
+
+		cv::Point2i p1(0, 0);
+		cv::Point2i p2(357, 0);
+		cv::Point2i p3(274, 116);
+		cv::Point2i p4(241, 179);
+		cv::Point2i p5(191, 284);
+		cv::Point2i p6(158, 372);
+		cv::Point2i p7(130, 480);
+		cv::Point2i p8(113, 590);
+		cv::Point2i p9(107, 685);
+		cv::Point2i p10(110, 801);
+		cv::Point2i p11(122, 903);
+		cv::Point2i p12(149, 1024);
+		cv::Point2i p13(188, 1129);
+		cv::Point2i p14(285, 1356);
+		cv::Point2i p15(350, 1439);
+		cv::Point2i p16(0, 1439);
+
+		oneContour.push_back(p1);
+		oneContour.push_back(p2);
+		oneContour.push_back(p3);
+		oneContour.push_back(p4);
+		oneContour.push_back(p5);
+		oneContour.push_back(p6);
+		oneContour.push_back(p7);
+		oneContour.push_back(p8);
+		oneContour.push_back(p9);
+		oneContour.push_back(p10);
+		oneContour.push_back(p11);
+		oneContour.push_back(p12);
+		oneContour.push_back(p13);
+		oneContour.push_back(p14);
+		oneContour.push_back(p15);
+		oneContour.push_back(p16);
+
+		contours.push_back(oneContour);
+	}
 
 	int width = 2560;
 	int height = 1440;
@@ -1366,7 +1436,7 @@ void connectEdge(cv::Mat& src, bool isHorizon)
 	int width = src.cols;
 	int height = src.rows;
 
-	int half_winsize_thres = 9;
+	int half_winsize_thres = 10;
 
 	if (isHorizon)
 	{
@@ -1377,6 +1447,10 @@ void connectEdge(cv::Mat& src, bool isHorizon)
 				//如果该中心点为255,则考虑它的八邻域
 				if (src.at<uchar>(y, x) == 255)
 				{
+					if(src.at<uchar>(y - 1, x ) == 255 || src.at<uchar>(y + 1, x) == 255)
+					{
+						continue;
+					}
 					//检查8邻域
 					int num_8 = 0;
 					int offset_x1[2] = { -1, 1 };
@@ -1450,6 +1524,11 @@ void connectEdge(cv::Mat& src, bool isHorizon)
 				//如果该中心点为255,则考虑它的八邻域
 				if (src.at<uchar>(y, x) == 255)
 				{
+					if (src.at<uchar>(y, x - 1) == 255 || src.at<uchar>(y, x + 1) == 255)
+					{
+						continue;
+					}
+
 					//检查8邻域
 					int num_8 = 0;
 					int offset_y1[2] = { -1, 1 };
@@ -1516,12 +1595,148 @@ void connectEdge(cv::Mat& src, bool isHorizon)
 	}
 }
 
-void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon)
+void myGetLines(cv::Mat& src, cv::Mat& tmp, cv::Point2i startPt, std::vector<cv::Point2i>& oneLine, int lenThres, bool isHorizon)
+{
+	if(!oneLine.empty())
+	{
+		oneLine.clear();
+	}
+	if(isHorizon)
+	{
+		int max_x = startPt.x;
+		int min_x = startPt.x;
+		stack<int> p_x, p_y;
+		p_x.push(startPt.x);
+		p_y.push(startPt.y);
+		while (!p_x.empty())
+		{
+			cv::Point2i p(p_x.top(), p_y.top());
+			if (p.x > max_x)
+			{
+				max_x = p.x;
+			}
+			if (p.x < min_x)
+			{
+				min_x = p.x;
+			}
+			oneLine.push_back(p);
+			p_x.pop(); p_y.pop();
+			if ((p.y != 0 && p.x != 0) && (tmp.at<uchar>(p.y - 1, p.x - 1) == 255)) { // Top left
+				tmp.at<uchar>(p.y - 1, p.x - 1) = 0;
+				p_x.push(p.x - 1); p_y.push(p.y - 1);
+			}
+			if ((p.y != 0) && (tmp.at<uchar>(p.y - 1, p.x) == 255)) { // Top
+				tmp.at<uchar>(p.y - 1, p.x) = 0;
+				p_x.push(p.x); p_y.push(p.y - 1);
+			}
+			if ((p.y != 0 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y - 1, p.x + 1) == 255)) { // Top right
+				tmp.at<uchar>(p.y - 1, p.x + 1) = 0;
+				p_x.push(p.x + 1); p_y.push(p.y - 1);
+			}
+			if ((p.x != 0) && (tmp.at<uchar>(p.y, p.x - 1) == 255)) { // left
+				tmp.at<uchar>(p.y, p.x - 1) = 0;
+				p_x.push(p.x - 1); p_y.push(p.y);
+			}
+			if ((p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y, p.x + 1) == 255)) { // Right
+				tmp.at<uchar>(p.y, p.x + 1) = 0;
+				p_x.push(p.x + 1); p_y.push(p.y);
+			}
+			if ((p.y != tmp.rows - 1 && p.x != 0) && (tmp.at<uchar>(p.y + 1, p.x - 1) == 255)) { // Down left
+				tmp.at<uchar>(p.y + 1, p.x - 1) = 0;
+				p_x.push(p.x - 1); p_y.push(p.y + 1);
+			}
+			if ((p.y != tmp.rows - 1) && (tmp.at<uchar>(p.y + 1, p.x) == 255)) { // Down
+				tmp.at<uchar>(p.y + 1, p.x) = 0;
+				p_x.push(p.x); p_y.push(p.y + 1);
+			}
+			if ((p.y != tmp.rows - 1 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y + 1, p.x + 1) == 255)) { // Down right
+				tmp.at<uchar>(p.y + 1, p.x + 1) = 0;
+				p_x.push(p.x + 1); p_y.push(p.y + 1);
+			}
+		}
+
+		if ((max_x - min_x) < lenThres)
+		{
+			for (std::vector<cv::Point2i>::iterator it = oneLine.begin(); it != oneLine.end(); it++)
+			{
+				cv::Point2i pt = *it;
+				src.at<uchar>(pt.y, pt.x) = 0;
+			}
+			oneLine.clear();
+		}
+	}
+	else
+	{
+		int max_y = startPt.y;
+		int min_y = startPt.y;
+		stack<int> p_x, p_y;
+		p_x.push(startPt.x);
+		p_y.push(startPt.y);
+		while (!p_x.empty())
+		{
+			cv::Point2i p(p_x.top(), p_y.top());
+			if (p.y > max_y)
+			{
+				max_y = p.y;
+			}
+			if (p.y < min_y)
+			{
+				min_y = p.y;
+			}
+			oneLine.push_back(p);
+			p_x.pop(); p_y.pop();
+			if ((p.y != 0 && p.x != 0) && (tmp.at<uchar>(p.y - 1, p.x - 1) == 255)) { // Top left
+				tmp.at<uchar>(p.y - 1, p.x - 1) = 0;
+				p_x.push(p.x - 1); p_y.push(p.y - 1);
+			}
+			if ((p.y != 0) && (tmp.at<uchar>(p.y - 1, p.x) == 255)) { // Top
+				tmp.at<uchar>(p.y - 1, p.x) = 0;
+				p_x.push(p.x); p_y.push(p.y - 1);
+			}
+			if ((p.y != 0 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y - 1, p.x + 1) == 255)) { // Top right
+				tmp.at<uchar>(p.y - 1, p.x + 1) = 0;
+				p_x.push(p.x + 1); p_y.push(p.y - 1);
+			}
+			if ((p.x != 0) && (tmp.at<uchar>(p.y, p.x - 1) == 255)) { // left
+				tmp.at<uchar>(p.y, p.x - 1) = 0;
+				p_x.push(p.x - 1); p_y.push(p.y);
+			}
+			if ((p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y, p.x + 1) == 255)) { // Right
+				tmp.at<uchar>(p.y, p.x + 1) = 0;
+				p_x.push(p.x + 1); p_y.push(p.y);
+			}
+			if ((p.y != tmp.rows - 1 && p.x != 0) && (tmp.at<uchar>(p.y + 1, p.x - 1) == 255)) { // Down left
+				tmp.at<uchar>(p.y + 1, p.x - 1) = 0;
+				p_x.push(p.x - 1); p_y.push(p.y + 1);
+			}
+			if ((p.y != tmp.rows - 1) && (tmp.at<uchar>(p.y + 1, p.x) == 255)) { // Down
+				tmp.at<uchar>(p.y + 1, p.x) = 0;
+				p_x.push(p.x); p_y.push(p.y + 1);
+			}
+			if ((p.y != tmp.rows - 1 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y + 1, p.x + 1) == 255)) { // Down right
+				tmp.at<uchar>(p.y + 1, p.x + 1) = 0;
+				p_x.push(p.x + 1); p_y.push(p.y + 1);
+			}
+		}
+
+		if ((max_y - min_y) < lenThres)
+		{
+			for (std::vector<cv::Point2i>::iterator it = oneLine.begin(); it != oneLine.end(); it++)
+			{
+				cv::Point2i pt = *it;
+				src.at<uchar>(pt.y, pt.x) = 0;
+			}
+			oneLine.clear();
+		}
+	}
+}
+
+void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon, RIGHT_COUNT_SIDE mode)
 {
 	int width = src.cols;
 	int height = src.rows;
 
-	int lenThres = 500;
+	int lenThres = 400;
 	int count = 0;
 	if(!lines.empty())
 	{
@@ -1530,79 +1745,42 @@ void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& li
 
     cv:Mat tmp = src.clone();
 
-	if(isHorizon)
+	if (isHorizon)
 	{
-		for(int y = 2; y < height - 2; y++)
+		if (mode == TOP_LEFT || mode == BOTTOM_LEFT)
 		{
-			for(int x = 2; x < width - 2; x++)
+			for (int y = 2; y < height - 2; y++)
 			{
-				if(tmp.at<uchar>(y, x) == 255)
+				for (int x = 2; x < width - 2; x++)
 				{
-					std::vector<cv::Point2i> line;
-					int max_x = x;
-					int min_x = x;
-					stack<int> p_x, p_y;
-					p_x.push(x);
-					p_y.push(y);
-					while(!p_x.empty())
+					if (tmp.at<uchar>(y, x) == 255)
 					{
-						cv::Point2i p(p_x.top(), p_y.top());
-						if(p.x > max_x)
+						std::vector<cv::Point2i> line;
+						myGetLines(src, tmp, cv::Point2i(x, y), line, lenThres, isHorizon);
+						if (!line.empty())
 						{
-							max_x = p.x;
-						}
-						if(p.x < min_x)
-						{
-							min_x = p.x;
-						}
-						line.push_back(p);
-						p_x.pop(); p_y.pop();
-						if ((p.y != 0 && p.x != 0) && (tmp.at<uchar>(p.y - 1, p.x - 1) == 255)) { // Top left
-							tmp.at<uchar>(p.y - 1, p.x - 1) = 0;
-							p_x.push(p.x - 1); p_y.push(p.y - 1);
-						}
-						if ((p.y != 0) && (tmp.at<uchar>(p.y - 1, p.x) == 255)) { // Top
-							tmp.at<uchar>(p.y - 1, p.x) = 0;
-							p_x.push(p.x); p_y.push(p.y - 1);
-						}
-						if ((p.y != 0 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y - 1,p.x + 1) == 255)) { // Top right
-							tmp.at<uchar>(p.y - 1,p.x + 1) = 0;
-							p_x.push(p.x + 1); p_y.push(p.y - 1);
-						}
-						if ((p.x != 0) && (tmp.at<uchar>(p.y, p.x - 1) == 255)) { // left
-							tmp.at<uchar>(p.y, p.x - 1) = 0;
-							p_x.push(p.x - 1); p_y.push(p.y);
-						}
-						if ((p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y, p.x + 1) == 255)) { // Right
-							tmp.at<uchar>(p.y, p.x + 1) = 0;
-							p_x.push(p.x + 1); p_y.push(p.y);
-						}
-						if ((p.y != tmp.rows - 1 && p.x != 0) && (tmp.at<uchar>(p.y + 1, p.x - 1) == 255)) { // Down left
-							tmp.at<uchar>(p.y + 1, p.x - 1) = 0;
-							p_x.push(p.x - 1); p_y.push(p.y + 1);
-						}
-						if ((p.y != tmp.rows - 1) && (tmp.at<uchar>(p.y + 1, p.x) == 255)) { // Down
-							tmp.at<uchar>(p.y + 1, p.x) = 0;
-							p_x.push(p.x); p_y.push(p.y + 1);
-						}
-						if ((p.y != tmp.rows - 1 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y + 1, p.x + 1) == 255)) { // Down right
-							tmp.at<uchar>(p.y + 1, p.x + 1) = 0;
-							p_x.push(p.x + 1); p_y.push(p.y + 1);
+							lines[count] = line;
+							count++;
 						}
 					}
-
-					if((max_x - min_x) < lenThres)
+				}
+			}
+		}
+		else if (mode == TOP_RIGHT || mode == BOTTOM_RIGHT)
+		{
+			for (int y = 2; y < height - 2; y++)
+			{
+				for (int x = width - 3; x > 1; x--)
+				{
+					if (tmp.at<uchar>(y, x) == 255)
 					{
-						for(std::vector<cv::Point2i>::iterator it = line.begin(); it != line.end(); it++)
+						std::vector<cv::Point2i> line;
+						myGetLines(src, tmp, cv::Point2i(x, y), line, lenThres, isHorizon);
+						if (!line.empty())
 						{
-							cv::Point2i pt = *it;
-							src.at<uchar>(pt.y, pt.x) = 0;
+							lines[count] = line;
+							count++;
 						}
-					}
-					else
-					{
-						lines[count] = line;
-						count++;
 					}
 				}
 			}
@@ -1617,67 +1795,8 @@ void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& li
 				if (tmp.at<uchar>(y, x) == 255)
 				{
 					std::vector<cv::Point2i> line;
-					int max_y = y;
-					int min_y = y;
-					stack<int> p_x, p_y;
-					p_x.push(x);
-					p_y.push(y);
-					while (!p_x.empty())
-					{
-						cv::Point2i p(p_x.top(), p_y.top());
-						if (p.y > max_y)
-						{
-							max_y = p.y;
-						}
-						if (p.y < min_y)
-						{
-							min_y = p.y;
-						}
-						line.push_back(p);
-						p_x.pop(); p_y.pop();
-						if ((p.y != 0 && p.x != 0) && (tmp.at<uchar>(p.y - 1, p.x - 1) == 255)) { // Top left
-							tmp.at<uchar>(p.y - 1, p.x - 1) = 0;
-							p_x.push(p.x - 1); p_y.push(p.y - 1);
-						}
-						if ((p.y != 0) && (tmp.at<uchar>(p.y - 1, p.x) == 255)) { // Top
-							tmp.at<uchar>(p.y - 1, p.x) = 0;
-							p_x.push(p.x); p_y.push(p.y - 1);
-						}
-						if ((p.y != 0 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y - 1, p.x + 1) == 255)) { // Top right
-							tmp.at<uchar>(p.y - 1, p.x + 1) = 0;
-							p_x.push(p.x + 1); p_y.push(p.y - 1);
-						}
-						if ((p.x != 0) && (tmp.at<uchar>(p.y, p.x - 1) == 255)) { // left
-							tmp.at<uchar>(p.y, p.x - 1) = 0;
-							p_x.push(p.x - 1); p_y.push(p.y);
-						}
-						if ((p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y, p.x + 1) == 255)) { // Right
-							tmp.at<uchar>(p.y, p.x + 1) = 0;
-							p_x.push(p.x + 1); p_y.push(p.y);
-						}
-						if ((p.y != tmp.rows - 1 && p.x != 0) && (tmp.at<uchar>(p.y + 1, p.x - 1) == 255)) { // Down left
-							tmp.at<uchar>(p.y + 1, p.x - 1) = 0;
-							p_x.push(p.x - 1); p_y.push(p.y + 1);
-						}
-						if ((p.y != tmp.rows - 1) && (tmp.at<uchar>(p.y + 1, p.x) == 255)) { // Down
-							tmp.at<uchar>(p.y + 1, p.x) = 0;
-							p_x.push(p.x); p_y.push(p.y + 1);
-						}
-						if ((p.y != tmp.rows - 1 && p.x != tmp.cols - 1) && (tmp.at<uchar>(p.y + 1, p.x + 1) == 255)) { // Down right
-							tmp.at<uchar>(p.y + 1, p.x + 1) = 0;
-							p_x.push(p.x + 1); p_y.push(p.y + 1);
-						}
-					}
-
-					if ((max_y - min_y) < lenThres)
-					{
-						for (std::vector<cv::Point2i>::iterator it = line.begin(); it != line.end(); it++)
-						{
-							cv::Point2i pt = *it;
-							src.at<uchar>(pt.y, pt.x) = 0;
-						}
-					}
-					else
+					myGetLines(src, tmp, cv::Point2i(x, y), line, lenThres, isHorizon);
+					if (!line.empty())
 					{
 						lines[count] = line;
 						count++;
@@ -1688,11 +1807,11 @@ void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& li
 	}
 }
 
-void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon)
+void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon, RIGHT_COUNT_SIDE mode)
 {
 	connectEdge(src, isHorizon);
 	connectEdge(src, isHorizon);
-	removeShortEdges(src, lines, isHorizon);
+	removeShortEdges(src, lines, isHorizon, mode);
 }
 
 /**
@@ -1833,15 +1952,15 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 		bitwise_and(lineH, mask, lineH);
 	}
 	std::map<int, std::vector<cv::Point2i> > lines_H, lines_V;
-	post_process(lineH, lines_H, true);
-	post_process(lineV, lines_V, false);
+	post_process(lineH, lines_H, true, mode);
+	post_process(lineV, lines_V, false, mode);
 
 	std::map<cv::Point2i, cv::Point2f, myCmp_map>  pts_H;
 
 	cv::Mat ptsImg;
 	bitwise_and(lineH, lineV, ptsImg);
-	//cv::Mat ptsImg_2;
-	//bitwise_not(ptsImg, ptsImg_2);
+	cv::Mat ptsImg_;
+	bitwise_or(lineH, lineV, ptsImg_);
 
 	int height = ptsImg.rows;
 	int width = ptsImg.cols;
@@ -2419,9 +2538,9 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
-	double rms = my_cv::fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,
+	double rms = my_cv::fisheye_r_rd::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
-		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 7000, 1e-8));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
+		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 7000, 1e-10));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	cout << "rms" << rms << endl;
 	cout << K << endl;
 	cout << D << endl;
