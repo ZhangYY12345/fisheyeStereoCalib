@@ -136,33 +136,7 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 			cv::Vec3d dthetadom = dthetadr_ * dr_dom;
 			cv::Vec3d dthetadT = dthetadr_ * dr_dT;
 
-			cv::Vec3d drdtheta;
-			switch (mode)
-			{
-			case STEREOGRAPHIC:
-			{
-				double temp = cos(theta / 2.0);
-				temp = temp * temp;
-				drdtheta = 1.0 / temp;
-			}
-				break;
-			case EQUIDISTANCE:
-				drdtheta = 1.0;
-				break;
-			case EQUISOLID:
-				drdtheta = cos(theta / 2.0);
-				break;
-			case ORTHOGONAL:
-				drdtheta = cos(theta);
-				break;
-			case IDEAL_PERSPECTIVE:
-			{
-				double temp_ = cos(theta);
-				temp_ = temp_ * temp_;
-				drdtheta = 1.0 / temp_;
-			}
-				break;
-			}
+			double drdtheta = get_drdtheta(theta, mode);
 			cv::Vec3d drdom = drdtheta * dthetadom;
 			cv::Vec3d drdT = drdtheta * dthetadT;
 
@@ -600,24 +574,6 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap(cv::InputArray K, cv::InputArra
 				double x = _x / _w, y = _y / _w;
 
 				double r = sqrt(x * x + y * y);
-				//double theta;
-				//switch (mode)
-				//{
-				//case STEREOGRAPHIC:
-				//	theta = 2 * atan(r / 2);		//r = 2f * tan(theta / 2)
-				//	break;
-				//case EQUIDISTANCE:
-				//	theta = r;						// r = f * theta
-				//	break;
-				//case EQUISOLID:
-				//	theta = 2 * asin(r / 2);		// r = 2f * sin(theta / 2)
-				//	break;
-				//case ORTHOGONAL:
-				//	theta = asin(r);				// r = f * sin(theta)
-				//	break;
-				//default:
-				//	theta = atan(r);				//r = f * tan(theta)
-				//}
 
 				double r2 = r * r, r4 = r2 * r2, r6 = r4 * r2, r8 = r4 * r4;
 				double r_d = r * (1 + k[0] * r2 + k[1] * r4 + k[2] * r6 + k[3] * r8);

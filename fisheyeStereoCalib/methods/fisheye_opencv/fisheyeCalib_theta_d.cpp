@@ -150,25 +150,7 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 			//cv::Vec3d dcdistdom = inv_r * (dr_ddom - cdist*dr_dom);
 			//cv::Vec3d dcdistdT  = inv_r * (dr_ddT  - cdist*dr_dT);
 			//cv::Vec4d dcdistdk  = inv_r *  dr_ddk;
-			double dr_ddtheta_d;
-			switch(mode)
-			{
-			case STEREOGRAPHIC:
-				dr_ddtheta_d = pow(1.0 / cos(theta_d / 2.0), 2);
-				break;
-			case EQUIDISTANCE:
-				dr_ddtheta_d = 1.0;
-				break;
-			case EQUISOLID:
-				dr_ddtheta_d = cos(theta_d / 2.0);
-				break;
-			case ORTHOGONAL:
-				dr_ddtheta_d = cos(theta_d);
-				break;
-			case IDEAL_PERSPECTIVE:
-				dr_ddtheta_d = pow(1.0 / cos(theta_d), 2);
-				break;
-			}
+			double dr_ddtheta_d = get_drdtheta(theta_d, mode);
 			cv::Vec3d dr_ddom = dr_ddtheta_d * dtheta_ddom;
 			cv::Vec3d dr_ddT = dr_ddtheta_d * dtheta_ddT;
 			cv::Vec4d dr_ddk = dr_ddtheta_d * dtheta_ddk;
@@ -490,54 +472,12 @@ void my_cv::fisheye:: initUndistortRectifyMap(cv::InputArray K, cv::InputArray D
 
 				double r_ = sqrt(x*x + y * y);
 
-				double theta = atan(r_);
-				if (isModeRelated)
-				{
-					switch (mode)
-					{
-					case STEREOGRAPHIC:
-						theta = 2 * atan(r_ / 2);		//r = 2f * tan(theta / 2)
-						break;
-					case EQUIDISTANCE:
-						theta = r_;						// r = f * theta
-						break;
-					case EQUISOLID:
-						theta = 2 * asin(r_ / 2);		// r = 2f * sin(theta / 2)
-						break;
-					case ORTHOGONAL:
-						theta = asin(r_);				// r = f * sin(theta)
-						break;
-					default:
-						theta = atan(r_);				//r = f * tan(theta)
-					}
-				}
-				else
-				{
-					theta = atan(r_);
-				}
+				double theta = getTheta(r_, IDEAL_PERSPECTIVE);
 
 				double theta2 = theta * theta, theta4 = theta2 * theta2, theta6 = theta4 * theta2, theta8 = theta4 * theta4;
 				double theta_d = theta * (1 + k[0] * theta2 + k[1] * theta4 + k[2] * theta6 + k[3] * theta8);
 
-				double r_d;
-				switch (mode)
-				{
-				case STEREOGRAPHIC:
-					r_d = 2 * tan(theta_d / 2);		//r = 2f * tan(theta / 2)
-					break;
-				case EQUIDISTANCE:
-					r_d = theta_d;						// r = f * theta
-					break;
-				case EQUISOLID:
-					r_d = 2 * sin(theta_d / 2);		// r = 2f * sin(theta / 2)
-					break;
-				case ORTHOGONAL:
-					r_d = sin(theta_d);				// r = f * sin(theta)
-					break;
-				default:
-					r_d = tan(theta_d);				//r = f * tan(theta)
-				}
-
+				double r_d = getR(theta_d, mode);
 				double scale = (r_ == 0) ? 1.0 : r_d / r_;
 				cv::Vec2d pu = cv::Vec2d(x, y) * scale; //undistorted point,图像物理坐标系
 
