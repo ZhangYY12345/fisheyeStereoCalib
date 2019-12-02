@@ -2531,7 +2531,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//flag |= fisheye::CALIB_FIX_K4;
 	//flag |= fisheye::CALIB_FIX_PRINCIPAL_POINT;
 	//flag |= fisheye::CALIB_FIX_INTRINSIC;
-	flag |= fisheye::CALIB_USE_INTRINSIC_GUESS;
+	//flag |= fisheye::CALIB_USE_INTRINSIC_GUESS;
 
 	//left camera calibration
 	cv::Mat K = cv::Mat::eye(3, 3, CV_64FC1);		//the inner parameters of camera
@@ -2539,7 +2539,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	K.at<double>(1, 1) = 832.7025533;
 	K.at<double>(0, 2) = 1280.0;
 	K.at<double>(1, 2) = 720.0;
-	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
+	cv::Mat D = cv::Mat::zeros(6, 1, CV_64FC1);		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
 	double rms = my_cv::fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,

@@ -29,7 +29,7 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 	cv::Vec3d om = _rvec.depth() == CV_32F ? (cv::Vec3d)*_rvec.getMat().ptr<cv::Vec3f>() : *_rvec.getMat().ptr<cv::Vec3d>();
 	cv::Vec3d T = _tvec.depth() == CV_32F ? (cv::Vec3d)*_tvec.getMat().ptr<cv::Vec3f>() : *_tvec.getMat().ptr<cv::Vec3d>();
 
-	CV_Assert(_K.size() == cv::Size(3, 3) && (_K.type() == CV_32F || _K.type() == CV_64F) && _D.type() == _K.type() && _D.total() == 4);
+	CV_Assert(_K.size() == cv::Size(3, 3) && (_K.type() == CV_32F || _K.type() == CV_64F) && _D.type() == _K.type() && _D.total() == 6);
 
 	cv::Vec2d f, c;
 	if (_K.depth() == CV_32F)
@@ -45,13 +45,13 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 		c = cv::Vec2d(K(0, 2), K(1, 2));
 	}
 
-	cv::Vec4d k = _D.depth() == CV_32F ? (cv::Vec4d)*_D.getMat().ptr<cv::Vec4f>() : *_D.getMat().ptr<cv::Vec4d>();
+	cv::Vec6d k = _D.depth() == CV_32F ? (cv::Vec6d)*_D.getMat().ptr<cv::Vec6f>() : *_D.getMat().ptr<cv::Vec6d>();
 
 	const bool isJacobianNeeded = jacobian.needed();
 	my_cv::JacobianRow *Jn = 0;
 	if (isJacobianNeeded)
 	{
-		int nvars = 2 + 2 + 1 + 4 + 3 + 3; // f, c, alpha, k, om, T,
+		int nvars = 2 + 2 + 1 + 6 + 3 + 3; // f, c, alpha, k, om, T,
 		jacobian.create(2 * (int)n, nvars, CV_64F);
 		Jn = jacobian.getMat().ptr<JacobianRow>(0);
 	}
@@ -81,9 +81,10 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 		double theta = getTheta(r_, IDEAL_PERSPECTIVE);
 
 		double theta2 = theta * theta, theta3 = theta2 * theta, theta4 = theta2 * theta2, theta5 = theta4 * theta,
-			theta6 = theta3 * theta3, theta7 = theta6 * theta, theta8 = theta4 * theta4, theta9 = theta8 * theta;
+			theta6 = theta3 * theta3, theta7 = theta6 * theta, theta8 = theta4 * theta4, theta9 = theta8 * theta,
+			theta10 = theta2 * theta8, theta11 = theta2 * theta9, theta12 = theta2 * theta10, theta13 = theta2 * theta11;
 
-		double theta_d = theta + k[0] * theta3 + k[1] * theta5 + k[2] * theta7 + k[3] * theta9;
+		double theta_d = theta + k[0] * theta3 + k[1] * theta5 + k[2] * theta7 + k[3] * theta9 + k[4] * theta11 + k[5] * theta13;
 
 		double r_d = getR(theta_d, mode);
 
@@ -139,17 +140,17 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 			cv::Vec3d dthetadT = dthetadr_ * dr_dT;
 
 			//double theta_d = theta + k[0]*theta3 + k[1]*theta5 + k[2]*theta7 + k[3]*theta9;
-			double dtheta_ddtheta = 1 + 3 * k[0] * theta2 + 5 * k[1] * theta4 + 7 * k[2] * theta6 + 9 * k[3] * theta8;
+			double dtheta_ddtheta = 1 + 3 * k[0] * theta2 + 5 * k[1] * theta4 + 7 * k[2] * theta6 + 9 * k[3] * theta8 + 11 * k[4] * theta10 + 13 * k[5] * theta12;
 			cv::Vec3d dtheta_ddom = dtheta_ddtheta * dthetadom;
 			cv::Vec3d dtheta_ddT = dtheta_ddtheta * dthetadT;
-			cv::Vec4d dtheta_ddk = cv::Vec4d(theta3, theta5, theta7, theta9);
+			cv::Vec6d dtheta_ddk = cv::Vec6d(theta3, theta5, theta7, theta9, theta11, theta13);
 
 			//double inv_r_ = r_ > 1e-8 ? 1.0/r_ : 1;
 			//double cdist = r_ > 1e-8 ? r_d / r_ : 1;
 
 			//cv::Vec3d dcdistdom = inv_r * (dr_ddom - cdist*dr_dom);
 			//cv::Vec3d dcdistdT  = inv_r * (dr_ddT  - cdist*dr_dT);
-			//cv::Vec4d dcdistdk  = inv_r *  dr_ddk;
+			//cv::Vec6d dcdistdk  = inv_r *  dr_ddk;
 			double dr_ddtheta_d;
 			switch(mode)
 			{
@@ -171,15 +172,15 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 			}
 			cv::Vec3d dr_ddom = dr_ddtheta_d * dtheta_ddom;
 			cv::Vec3d dr_ddT = dr_ddtheta_d * dtheta_ddT;
-			cv::Vec4d dr_ddk = dr_ddtheta_d * dtheta_ddk;
+			cv::Vec6d dr_ddk = dr_ddtheta_d * dtheta_ddk;
 
 			cv::Vec3d dcdistdom = inv_r_ * (dr_ddom - cdist * dr_dom);
 			cv::Vec3d dcdistdT = inv_r_ * (dr_ddT - cdist * dr_dT);
-			cv::Vec4d dcdistdk = inv_r_ * dr_ddk;
+			cv::Vec6d dcdistdk = inv_r_ * dr_ddk;
 
 
 			//cv::Vec2d xd1 = x * cdist;
-			cv::Vec4d dxd1dk[2];
+			cv::Vec6d dxd1dk[2];
 			cv::Vec3d dxd1dom[2], dxd1dT[2];
 			dxd1dom[0] = x[0] * dcdistdom + cdist * dxdom[0];
 			dxd1dom[1] = x[1] * dcdistdom + cdist * dxdom[1];
@@ -189,7 +190,7 @@ void my_cv::fisheye::projectPoints(cv::InputArray objectPoints, cv::OutputArray 
 			dxd1dk[1] = x[1] * dcdistdk;
 
 			//cv::Vec2d xd3(xd1[0] + alpha*xd1[1], xd1[1]);
-			cv::Vec4d dxd3dk[2];
+			cv::Vec6d dxd3dk[2];
 			cv::Vec3d dxd3dom[2], dxd3dT[2];
 			dxd3dom[0] = dxd1dom[0] + alpha * dxd1dom[1];
 			dxd3dom[1] = dxd1dom[1];
@@ -236,7 +237,7 @@ void my_cv::fisheye::distortPoints(cv::InputArray undistorted, cv::OutputArray d
 	distorted.create(undistorted.size(), undistorted.type());
 	size_t n = undistorted.total();
 
-	CV_Assert(K.size() == cv::Size(3, 3) && (K.type() == CV_32F || K.type() == CV_64F) && D.total() == 4);
+	CV_Assert(K.size() == cv::Size(3, 3) && (K.type() == CV_32F || K.type() == CV_64F) && D.total() == 6);
 
 	cv::Vec2d f, c;
 	if (K.depth() == CV_32F)
@@ -252,7 +253,7 @@ void my_cv::fisheye::distortPoints(cv::InputArray undistorted, cv::OutputArray d
 		c = cv::Vec2d(camMat(0, 2), camMat(1, 2));
 	}
 
-	cv::Vec4d k = D.depth() == CV_32F ? (cv::Vec4d)*D.getMat().ptr<cv::Vec4f>() : *D.getMat().ptr<cv::Vec4d>();
+	cv::Vec6d k = D.depth() == CV_32F ? (cv::Vec6d)*D.getMat().ptr<cv::Vec6f>() : *D.getMat().ptr<cv::Vec6d>();
 
 	const cv::Vec2f* Xf = undistorted.getMat().ptr<cv::Vec2f>();
 	const cv::Vec2d* Xd = undistorted.getMat().ptr<cv::Vec2d>();
@@ -271,9 +272,10 @@ void my_cv::fisheye::distortPoints(cv::InputArray undistorted, cv::OutputArray d
 
 
 		double theta2 = theta * theta, theta3 = theta2 * theta, theta4 = theta2 * theta2, theta5 = theta4 * theta,
-			theta6 = theta3 * theta3, theta7 = theta6 * theta, theta8 = theta4 * theta4, theta9 = theta8 * theta;
+			theta6 = theta3 * theta3, theta7 = theta6 * theta, theta8 = theta4 * theta4, theta9 = theta8 * theta,
+			theta10 = theta2 * theta8, theta11 = theta9 * theta2, theta12 = theta10 * theta2, theta13 = theta10 * theta2;
 
-		double theta_d = theta + k[0] * theta3 + k[1] * theta5 + k[2] * theta7 + k[3] * theta9;
+		double theta_d = theta + k[0] * theta3 + k[1] * theta5 + k[2] * theta7 + k[3] * theta9 + k[4] * theta11 + k[5] * theta13;
 
 		double r_d = getR(theta_d, mode);
 
@@ -305,7 +307,7 @@ void my_cv::fisheye::undistortPoints(cv::InputArray distorted, cv::OutputArray u
 
 	CV_Assert(P.empty() || P.size() == cv::Size(3, 3) || P.size() == cv::Size(4, 3));
 	CV_Assert(R.empty() || R.size() == cv::Size(3, 3) || R.total() * R.channels() == 3);
-	CV_Assert(D.total() == 4 && K.size() == cv::Size(3, 3) && (K.depth() == CV_32F || K.depth() == CV_64F));
+	CV_Assert(D.total() == 6 && K.size() == cv::Size(3, 3) && (K.depth() == CV_32F || K.depth() == CV_64F));
 
 	cv::Vec2d f, c;
 	double alpha;
@@ -324,7 +326,7 @@ void my_cv::fisheye::undistortPoints(cv::InputArray distorted, cv::OutputArray u
 		alpha = camMat(0, 1) / camMat(0, 0);
 	}
 
-	cv::Vec4d k = D.depth() == CV_32F ? (cv::Vec4d)*D.getMat().ptr<cv::Vec4f>() : *D.getMat().ptr<cv::Vec4d>();
+	cv::Vec6d k = D.depth() == CV_32F ? (cv::Vec6d)*D.getMat().ptr<cv::Vec6f>() : *D.getMat().ptr<cv::Vec6d>();
 
 	cv::Matx33d RR = cv::Matx33d::eye();
 	if (!R.empty() && R.total() * R.channels() == 3)
@@ -372,14 +374,16 @@ void my_cv::fisheye::undistortPoints(cv::InputArray distorted, cv::OutputArray u
 		double theta = theta_d;
 		if (theta_d > 1e-8)
 		{
-			Eigen::VectorXd coeffs(10);
-			coeffs(9) = -theta_d;
-			coeffs(8) = 1;
-			coeffs(7) = coeffs(5) = coeffs(3) = coeffs(1) = 0;
-			coeffs(6) = k[0];
-			coeffs(4) = k[1];
-			coeffs(2) = k[2];
-			coeffs(0) = k[3];
+			Eigen::VectorXd coeffs(14);
+			coeffs(13) = -theta_d;
+			coeffs(12) = 1;
+			coeffs(11) = coeffs(9) = coeffs(7) = coeffs(5) = coeffs(3) = coeffs(1) = 0;
+			coeffs(10) = k[0];
+			coeffs(8) = k[1];
+			coeffs(6) = k[2];
+			coeffs(4) = k[3];
+			coeffs(2) = k[4];
+			coeffs(0) = k[5];
 
 			std::set<double> theta_s;
 			theta_s = RootFinder::solvePolyInterval(coeffs, -INFINITY, INFINITY, 1e-8, false);
@@ -424,7 +428,7 @@ void my_cv::fisheye:: initUndistortRectifyMap(cv::InputArray K, cv::InputArray D
 
 	CV_Assert((K.depth() == CV_32F || K.depth() == CV_64F) && (D.depth() == CV_32F || D.depth() == CV_64F));
 	CV_Assert((P.empty() || P.depth() == CV_32F || P.depth() == CV_64F) && (R.empty() || R.depth() == CV_32F || R.depth() == CV_64F));
-	CV_Assert(K.size() == cv::Size(3, 3) && (D.empty() || D.total() == 4));
+	CV_Assert(K.size() == cv::Size(3, 3) && (D.empty() || D.total() == 6));
 	CV_Assert(R.empty() || R.size() == cv::Size(3, 3) || R.total() * R.channels() == 3);
 	CV_Assert(P.empty() || P.size() == cv::Size(3, 3) || P.size() == cv::Size(4, 3));
 
@@ -445,9 +449,9 @@ void my_cv::fisheye:: initUndistortRectifyMap(cv::InputArray K, cv::InputArray D
 		alpha = camMat(0, 1) / camMat(0, 0);
 	}
 
-	cv::Vec4d k = cv::Vec4d::all(0);
+	cv::Vec6d k = cv::Vec6d::all(0);
 	if (!D.empty())
-		k = D.depth() == CV_32F ? (cv::Vec4d)*D.getMat().ptr<cv::Vec4f>() : *D.getMat().ptr<cv::Vec4d>();
+		k = D.depth() == CV_32F ? (cv::Vec6d)*D.getMat().ptr<cv::Vec6f>() : *D.getMat().ptr<cv::Vec6d>();
 
 	cv::Matx33d RR = cv::Matx33d::eye();
 	if (!R.empty() && R.total() * R.channels() == 3)
@@ -490,53 +494,12 @@ void my_cv::fisheye:: initUndistortRectifyMap(cv::InputArray K, cv::InputArray D
 
 				double r_ = sqrt(x*x + y * y);
 
-				double theta = atan(r_);
-				if (isModeRelated)
-				{
-					switch (mode)
-					{
-					case STEREOGRAPHIC:
-						theta = 2 * atan(r_ / 2);		//r = 2f * tan(theta / 2)
-						break;
-					case EQUIDISTANCE:
-						theta = r_;						// r = f * theta
-						break;
-					case EQUISOLID:
-						theta = 2 * asin(r_ / 2);		// r = 2f * sin(theta / 2)
-						break;
-					case ORTHOGONAL:
-						theta = asin(r_);				// r = f * sin(theta)
-						break;
-					default:
-						theta = atan(r_);				//r = f * tan(theta)
-					}
-				}
-				else
-				{
-					theta = atan(r_);
-				}
+				double theta = getTheta(r_, IDEAL_PERSPECTIVE);
 
-				double theta2 = theta * theta, theta4 = theta2 * theta2, theta6 = theta4 * theta2, theta8 = theta4 * theta4;
-				double theta_d = theta * (1 + k[0] * theta2 + k[1] * theta4 + k[2] * theta6 + k[3] * theta8);
+				double theta2 = theta * theta, theta4 = theta2 * theta2, theta6 = theta4 * theta2, theta8 = theta4 * theta4, theta10 = theta4 * theta6, theta12 = theta10 * theta2;
+				double theta_d = theta * (1 + k[0] * theta2 + k[1] * theta4 + k[2] * theta6 + k[3] * theta8 + k[4] * theta10 + k[5] * theta12);
 
-				double r_d;
-				switch (mode)
-				{
-				case STEREOGRAPHIC:
-					r_d = 2 * tan(theta_d / 2);		//r = 2f * tan(theta / 2)
-					break;
-				case EQUIDISTANCE:
-					r_d = theta_d;						// r = f * theta
-					break;
-				case EQUISOLID:
-					r_d = 2 * sin(theta_d / 2);		// r = 2f * sin(theta / 2)
-					break;
-				case ORTHOGONAL:
-					r_d = sin(theta_d);				// r = f * sin(theta)
-					break;
-				default:
-					r_d = tan(theta_d);				//r = f * tan(theta)
-				}
+				double r_d = getR(theta_d, mode);
 
 				double scale = (r_ == 0) ? 1.0 : r_d / r_;
 				cv::Vec2d pu = cv::Vec2d(x, y) * scale; //undistorted point,图像物理坐标系
@@ -602,7 +565,7 @@ void my_cv::fisheye::estimateNewCameraMatrixForUndistortRectify(cv::InputArray K
 	cv::OutputArray P, double balance, const cv::Size& new_size, double fov_scale)
 {
 	CV_Assert(K.size() == cv::Size(3, 3) && (K.depth() == CV_32F || K.depth() == CV_64F));
-	CV_Assert(D.empty() || ((D.total() == 4) && (D.depth() == CV_32F || D.depth() == CV_64F)));
+	CV_Assert(D.empty() || ((D.total() == 6) && (D.depth() == CV_32F || D.depth() == CV_64F)));
 
 	int w = image_size.width, h = image_size.height;
 	balance = std::min(std::max(balance, 0.0), 1.0);
@@ -762,7 +725,7 @@ double my_cv::fisheye::calibrate(cv::InputArrayOfArrays objectPoints, cv::InputA
 	CV_Assert(objectPoints.type() == CV_32FC3 || objectPoints.type() == CV_64FC3);
 	CV_Assert(imagePoints.type() == CV_32FC2 || imagePoints.type() == CV_64FC2);
 	CV_Assert(K.empty() || (K.size() == cv::Size(3, 3)));
-	CV_Assert(D.empty() || (D.total() == 4));
+	CV_Assert(D.empty() || (D.total() == 6));
 	CV_Assert(rvecs.empty() || (rvecs.channels() == 3));
 	CV_Assert(tvecs.empty() || (tvecs.channels() == 3));
 
@@ -783,6 +746,8 @@ double my_cv::fisheye::calibrate(cv::InputArrayOfArrays objectPoints, cv::InputA
 	finalParam.isEstimate[6] = flags & cv::fisheye::CALIB_FIX_K2 ? 0 : 1;
 	finalParam.isEstimate[7] = flags & cv::fisheye::CALIB_FIX_K3 ? 0 : 1;
 	finalParam.isEstimate[8] = flags & cv::fisheye::CALIB_FIX_K4 ? 0 : 1;
+	finalParam.isEstimate[9] = 1;
+	finalParam.isEstimate[10] = 1;
 
 	const int recompute_extrinsic = flags & cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC ? 1 : 0;
 	const int check_cond = flags & cv::fisheye::CALIB_CHECK_COND ? 1 : 0;
@@ -793,17 +758,18 @@ double my_cv::fisheye::calibrate(cv::InputArrayOfArrays objectPoints, cv::InputA
 	cv::Vec2d err_std;
 
 	cv::Matx33d _K;
-	cv::Vec4d _D;
+	cv::Vec6d _D;
 	if (flags & cv::fisheye::CALIB_USE_INTRINSIC_GUESS)
 	{
 		K.getMat().convertTo(_K, CV_64FC1);
 		D.getMat().convertTo(_D, CV_64FC1);
 		finalParam.Init(cv::Vec2d(_K(0, 0), _K(1, 1)),
 			cv::Vec2d(_K(0, 2), _K(1, 2)),
-			cv::Vec4d(flags & cv::fisheye::CALIB_FIX_K1 ? 0 : _D[0],
+			cv::Vec6d(flags & cv::fisheye::CALIB_FIX_K1 ? 0 : _D[0],
 				flags & cv::fisheye::CALIB_FIX_K2 ? 0 : _D[1],
 				flags & cv::fisheye::CALIB_FIX_K3 ? 0 : _D[2],
-				flags & cv::fisheye::CALIB_FIX_K4 ? 0 : _D[3]),
+				flags & cv::fisheye::CALIB_FIX_K4 ? 0 : _D[3],
+				_D[4], _D[5]),
 			_K(0, 1) / _K(0, 0));
 	}
 	else
@@ -903,9 +869,9 @@ double my_cv::fisheye::stereoCalibrate(cv::InputArrayOfArrays objectPoints, cv::
 	CV_Assert(imagePoints2.type() == CV_32FC2 || imagePoints2.type() == CV_64FC2);
 
 	CV_Assert(K1.empty() || (K1.size() == cv::Size(3, 3)));
-	CV_Assert(D1.empty() || (D1.total() == 4));
+	CV_Assert(D1.empty() || (D1.total() == 6));
 	CV_Assert(K2.empty() || (K1.size() == cv::Size(3, 3)));
-	CV_Assert(D2.empty() || (D1.total() == 4));
+	CV_Assert(D2.empty() || (D1.total() == 6));
 
 	CV_Assert((!K1.empty() && !K2.empty() && !D1.empty() && !D2.empty()) || !(flags & cv::fisheye::CALIB_FIX_INTRINSIC));
 
@@ -927,7 +893,7 @@ double my_cv::fisheye::stereoCalibrate(cv::InputArrayOfArrays objectPoints, cv::
 	my_cv::internal::IntrinsicParams intrinsicRight_errors;
 
 	cv::Matx33d _K1, _K2;
-	cv::Vec4d _D1, _D2;
+	cv::Vec6d _D1, _D2;
 	if (!K1.empty()) K1.getMat().convertTo(_K1, CV_64FC1);
 	if (!D1.empty()) D1.getMat().convertTo(_D1, CV_64FC1);
 	if (!K2.empty()) K2.getMat().convertTo(_K2, CV_64FC1);
@@ -942,10 +908,10 @@ double my_cv::fisheye::stereoCalibrate(cv::InputArrayOfArrays objectPoints, cv::
 	}
 
 	intrinsicLeft.Init(cv::Vec2d(_K1(0, 0), _K1(1, 1)), cv::Vec2d(_K1(0, 2), _K1(1, 2)),
-		cv::Vec4d(_D1[0], _D1[1], _D1[2], _D1[3]), _K1(0, 1) / _K1(0, 0));
+		cv::Vec6d(_D1[0], _D1[1], _D1[2], _D1[3], _D1[4], _D1[5]), _K1(0, 1) / _K1(0, 0));
 
 	intrinsicRight.Init(cv::Vec2d(_K2(0, 0), _K2(1, 1)), cv::Vec2d(_K2(0, 2), _K2(1, 2)),
-		cv::Vec4d(_D2[0], _D2[1], _D2[2], _D2[3]), _K2(0, 1) / _K2(0, 0));
+		cv::Vec6d(_D2[0], _D2[1], _D2[2], _D2[3], _D2[4], _D2[5]), _K2(0, 1) / _K2(0, 0));
 
 	if ((flags & cv::fisheye::CALIB_FIX_INTRINSIC))
 	{
@@ -962,6 +928,8 @@ double my_cv::fisheye::stereoCalibrate(cv::InputArrayOfArrays objectPoints, cv::
 	intrinsicLeft.isEstimate[6] = flags & (cv::fisheye::CALIB_FIX_K2 | cv::fisheye::CALIB_FIX_INTRINSIC) ? 0 : 1;
 	intrinsicLeft.isEstimate[7] = flags & (cv::fisheye::CALIB_FIX_K3 | cv::fisheye::CALIB_FIX_INTRINSIC) ? 0 : 1;
 	intrinsicLeft.isEstimate[8] = flags & (cv::fisheye::CALIB_FIX_K4 | cv::fisheye::CALIB_FIX_INTRINSIC) ? 0 : 1;
+	intrinsicLeft.isEstimate[9] = flags & cv::fisheye::CALIB_FIX_INTRINSIC ? 0 : 1;
+	intrinsicLeft.isEstimate[10] = flags & cv::fisheye::CALIB_FIX_INTRINSIC ? 0 : 1;
 
 	intrinsicRight.isEstimate[0] = flags & cv::fisheye::CALIB_FIX_INTRINSIC ? 0 : 1;
 	intrinsicRight.isEstimate[1] = flags & cv::fisheye::CALIB_FIX_INTRINSIC ? 0 : 1;
@@ -972,6 +940,8 @@ double my_cv::fisheye::stereoCalibrate(cv::InputArrayOfArrays objectPoints, cv::
 	intrinsicRight.isEstimate[6] = flags & (cv::fisheye::CALIB_FIX_K2 | cv::fisheye::CALIB_FIX_INTRINSIC) ? 0 : 1;
 	intrinsicRight.isEstimate[7] = flags & (cv::fisheye::CALIB_FIX_K3 | cv::fisheye::CALIB_FIX_INTRINSIC) ? 0 : 1;
 	intrinsicRight.isEstimate[8] = flags & (cv::fisheye::CALIB_FIX_K4 | cv::fisheye::CALIB_FIX_INTRINSIC) ? 0 : 1;
+	intrinsicLeft.isEstimate[9] = flags & cv::fisheye::CALIB_FIX_INTRINSIC ? 0 : 1;
+	intrinsicLeft.isEstimate[10] = flags & cv::fisheye::CALIB_FIX_INTRINSIC ? 0 : 1;
 
 	intrinsicLeft_errors.isEstimate = intrinsicLeft.isEstimate;
 	intrinsicRight_errors.isEstimate = intrinsicRight.isEstimate;
@@ -998,7 +968,7 @@ double my_cv::fisheye::stereoCalibrate(cv::InputArrayOfArrays objectPoints, cv::
 	cv::Vec3d omcur = my_cv::internal::median3d(om_list);
 	cv::Vec3d Tcur = my_cv::internal::median3d(T_list);
 
-	cv::Mat J = cv::Mat::zeros(4 * n_points * n_images, 18 + 6 * (n_images + 1), CV_64FC1),
+	cv::Mat J = cv::Mat::zeros(4 * n_points * n_images, 22 + 6 * (n_images + 1), CV_64FC1),
 		e = cv::Mat::zeros(4 * n_points * n_images, 1, CV_64FC1), Jkk, ekk;
 
 	for (int iter = 0; ; ++iter)
@@ -1008,16 +978,16 @@ double my_cv::fisheye::stereoCalibrate(cv::InputArrayOfArrays objectPoints, cv::
 			(criteria.type == 3 && (change <= criteria.epsilon || iter >= criteria.maxCount)))
 			break;
 
-		J.create(4 * n_points * n_images, 18 + 6 * (n_images + 1), CV_64FC1);
+		J.create(4 * n_points * n_images, 22 + 6 * (n_images + 1), CV_64FC1);
 		e.create(4 * n_points * n_images, 1, CV_64FC1);
-		Jkk.create(4 * n_points, 18 + 6 * (n_images + 1), CV_64FC1);
+		Jkk.create(4 * n_points, 22 + 6 * (n_images + 1), CV_64FC1);
 		ekk.create(4 * n_points, 1, CV_64FC1);
 
 		cv::Mat omr, Tr, domrdomckk, domrdTckk, domrdom, domrdT, dTrdomckk, dTrdTckk, dTrdom, dTrdT;
 
 		for (int image_idx = 0; image_idx < n_images; ++image_idx)
 		{
-			Jkk = cv::Mat::zeros(4 * n_points, 18 + 6 * (n_images + 1), CV_64FC1);
+			Jkk = cv::Mat::zeros(4 * n_points, 22 + 6 * (n_images + 1), CV_64FC1);
 
 			cv::Mat object = objectPoints.getMat(image_idx).clone();
 			cv::Mat imageLeft = imagePoints1.getMat(image_idx).clone();
@@ -1029,12 +999,12 @@ double my_cv::fisheye::stereoCalibrate(cv::InputArrayOfArrays objectPoints, cv::
 			cv::Mat tvec = cv::Mat(tvecs1[image_idx]);
 			my_cv::internal::projectPoints(object, projected, rvec, tvec, intrinsicLeft, jacobians, THETA_D_FISHEYE_CALIB);
 			cv::Mat(cv::Mat((imageLeft - projected).t()).reshape(1, 1).t()).copyTo(ekk.rowRange(0, 2 * n_points));
-			jacobians.colRange(8, 11).copyTo(Jkk.colRange(24 + image_idx * 6, 27 + image_idx * 6).rowRange(0, 2 * n_points));
-			jacobians.colRange(11, 14).copyTo(Jkk.colRange(27 + image_idx * 6, 30 + image_idx * 6).rowRange(0, 2 * n_points));
+			jacobians.colRange(10, 13).copyTo(Jkk.colRange(28 + image_idx * 6, 31 + image_idx * 6).rowRange(0, 2 * n_points));
+			jacobians.colRange(13, 16).copyTo(Jkk.colRange(31 + image_idx * 6, 34 + image_idx * 6).rowRange(0, 2 * n_points));
 			jacobians.colRange(0, 2).copyTo(Jkk.colRange(0, 2).rowRange(0, 2 * n_points));
 			jacobians.colRange(2, 4).copyTo(Jkk.colRange(2, 4).rowRange(0, 2 * n_points));
-			jacobians.colRange(4, 8).copyTo(Jkk.colRange(5, 9).rowRange(0, 2 * n_points));
-			jacobians.col(14).copyTo(Jkk.col(4).rowRange(0, 2 * n_points));
+			jacobians.colRange(4, 10).copyTo(Jkk.colRange(5, 11).rowRange(0, 2 * n_points));
+			jacobians.col(16).copyTo(Jkk.col(4).rowRange(0, 2 * n_points));
 
 			//right camera jacobian
 			my_cv::internal::compose_motion(rvec, tvec, omcur, Tcur, omr, Tr, domrdomckk, domrdTckk, domrdom, domrdT, dTrdomckk, dTrdTckk, dTrdom, dTrdT);
@@ -1043,19 +1013,19 @@ double my_cv::fisheye::stereoCalibrate(cv::InputArrayOfArrays objectPoints, cv::
 
 			my_cv::internal::projectPoints(object, projected, omr, Tr, intrinsicRight, jacobians, THETA_D_FISHEYE_CALIB);
 			cv::Mat(cv::Mat((imageRight - projected).t()).reshape(1, 1).t()).copyTo(ekk.rowRange(2 * n_points, 4 * n_points));
-			cv::Mat dxrdom = jacobians.colRange(8, 11) * domrdom + jacobians.colRange(11, 14) * dTrdom;
-			cv::Mat dxrdT = jacobians.colRange(8, 11) * domrdT + jacobians.colRange(11, 14)* dTrdT;
-			cv::Mat dxrdomckk = jacobians.colRange(8, 11) * domrdomckk + jacobians.colRange(11, 14) * dTrdomckk;
-			cv::Mat dxrdTckk = jacobians.colRange(8, 11) * domrdTckk + jacobians.colRange(11, 14) * dTrdTckk;
+			cv::Mat dxrdom = jacobians.colRange(10, 13) * domrdom + jacobians.colRange(13, 16) * dTrdom;
+			cv::Mat dxrdT = jacobians.colRange(10, 13) * domrdT + jacobians.colRange(13, 16)* dTrdT;
+			cv::Mat dxrdomckk = jacobians.colRange(10, 13) * domrdomckk + jacobians.colRange(13, 16) * dTrdomckk;
+			cv::Mat dxrdTckk = jacobians.colRange(10, 13) * domrdTckk + jacobians.colRange(13, 16) * dTrdTckk;
 
-			dxrdom.copyTo(Jkk.colRange(18, 21).rowRange(2 * n_points, 4 * n_points));
-			dxrdT.copyTo(Jkk.colRange(21, 24).rowRange(2 * n_points, 4 * n_points));
-			dxrdomckk.copyTo(Jkk.colRange(24 + image_idx * 6, 27 + image_idx * 6).rowRange(2 * n_points, 4 * n_points));
-			dxrdTckk.copyTo(Jkk.colRange(27 + image_idx * 6, 30 + image_idx * 6).rowRange(2 * n_points, 4 * n_points));
-			jacobians.colRange(0, 2).copyTo(Jkk.colRange(9 + 0, 9 + 2).rowRange(2 * n_points, 4 * n_points));
-			jacobians.colRange(2, 4).copyTo(Jkk.colRange(9 + 2, 9 + 4).rowRange(2 * n_points, 4 * n_points));
-			jacobians.colRange(4, 8).copyTo(Jkk.colRange(9 + 5, 9 + 9).rowRange(2 * n_points, 4 * n_points));
-			jacobians.col(14).copyTo(Jkk.col(9 + 4).rowRange(2 * n_points, 4 * n_points));
+			dxrdom.copyTo(Jkk.colRange(22, 25).rowRange(2 * n_points, 4 * n_points));
+			dxrdT.copyTo(Jkk.colRange(25, 28).rowRange(2 * n_points, 4 * n_points));
+			dxrdomckk.copyTo(Jkk.colRange(28 + image_idx * 6, 31 + image_idx * 6).rowRange(2 * n_points, 4 * n_points));
+			dxrdTckk.copyTo(Jkk.colRange(31 + image_idx * 6, 34 + image_idx * 6).rowRange(2 * n_points, 4 * n_points));
+			jacobians.colRange(0, 2).copyTo(Jkk.colRange(11 + 0, 11 + 2).rowRange(2 * n_points, 4 * n_points));
+			jacobians.colRange(2, 4).copyTo(Jkk.colRange(11 + 2, 11 + 4).rowRange(2 * n_points, 4 * n_points));
+			jacobians.colRange(4, 8).copyTo(Jkk.colRange(11 + 5, 11 + 11).rowRange(2 * n_points, 4 * n_points));
+			jacobians.col(14).copyTo(Jkk.col(11 + 4).rowRange(2 * n_points, 4 * n_points));
 
 			//check goodness of sterepair
 			double abs_max = 0;

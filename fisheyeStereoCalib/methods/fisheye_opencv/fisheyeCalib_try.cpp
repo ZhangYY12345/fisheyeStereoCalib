@@ -5,15 +5,15 @@
 #include "fisheyeCalib_radius_d.h"
 #include "fisheyeCalib_radius_rd.h"
 
-camMode cur_fisheye_mode = EQUIDISTANCE;
+camMode cur_fisheye_mode = STEREOGRAPHIC;
 
 my_cv::internal::IntrinsicParams::IntrinsicParams() :
-	f(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec4d::all(0)), alpha(0), isEstimate(9, 0)
+	f(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec6d::all(0)), alpha(0), isEstimate(11, 0)
 {
 }
 
-my_cv::internal::IntrinsicParams::IntrinsicParams(cv::Vec2d _f, cv::Vec2d _c, cv::Vec4d _k, double _alpha) :
-	f(_f), c(_c), k(_k), alpha(_alpha), isEstimate(9, 0)
+my_cv::internal::IntrinsicParams::IntrinsicParams(cv::Vec2d _f, cv::Vec2d _c, cv::Vec6d _k, double _alpha) :
+	f(_f), c(_c), k(_k), alpha(_alpha), isEstimate(11, 0)
 {
 }
 
@@ -33,6 +33,8 @@ my_cv::internal::IntrinsicParams my_cv::internal::IntrinsicParams::operator+(con
 	tmp.k[1] = this->k[1] + (isEstimate[6] ? ptr[j++] : 0);
 	tmp.k[2] = this->k[2] + (isEstimate[7] ? ptr[j++] : 0);
 	tmp.k[3] = this->k[3] + (isEstimate[8] ? ptr[j++] : 0);
+	tmp.k[4] = this->k[4] + (isEstimate[9] ? ptr[j++] : 0);
+	tmp.k[5] = this->k[5] + (isEstimate[10] ? ptr[j++] : 0);
 
 	tmp.isEstimate = isEstimate;
 	return tmp;
@@ -54,11 +56,13 @@ my_cv::internal::IntrinsicParams& my_cv::internal::IntrinsicParams::operator =(c
 	this->k[1] = isEstimate[6] ? ptr[j++] : 0;
 	this->k[2] = isEstimate[7] ? ptr[j++] : 0;
 	this->k[3] = isEstimate[8] ? ptr[j++] : 0;
+	this->k[4] = isEstimate[9] ? ptr[j++] : 0;
+	this->k[5] = isEstimate[10] ? ptr[j++] : 0;
 
 	return *this;
 }
 
-void my_cv::internal::IntrinsicParams::Init(const cv::Vec2d& _f, const cv::Vec2d& _c, const cv::Vec4d& _k, const double& _alpha)
+void my_cv::internal::IntrinsicParams::Init(const cv::Vec2d& _f, const cv::Vec2d& _c, const cv::Vec6d& _k, const double& _alpha)
 {
 	this->c = _c;
 	this->f = _f;
@@ -124,7 +128,7 @@ void my_cv::internal::ComputeExtrinsicRefine(const cv::Mat& imagePoints, const c
 			cv::Mat ex = imagePoints - cv::Mat(x).t();
 			ex = ex.reshape(1, 2);
 
-			J = jacobians.colRange(8, 14).clone();
+			J = jacobians.colRange(10, 16).clone();
 
 			cv::SVD svd(J, cv::SVD::NO_UV);
 			double condJJ = svd.w.at<double>(0) / svd.w.at<double>(5);
@@ -157,7 +161,7 @@ void my_cv::internal::ComputeExtrinsicRefine(const cv::Mat& imagePoints, const c
 			cv::Mat ex = objectPoints - cv::Mat(x).t();
 			ex = ex.reshape(1, 3);
 
-			J = jacobians.colRange(8, 14).clone();
+			J = jacobians.colRange(10, 16).clone();
 
 			cv::SVD svd(J, cv::SVD::NO_UV);
 			double condJJ = svd.w.at<double>(0) / svd.w.at<double>(5);
@@ -430,8 +434,8 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 
 	int n = (int)objectPoints.total();
 
-	JJ2 = cv::Mat::zeros(9 + 6 * n, 9 + 6 * n, CV_64FC1);
-	ex3 = cv::Mat::zeros(9 + 6 * n, 1, CV_64FC1);
+	JJ2 = cv::Mat::zeros(11 + 6 * n, 11 + 6 * n, CV_64FC1);
+	ex3 = cv::Mat::zeros(11 + 6 * n, 1, CV_64FC1);
 
 	if (distortMode != RADIUS_RD_FISHEYE_CALIB)
 	{
@@ -449,24 +453,24 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 			projectPoints(object, x, om, T, param, jacobians, distortMode);
 			cv::Mat exkk = (imT ? image.t() : image) - cv::Mat(x);
 
-			cv::Mat A(jacobians.rows, 9, CV_64FC1);
+			cv::Mat A(jacobians.rows, 11, CV_64FC1);
 			jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
-			jacobians.col(14).copyTo(A.col(4));//alpha
-			jacobians.colRange(4, 8).copyTo(A.colRange(5, 9));//k
+			jacobians.col(16).copyTo(A.col(4));//alpha
+			jacobians.colRange(4, 10).copyTo(A.colRange(5, 11));//k
 
 			A = A.t();
 
-			cv::Mat B = jacobians.colRange(8, 14).clone();
+			cv::Mat B = jacobians.colRange(10, 16).clone();
 			B = B.t();
 
-			JJ2(cv::Rect(0, 0, 9, 9)) += A * A.t();
-			JJ2(cv::Rect(9 + 6 * image_idx, 9 + 6 * image_idx, 6, 6)) = B * B.t();
+			JJ2(cv::Rect(0, 0, 11, 11)) += A * A.t();
+			JJ2(cv::Rect(11 + 6 * image_idx, 11 + 6 * image_idx, 6, 6)) = B * B.t();
 
-			JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)) = A * B.t();
-			JJ2(cv::Rect(0, 9 + 6 * image_idx, 9, 6)) = JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)).t();
+			JJ2(cv::Rect(11 + 6 * image_idx, 0, 6, 11)) = A * B.t();
+			JJ2(cv::Rect(0, 11 + 6 * image_idx, 11, 6)) = JJ2(cv::Rect(11 + 6 * image_idx, 0, 6, 11)).t();
 
-			ex3.rowRange(0, 9) += A * exkk.reshape(1, 2 * exkk.rows);
-			ex3.rowRange(9 + 6 * image_idx, 9 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 2 * exkk.rows);
+			ex3.rowRange(0, 11) += A * exkk.reshape(1, 2 * exkk.rows);
+			ex3.rowRange(11 + 6 * image_idx, 11 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 2 * exkk.rows);
 
 			if (check_cond)
 			{
@@ -492,24 +496,24 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 			projectPoints(x, image, om, T, param, jacobians, distortMode);
 			cv::Mat exkk = (objT ? object.t() : object) - cv::Mat(x);
 
-			cv::Mat A(jacobians.rows, 9, CV_64FC1);
+			cv::Mat A(jacobians.rows, 11, CV_64FC1);
 			jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
 			jacobians.col(14).copyTo(A.col(4));//alpha
-			jacobians.colRange(4, 8).copyTo(A.colRange(5, 9));//k
+			jacobians.colRange(4, 10).copyTo(A.colRange(5, 11));//k
 
 			A = A.t();
 
-			cv::Mat B = jacobians.colRange(8, 14).clone();
+			cv::Mat B = jacobians.colRange(10, 16).clone();
 			B = B.t();
 
-			JJ2(cv::Rect(0, 0, 9, 9)) += A * A.t();
-			JJ2(cv::Rect(9 + 6 * image_idx, 9 + 6 * image_idx, 6, 6)) = B * B.t();
+			JJ2(cv::Rect(0, 0, 11, 11)) += A * A.t();
+			JJ2(cv::Rect(11 + 6 * image_idx, 11 + 6 * image_idx, 6, 6)) = B * B.t();
 
-			JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)) = A * B.t();
-			JJ2(cv::Rect(0, 9 + 6 * image_idx, 9, 6)) = JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)).t();
+			JJ2(cv::Rect(11 + 6 * image_idx, 0, 6, 11)) = A * B.t();
+			JJ2(cv::Rect(0, 11 + 6 * image_idx, 11, 6)) = JJ2(cv::Rect(11 + 6 * image_idx, 0, 6, 11)).t();
 
-			ex3.rowRange(0, 9) += A * exkk.reshape(1, 3 * exkk.rows);
-			ex3.rowRange(9 + 6 * image_idx, 9 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 3 * exkk.rows);
+			ex3.rowRange(0, 11) += A * exkk.reshape(1, 3 * exkk.rows);
+			ex3.rowRange(11 + 6 * image_idx, 11 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 3 * exkk.rows);
 
 			if (check_cond)
 			{

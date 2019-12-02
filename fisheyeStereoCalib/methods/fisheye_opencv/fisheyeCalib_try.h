@@ -12,7 +12,7 @@ namespace my_cv
 		struct JacobianRow
 		{
 			cv::Vec2d df, dc;
-			cv::Vec4d dk;
+			cv::Vec6d dk;
 			cv::Vec3d dom, dT;
 			double dalpha;
 		};
@@ -49,15 +49,15 @@ namespace my_cv
 		{
 			cv::Vec2d f;
 			cv::Vec2d c;
-			cv::Vec4d k;
+			cv::Vec6d k;
 			double alpha;
 			std::vector<uchar> isEstimate;
 
 			IntrinsicParams();
-			IntrinsicParams(cv::Vec2d f, cv::Vec2d c, cv::Vec4d k, double alpha = 0);
+			IntrinsicParams(cv::Vec2d f, cv::Vec2d c, cv::Vec6d k, double alpha = 0);
 			IntrinsicParams operator+(const cv::Mat& a);
 			IntrinsicParams& operator =(const cv::Mat& a);
-			void Init(const cv::Vec2d& f, const cv::Vec2d& c, const cv::Vec4d& k = cv::Vec4d(0, 0, 0, 0), const double& alpha = 0);
+			void Init(const cv::Vec2d& f, const cv::Vec2d& c, const cv::Vec6d& k = cv::Vec6d(0, 0, 0, 0, 0, 0), const double& alpha = 0);
 		};
 		void projectPoints(cv::InputOutputArray objectPoints, cv::InputOutputArray imagePoints,
 			cv::InputArray _rvec, cv::InputArray _tvec,
