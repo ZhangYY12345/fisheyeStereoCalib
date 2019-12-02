@@ -34,7 +34,7 @@ bool ptsCalib_Single(std::string imgFilePath, cv::Size& imgSize, douVecPt2f& pts
 bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts,
 	douVecPt3f& ptsReal, int corRowNum, int corColNum);
 
-//
+//---------------------------------------------------
 struct myCmp_map
 {
 	bool operator() (const cv::Point2i& node1, const cv::Point2i& node2) const
@@ -67,7 +67,8 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, std::map<RIGHT_COUN
 bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize,
 	douVecPt2f& pts, douVecPt3f& ptsReal, int gridSize, int hNum, int vNum, cv::Mat mask = cv::Mat::Mat());
 
-//
+
+//----------------------------------------------------
 double stereoCamCalibration(std::string imgFilePath, std::string cameraParaPath);
 double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPath);
 

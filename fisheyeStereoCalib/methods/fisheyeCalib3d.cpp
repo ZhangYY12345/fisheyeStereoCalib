@@ -2095,6 +2095,10 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 	}
 		break;
 	}
+
+	cornerSubPix(ptsImg_, pts, cv::Size(3, 3), cv::Size(-1, -1),
+		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
+
 }
 
 void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SIDE, vector<vector<std::string> > >& path_)
@@ -2538,7 +2542,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
-	double rms = my_cv::fisheye_r_rd::calibrate(objPts3d, cornerPtsVec, imgSize,
+	double rms = my_cv::fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 7000, 1e-10));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	cout << "rms" << rms << endl;
@@ -2546,8 +2550,8 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	cout << D << endl;
 
 	waitKey(0);
-	if (rms < 1)
-	{
+	//if (rms < 1)
+	//{
 		FileStorage fn(cameraParaPath, FileStorage::WRITE);
 		fn << "ImgSize" << imgSize;
 		fn << "CameraInnerPara" << K;
@@ -2556,11 +2560,11 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 		fn.release();
 
 		//distortRectify_fisheye(K, D, imgSize, imgFilePath);
-	}
-	else
-	{
-		cout << "calibration failed" << endl;
-	}
+	//}
+	//else
+	//{
+	//	cout << "calibration failed" << endl;
+	//}
 
 	return rms;
 }
@@ -2572,8 +2576,8 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 	std::vector<String> fileNames;
 	glob(filePath, fileNames, false);
 
-	int x_expand_half = 2560 * 1 / 2;
-	int y_expand_half = 1440 * 1 / 2;
+	int x_expand_half = 2560 * 2 / 2;
+	int y_expand_half = 1440 * 2 / 2;
 	Mat K_new = K;
 	K_new.at<double>(0, 2) = K.at<double>(0, 2) + x_expand_half;
 	K_new.at<double>(1, 2) = K.at<double>(1, 2) + y_expand_half;
@@ -2585,7 +2589,7 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 
 		cv::Mat imgUndistort;
 
-		my_cv::fisheye_r_d::undistortImage(imgOrigin, imgUndistort, K_new, D, K_new, imgSize*2);
+		cv::fisheye::undistortImage(imgOrigin, imgUndistort, K_new, D, K_new, imgSize*3);
 		imwrite(fileNames[i].substr(0, fileNames[i].length() - 4) + "_undistort.jpg", imgUndistort);
 	}
 }
