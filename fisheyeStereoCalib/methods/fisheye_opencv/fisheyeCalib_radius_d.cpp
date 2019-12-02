@@ -866,6 +866,7 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 	const double alpha_smooth = 0.4;
 	const double thresh_cond = 1e6;
 	double change = 1;
+	double change2 = 1;
 	cv::Vec2d err_std;
 
 	cv::Matx33d _K;
@@ -899,8 +900,8 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 	for (int iter = 0; iter < std::numeric_limits<int>::max(); ++iter)
 	{
 		if ((criteria.type == 1 && iter >= criteria.maxCount) ||
-			(criteria.type == 2 && change <= criteria.epsilon) ||
-			(criteria.type == 3 && (change <= criteria.epsilon || iter >= criteria.maxCount)))
+			(criteria.type == 2 && change <= criteria.epsilon && change2 <= criteria.epsilon) ||
+			(criteria.type == 3 && ((change <= criteria.epsilon && change2 <= criteria.epsilon) || iter >= criteria.maxCount)))
 			break;
 
 		double alpha_smooth2 = 1 - std::pow(1 - alpha_smooth, iter + 1.0);
@@ -936,6 +937,7 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 		change = norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
 			cv::Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
 			/ norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
+		change2 = norm(currentParam.k - finalParam.k) / norm(currentParam.k);
 
 		finalParam = currentParam;
 

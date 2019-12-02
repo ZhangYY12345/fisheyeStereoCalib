@@ -134,26 +134,7 @@ void my_cv::fisheye_r_rd::projectPoints(cv::InputArray imagePoints, cv::OutputAr
 			double drdalpha = drdr_d * dr_ddalpha;
 			cv::Vec4d drdk = cv::Vec4d(r_d3, r_d5, r_d7, r_d9);
 
-			double r2 = r * r;
-			double dthetadr;
-			switch (mode)
-			{
-			case STEREOGRAPHIC:
-				dthetadr = 4.0 / (4.0 + r2);
-				break;
-			case EQUIDISTANCE:
-				dthetadr = 1.0;
-				break;
-			case EQUISOLID:
-				dthetadr = 2.0 / sqrt(4.0 - r2);
-				break;
-			case ORTHOGONAL:
-				dthetadr = 1.0 / sqrt(1.0 - r2);
-				break;
-			case IDEAL_PERSPECTIVE:
-				dthetadr = 1.0 / (1.0 + r2);
-				break;
-			}
+			double dthetadr = get_dthetadr(r, mode);
 			cv::Vec2d dthetadc = dthetadr * drdc;
 			cv::Vec2d dthetadf = dthetadr * drdf;
 			double dthetadalpha = dthetadr * drdalpha;
