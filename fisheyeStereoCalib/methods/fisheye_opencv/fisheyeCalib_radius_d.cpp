@@ -79,9 +79,9 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 
 		double r_2 = x.dot(x);
 		double r_ = std::sqrt(r_2);
-		//double theta = getTheta(r_, IDEAL_PERSPECTIVE);
-		//double r = getR(theta, mode);
-		double r = r_;
+		double theta = getTheta(r_, IDEAL_PERSPECTIVE);
+		double r = getR(theta, mode);
+		//double r = r_;
 
 		// r_d = r(1 + k[0] * r^2 + k[1] * r^4 + k[2] * r^6 + k[3] * r^8)
 		double r2 = r * r, r3 = r2 * r, r4 = r2 * r2, r5 = r4 * r,
@@ -133,15 +133,15 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 			cv::Vec3d dr_dom = dr_dr_2 * dr_2dom;
 			cv::Vec3d dr_dT = dr_dr_2 * dr_2dT;
 
-			//double dthetadr_ = get_dthetadr(r_, IDEAL_PERSPECTIVE);
-			//cv::Vec3d dthetadom = dthetadr_ * dr_dom;
-			//cv::Vec3d dthetadT = dthetadr_ * dr_dT;
-			//double drdtheta = get_drdtheta(theta, mode);
-			//cv::Vec3d drdom = drdtheta * dthetadom;
-			//cv::Vec3d drdT = drdtheta * dthetadT;
+			double dthetadr_ = get_dthetadr(r_, IDEAL_PERSPECTIVE);
+			cv::Vec3d dthetadom = dthetadr_ * dr_dom;
+			cv::Vec3d dthetadT = dthetadr_ * dr_dT;
+			double drdtheta = get_drdtheta(theta, mode);
+			cv::Vec3d drdom = drdtheta * dthetadom;
+			cv::Vec3d drdT = drdtheta * dthetadT;
 
-			cv::Vec3d drdom = dr_dom;
-			cv::Vec3d drdT = dr_dT;
+			//cv::Vec3d drdom = dr_dom;
+			//cv::Vec3d drdT = dr_dT;
 
 			//double r_d = r + k[0]*r3 + k[1]*r5 + k[2]*r7 + k[3]*r9;
 			double dr_ddr = 1 + 3 * k[0] * r2 + 5 * k[1] * r4 + 7 * k[2] * r6 + 9 * k[3] * r8 + 11 * k[4] * r10 + 13 * k[5] * r12;
@@ -238,21 +238,19 @@ void my_cv::fisheye_r_d::distortPoints(cv::InputArray undistorted, cv::OutputArr
 
 	for (size_t i = 0; i < n; ++i)
 	{
-		cv::Vec2d x = undistorted.depth() == CV_32F ? (cv::Vec2d)Xf[i] : Xd[i];
+		cv::Vec2d x = undistorted.depth() == CV_32F ? (cv::Vec2d)Xf[i] : Xd[i];//理想图像像素坐标系
 		cv::Vec2d px = cv::Vec2d((x[0] - c[0]) / f[0], (x[1] - c[1]) / f[1]);
 		px[0] -= alpha * px[1];
 
 		double r_2 = px.dot(px);
-		double r_ = std::sqrt(r_2);
-		//double theta = getTheta(r_, IDEAL_PERSPECTIVE);
-		double r = r_;
+		double r = std::sqrt(r_2);
 
 		double r2 = r * r, r3 = r2 * r, r5 = r3 * r2, r7 = r5 * r2, r9 = r7 * r2, r11 = r9 * r2, r13 = r11 * r2;
 
 		double r_d = r + k[0] * r3 + k[1] * r5 + k[2] * r7 + k[3] * r9 + k[4] * r11 + k[5] * r13;
 
-		double inv_r_ = r_ > 1e-8 ? 1.0 / r_ : 1;
-		double cdist = r_ > 1e-8 ? r_d * inv_r_ : 1;
+		double inv_r = r > 1e-8 ? 1.0 / r : 1;
+		double cdist = r > 1e-8 ? r_d * inv_r : 1;
 
 		cv::Vec2d xd1 = x * cdist;
 		cv::Vec2d xd3(xd1[0] + alpha * xd1[1], xd1[1]);
@@ -371,7 +369,7 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 		cv::Vec2d pu = pw * scale; //undistorted point in the image space
 
 		// reproject
-		double theta = getTheta(r, IDEAL_PERSPECTIVE);
+		double theta = getTheta(r, mode);
 
 		cv::Vec2d pfi = pw / r_d;
 		cv::Vec3d pr3d = cv::Vec3d(sin(theta) * pfi[0], sin(theta) * pfi[1], cos(theta));
@@ -383,9 +381,8 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 		cv::Vec2d new_Xc = cv::Vec2d(rotate_pr3d[0] / rotate_pr3d[2], rotate_pr3d[1] / rotate_pr3d[2]);
 		double new_r_2 = new_Xc.dot(new_Xc);
 		double new_r_ = sqrt(new_r_2);
-		//double new_theta = getTheta(new_r_, IDEAL_PERSPECTIVE);
-		//double new_r = getR(new_theta, mode);
-		double new_r = new_r_;
+		double new_theta = getTheta(new_r_, IDEAL_PERSPECTIVE);
+		double new_r = getR(new_theta, mode);
 		cv::Vec2d new_pu = new_r * pfi;
 		cv::Vec2d xd3(new_pu[0] + alpha * new_pu[1], new_pu[1]);
 		cv::Vec2d fi(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
@@ -499,11 +496,10 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 		//	dstd[i] = pu;
 
 		// reproject
-		//double theta = getTheta(r, mode);
-		//double r_ = getR(theta, IDEAL_PERSPECTIVE);
-		double r_ = r;
+		double theta = getTheta(r, mode);
+		double r_ = getR(theta, IDEAL_PERSPECTIVE);
 		double newScale = r_ / r_d;
-		cv::Vec2d pfi = pw * newScale;
+		cv::Vec2d pfi = pw * newScale;//理想归一化相机坐标系
 		//cv::Vec3d fi = cv::Vec3d(pfi[0], pfi[1], cos(theta));
 
 		if (sdepth == CV_32F)
@@ -530,17 +526,20 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap(cv::InputArray K, cv::InputArra
 	CV_Assert(P.empty() || P.size() == cv::Size(3, 3) || P.size() == cv::Size(4, 3));
 
 	cv::Vec2d f, c;
+	double alpha;
 	if (K.depth() == CV_32F)
 	{
 		cv::Matx33f camMat = K.getMat();
 		f = cv::Vec2f(camMat(0, 0), camMat(1, 1));
 		c = cv::Vec2f(camMat(0, 2), camMat(1, 2));
+		alpha = camMat(0, 1) / camMat(0, 0);
 	}
 	else
 	{
 		cv::Matx33d camMat = K.getMat();
 		f = cv::Vec2d(camMat(0, 0), camMat(1, 1));
 		c = cv::Vec2d(camMat(0, 2), camMat(1, 2));
+		alpha = camMat(0, 1) / camMat(0, 0);
 	}
 
 	cv::Vec6d k = cv::Vec6d::all(0);
@@ -558,10 +557,23 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap(cv::InputArray K, cv::InputArra
 		R.getMat().convertTo(RR, CV_64F);
 
 	cv::Matx33d PP = cv::Matx33d::eye();
+	cv::Vec2d p_f, p_c;
+	double p_alpha;
 	if (!P.empty())
+	{
 		P.getMat().colRange(0, 3).convertTo(PP, CV_64F);
+		p_f = cv::Vec2d(PP(0, 0), PP(1, 1));
+		p_c = cv::Vec2d(PP(0, 2), PP(1, 2));
+		p_alpha = PP(0, 1) / PP(0, 0);
+	}
+	else
+	{
+		p_f = f;
+		p_c = c;
+		p_alpha = alpha;
+	}
 
-	cv::Matx33d iR = (PP * RR).inv(cv::DECOMP_SVD);
+	cv::Matx33d iR = RR.inv(cv::DECOMP_SVD);
 
 	for (int i = 0; i < size.height; ++i)
 	{
@@ -570,49 +582,53 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap(cv::InputArray K, cv::InputArra
 		short*  m1 = (short*)m1f;
 		ushort* m2 = (ushort*)m2f;
 
-		double _x = i * iR(0, 1) + iR(0, 2),
-			_y = i * iR(1, 1) + iR(1, 2),
-			_w = i * iR(2, 1) + iR(2, 2);
-
 		for (int j = 0; j < size.width; ++j)
 		{
-			double u, v;
-			if (_w <= 0)
+			cv::Vec2d x(j, i); //( u_ideal, v_ideal )
+			cv::Vec2d px = cv::Vec2d((x[0] - p_c[0]) / p_f[0], (x[1] - p_c[1]) / p_f[1]);
+			px[0] -= p_alpha * px[1];
+
+			double r2 = px.dot(px);
+			double r = std::sqrt(r2);
+			cv::Vec2d pu = px / (1.0 * r);
+			double theta = getTheta(r, mode);
+
+			// 旋转后的相机坐标系坐标
+			cv::Vec3d pr = iR * cv::Vec3d(sin(theta) * pu[0], sin(theta) * pu[1], cos(theta)); // rotated point optionally multiplied by new camera matrix
+			if (pr[2] < DBL_MIN)
 			{
-				u = (_x > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
-				v = (_y > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
+				pr[2] = 1.0;
 			}
-			else
-			{
-				double x = _x / _w, y = _y / _w;
+			cv::Vec2d new_Xc = cv::Vec2d(pr[0] / pr[2], pr[1] / pr[2]);
+			double new_r_2 = new_Xc.dot(new_Xc);
+			double new_r_ = sqrt(new_r_2);
+			double new_theta = getTheta(new_r_, IDEAL_PERSPECTIVE);
+			double new_r = getR(new_theta, mode);
 
-				double r = sqrt(x * x + y * y);
+			double new_r2 = new_r * new_r, new_r4 = new_r2 * new_r2, new_r6 = new_r4 * new_r2, new_r8 = new_r4 * new_r4, new_r10 = new_r2 * new_r8, new_r12 = new_r2 * new_r10;
+			double r_d = new_r * (1 + k[0] * new_r2 + k[1] * new_r4 + k[2] * new_r6 + k[3] * new_r8 + k[4] * new_r10 + k[5] * new_r12);
 
-				double r2 = r * r, r4 = r2 * r2, r6 = r4 * r2, r8 = r4 * r4, r10 = r2 * r8, r12 = r2 * r10;
-				double r_d = r * (1 + k[0] * r2 + k[1] * r4 + k[2] * r6 + k[3] * r8 + k[4] * r10 + k[5] * r12);
+			double inv_r = new_r_ > 1e-8 ? 1.0 / new_r_ : 1;
+			double cdist = new_r_ > 1e-8 ? r_d * inv_r : 1;
 
-				double scale = (r == 0) ? 1.0 : r_d / r;
-				u = f[0] * x*scale + c[0];
-				v = f[1] * y*scale + c[1];
-			}
+			cv::Vec2d xd1 = new_Xc * cdist;
+			cv::Vec2d xd3(xd1[0] + alpha * xd1[1], xd1[1]);
+			cv::Vec2d final_point(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
+
 
 			if (m1type == CV_16SC2)
 			{
-				int iu = cv::saturate_cast<int>(u*cv::INTER_TAB_SIZE);
-				int iv = cv::saturate_cast<int>(v*cv::INTER_TAB_SIZE);
+				int iu = cv::saturate_cast<int>(final_point[0]*cv::INTER_TAB_SIZE);
+				int iv = cv::saturate_cast<int>(final_point[1]*cv::INTER_TAB_SIZE);
 				m1[j * 2 + 0] = (short)(iu >> cv::INTER_BITS);
 				m1[j * 2 + 1] = (short)(iv >> cv::INTER_BITS);
 				m2[j] = (ushort)((iv & (cv::INTER_TAB_SIZE - 1))*cv::INTER_TAB_SIZE + (iu & (cv::INTER_TAB_SIZE - 1)));
 			}
 			else if (m1type == CV_32FC1)
 			{
-				m1f[j] = (float)u;
-				m2f[j] = (float)v;
+				m1f[j] = (float)final_point[0];
+				m2f[j] = (float)final_point[1];
 			}
-
-			_x += iR(0, 0);
-			_y += iR(1, 0);
-			_w += iR(2, 0);
 		}
 	}
 }
