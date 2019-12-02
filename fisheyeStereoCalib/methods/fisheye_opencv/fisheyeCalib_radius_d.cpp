@@ -79,8 +79,9 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 
 		double r_2 = x.dot(x);
 		double r_ = std::sqrt(r_2);
-		double theta = getTheta(r_, IDEAL_PERSPECTIVE);
-		double r = getR(theta, mode);
+		//double theta = getTheta(r_, IDEAL_PERSPECTIVE);
+		//double r = getR(theta, mode);
+		double r = r_;
 
 		// r_d = r(1 + k[0] * r^2 + k[1] * r^4 + k[2] * r^6 + k[3] * r^8)
 		double r2 = r * r, r3 = r2 * r, r4 = r2 * r2, r5 = r4 * r,
@@ -132,39 +133,15 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 			cv::Vec3d dr_dom = dr_dr_2 * dr_2dom;
 			cv::Vec3d dr_dT = dr_dr_2 * dr_2dT;
 
-			double dthetadr_ = 1.0 / (1 + r_2);
-			cv::Vec3d dthetadom = dthetadr_ * dr_dom;
-			cv::Vec3d dthetadT = dthetadr_ * dr_dT;
+			//double dthetadr_ = get_dthetadr(r_, IDEAL_PERSPECTIVE);
+			//cv::Vec3d dthetadom = dthetadr_ * dr_dom;
+			//cv::Vec3d dthetadT = dthetadr_ * dr_dT;
+			//double drdtheta = get_drdtheta(theta, mode);
+			//cv::Vec3d drdom = drdtheta * dthetadom;
+			//cv::Vec3d drdT = drdtheta * dthetadT;
 
-			cv::Vec3d drdtheta;
-			switch (mode)
-			{
-			case STEREOGRAPHIC:
-			{
-				double temp = cos(theta / 2.0);
-				temp = temp * temp;
-				drdtheta = 1.0 / temp;
-			}
-				break;
-			case EQUIDISTANCE:
-				drdtheta = 1.0;
-				break;
-			case EQUISOLID:
-				drdtheta = cos(theta / 2.0);
-				break;
-			case ORTHOGONAL:
-				drdtheta = cos(theta);
-				break;
-			case IDEAL_PERSPECTIVE:
-			{
-				double temp_ = cos(theta);
-				temp_ = temp_ * temp_;
-				drdtheta = 1.0 / temp_;
-			}
-				break;
-			}
-			cv::Vec3d drdom = drdtheta * dthetadom;
-			cv::Vec3d drdT = drdtheta * dthetadT;
+			cv::Vec3d drdom = dr_dom;
+			cv::Vec3d drdT = dr_dT;
 
 			//double r_d = r + k[0]*r3 + k[1]*r5 + k[2]*r7 + k[3]*r9;
 			double dr_ddr = 1 + 3 * k[0] * r2 + 5 * k[1] * r4 + 7 * k[2] * r6 + 9 * k[3] * r8 + 11 * k[4] * r10 + 13 * k[5] * r12;
@@ -262,11 +239,13 @@ void my_cv::fisheye_r_d::distortPoints(cv::InputArray undistorted, cv::OutputArr
 	for (size_t i = 0; i < n; ++i)
 	{
 		cv::Vec2d x = undistorted.depth() == CV_32F ? (cv::Vec2d)Xf[i] : Xd[i];
+		cv::Vec2d px = cv::Vec2d((x[0] - c[0]) / f[0], (x[1] - c[1]) / f[1]);
+		px[0] -= alpha * px[1];
 
-		double r_2 = x.dot(x);
+		double r_2 = px.dot(px);
 		double r_ = std::sqrt(r_2);
-		double theta = getTheta(r_, IDEAL_PERSPECTIVE);
-		double r = getR(theta, mode);
+		//double theta = getTheta(r_, IDEAL_PERSPECTIVE);
+		double r = r_;
 
 		double r2 = r * r, r3 = r2 * r, r5 = r3 * r2, r7 = r5 * r2, r9 = r7 * r2, r11 = r9 * r2, r13 = r11 * r2;
 
@@ -334,7 +313,7 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 	if (!P.empty())
 	{
 		P.getMat().colRange(0, 3).convertTo(PP, CV_64F);
-		RRR = PP * RR;//PP对应内参矩阵， RR为旋转矩阵
+		RRR = PP * RR;//PP对应内参矩阵， 
 	}
 
 	// start undistorting
@@ -356,7 +335,7 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 
 		double r_d = sqrt(pw[0] * pw[0] + pw[1] * pw[1]);
 
-		double r = 1.0;
+		double r = r_d;
 		if (r_d > 1e-8)
 		{
 			// compensate distortion iteratively
@@ -374,7 +353,7 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 			coeffs(0) = k[5];
 
 			std::set<double> r_s;
-			r_s = RootFinder::solvePolyInterval(coeffs, -INFINITY, INFINITY, 1e-7, false);
+			r_s = RootFinder::solvePolyInterval(coeffs, -INFINITY, INFINITY, 1e-8, false);
 			double diff_r = INFINITY;
 			for(std::set<double>::iterator r_si = r_s.begin(); r_si != r_s.end(); r_si++)
 			{
@@ -392,17 +371,21 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 		cv::Vec2d pu = pw * scale; //undistorted point in the image space
 
 		// reproject
-		double theta = getTheta(r, mode);
+		double theta = getTheta(r, IDEAL_PERSPECTIVE);
 
 		cv::Vec2d pfi = pw / r_d;
 		cv::Vec3d pr3d = cv::Vec3d(sin(theta) * pfi[0], sin(theta) * pfi[1], cos(theta));
 		cv::Vec3d rotate_pr3d = RR * pr3d;
+		if(rotate_pr3d[2] < DBL_MIN)
+		{
+			rotate_pr3d[2] = 1.0;
+		}
 		cv::Vec2d new_Xc = cv::Vec2d(rotate_pr3d[0] / rotate_pr3d[2], rotate_pr3d[1] / rotate_pr3d[2]);
 		double new_r_2 = new_Xc.dot(new_Xc);
 		double new_r_ = sqrt(new_r_2);
-		double new_theta = getTheta(new_r_, IDEAL_PERSPECTIVE);
-		double new_r = getR(new_theta, mode);
-
+		//double new_theta = getTheta(new_r_, IDEAL_PERSPECTIVE);
+		//double new_r = getR(new_theta, mode);
+		double new_r = new_r_;
 		cv::Vec2d new_pu = new_r * pfi;
 		cv::Vec2d xd3(new_pu[0] + alpha * new_pu[1], new_pu[1]);
 		cv::Vec2d fi(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
@@ -516,9 +499,9 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 		//	dstd[i] = pu;
 
 		// reproject
-		double theta = getTheta(r, mode);
-
-		double r_ = getR(theta, IDEAL_PERSPECTIVE);
+		//double theta = getTheta(r, mode);
+		//double r_ = getR(theta, IDEAL_PERSPECTIVE);
+		double r_ = r;
 		double newScale = r_ / r_d;
 		cv::Vec2d pfi = pw * newScale;
 		//cv::Vec3d fi = cv::Vec3d(pfi[0], pfi[1], cos(theta));
@@ -854,6 +837,7 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 	const double alpha_smooth = 0.4;
 	const double thresh_cond = 1e6;
 	double change = 1;
+	double change2 = 0.1;
 	cv::Vec2d err_std;
 
 	cv::Matx33d _K;
@@ -888,8 +872,8 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 	for (int iter = 0; iter < std::numeric_limits<int>::max(); ++iter)
 	{
 		if ((criteria.type == 1 && iter >= criteria.maxCount) ||
-			(criteria.type == 2 && change <= criteria.epsilon) ||
-			(criteria.type == 3 && (change <= criteria.epsilon || iter >= criteria.maxCount)))
+			(criteria.type == 2 && change <= criteria.epsilon && change2 <= criteria.epsilon) ||
+			(criteria.type == 3 && ((change <= criteria.epsilon && change2 <= criteria.epsilon) || iter >= criteria.maxCount)))
 			break;
 
 		double alpha_smooth2 = 1 - std::pow(1 - alpha_smooth, iter + 1.0);
@@ -925,6 +909,8 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 		change = norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
 			cv::Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
 			/ norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
+		change2 = norm(currentParam.k - finalParam.k)
+			/ norm(currentParam.k);
 
 		finalParam = currentParam;
 

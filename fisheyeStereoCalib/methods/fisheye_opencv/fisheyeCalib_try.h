@@ -110,3 +110,5 @@ namespace my_cv
 
 double getR(double theta, camMode mode);
 double getTheta(double r, camMode mode);
+double get_drdtheta(double theta, camMode mode);
+double get_dthetadr(double r, camMode mode);

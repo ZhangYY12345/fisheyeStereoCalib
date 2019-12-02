@@ -1024,8 +1024,8 @@ double my_cv::fisheye::stereoCalibrate(cv::InputArrayOfArrays objectPoints, cv::
 			dxrdTckk.copyTo(Jkk.colRange(31 + image_idx * 6, 34 + image_idx * 6).rowRange(2 * n_points, 4 * n_points));
 			jacobians.colRange(0, 2).copyTo(Jkk.colRange(11 + 0, 11 + 2).rowRange(2 * n_points, 4 * n_points));
 			jacobians.colRange(2, 4).copyTo(Jkk.colRange(11 + 2, 11 + 4).rowRange(2 * n_points, 4 * n_points));
-			jacobians.colRange(4, 8).copyTo(Jkk.colRange(11 + 5, 11 + 11).rowRange(2 * n_points, 4 * n_points));
-			jacobians.col(14).copyTo(Jkk.col(11 + 4).rowRange(2 * n_points, 4 * n_points));
+			jacobians.colRange(4, 10).copyTo(Jkk.colRange(11 + 5, 11 + 11).rowRange(2 * n_points, 4 * n_points));
+			jacobians.col(16).copyTo(Jkk.col(11 + 4).rowRange(2 * n_points, 4 * n_points));
 
 			//check goodness of sterepair
 			double abs_max = 0;

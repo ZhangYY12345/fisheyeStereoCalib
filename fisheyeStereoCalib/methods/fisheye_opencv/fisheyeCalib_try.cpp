@@ -801,3 +801,61 @@ double getTheta(double r, camMode mode)
 	}
 	return theta;
 }
+
+double get_drdtheta(double theta, camMode mode)
+{
+	double drdtheta;
+	switch (mode)
+	{
+	case STEREOGRAPHIC:
+	{
+		double temp = cos(theta / 2.0);
+		temp = temp * temp;
+		drdtheta = 1.0 / temp;
+	}
+	break;
+	case EQUIDISTANCE:
+		drdtheta = 1.0;
+		break;
+	case EQUISOLID:
+		drdtheta = cos(theta / 2.0);
+		break;
+	case ORTHOGONAL:
+		drdtheta = cos(theta);
+		break;
+	case IDEAL_PERSPECTIVE:
+	{
+		double temp_ = cos(theta);
+		temp_ = temp_ * temp_;
+		drdtheta = 1.0 / temp_;
+	}
+	break;
+	}
+
+	return drdtheta;
+}
+
+double get_dthetadr(double r, camMode mode)
+{
+	double r2 = r * r;
+	double dthetadr;
+	switch (mode)
+	{
+	case STEREOGRAPHIC:
+		dthetadr = 4.0 / (4.0 + r2);
+		break;
+	case EQUIDISTANCE:
+		dthetadr = 1.0;
+		break;
+	case EQUISOLID:
+		dthetadr = 2.0 / sqrt(4.0 - r2);
+		break;
+	case ORTHOGONAL:
+		dthetadr = 1.0 / sqrt(1.0 - r2);
+		break;
+	case IDEAL_PERSPECTIVE:
+		dthetadr = 1.0 / (1.0 + r2);
+		break;
+	}
+	return dthetadr;
+}
