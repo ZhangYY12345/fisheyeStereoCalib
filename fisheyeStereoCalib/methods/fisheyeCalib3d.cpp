@@ -1962,6 +1962,12 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 	cv::Mat ptsImg_;
 	bitwise_or(lineH, lineV, ptsImg_);
 
+	// for paper
+	Mat toImg1, toImg2, toImg3;
+	bitwise_not(lineH, toImg1);
+	bitwise_not(lineV, toImg2);
+	bitwise_not(ptsImg_, toImg3);
+
 	int height = ptsImg.rows;
 	int width = ptsImg.cols;
 
@@ -2507,12 +2513,13 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
 	//std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
 	//bool isSuc = ptsCalib_Single(imgFilePath, imgSize, cornerPtsVec, objPts3d, 6, 9);
-	
+
+	double gridSize = 18.78789;
 	cv::Mat mask_;
 	createMask_lines(mask_);
 	std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
-	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, 20, 9, 16, mask_);
+	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, gridSize, 9, 16, mask_);
 
 	if (!isSuc)
 	{
@@ -2544,7 +2551,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
 	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
-		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 7000, 1e-10));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
+		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 70, 1e-30));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	cout << "rms" << rms << endl;
 	cout << K << endl;
 	cout << D << endl;
@@ -2576,8 +2583,8 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 	std::vector<String> fileNames;
 	glob(filePath, fileNames, false);
 
-	int x_expand_half = 2560 * 2 / 2;
-	int y_expand_half = 1440 * 2 / 2;
+	int x_expand_half = 2560 * 0 / 2;
+	int y_expand_half = 1440 * 0 / 2;
 	Mat K_new = K;
 	K_new.at<double>(0, 2) = K.at<double>(0, 2) + x_expand_half;
 	K_new.at<double>(1, 2) = K.at<double>(1, 2) + y_expand_half;
@@ -2589,7 +2596,7 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 
 		cv::Mat imgUndistort;
 
-		cv::fisheye::undistortImage(imgOrigin, imgUndistort, K_new, D, K_new, imgSize*3);
+		my_cv::fisheye_r_d::undistortImage(imgOrigin, imgUndistort, K_new, D, K_new, imgSize*1);
 		imwrite(fileNames[i].substr(0, fileNames[i].length() - 4) + "_undistort.jpg", imgUndistort);
 	}
 }

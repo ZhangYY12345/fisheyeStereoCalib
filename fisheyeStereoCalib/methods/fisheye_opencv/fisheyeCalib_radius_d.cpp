@@ -897,8 +897,37 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 		cv::Mat JJ2, ex3;
 		ComputeJacobians(objectPoints, imagePoints, finalParam, omc, Tc, check_cond, thresh_cond, JJ2, ex3, RADIUS_D_FISHEYE_CALIB);
 
+		int count = 1;
 		cv::Mat G;
-		int a = solve(JJ2, ex3, G, cv::DECOMP_SVD);
+		int a = solve(JJ2, ex3, G, cv::DECOMP_LU);
+		while(a == 0)
+		{
+			switch (count)
+			{
+			case 1:
+				a = cv::solve(JJ2, ex3, G, cv::DECOMP_CHOLESKY);
+				count++;
+				break;
+			case 2:
+				cv::solve(JJ2, ex3, G, cv::DECOMP_SVD);
+				a = 1;
+				count++;
+				break;
+			case 3:
+				a = cv::solve(JJ2, ex3, G, cv::DECOMP_QR);
+				count++;
+				break;
+			case 4:
+				a = cv::solve(JJ2, ex3, G, cv::DECOMP_EIG);
+				count++;
+				break;
+			case 5:
+				a = cv::solve(JJ2, ex3, G, cv::DECOMP_NORMAL);
+				a = 1;
+				count++;
+				break;
+			}
+		}
 		currentParam = finalParam + alpha_smooth2 * G;
 
 		//for(int image_idx = 0; image_idx < objectPoints.total(); image_idx++)
@@ -925,10 +954,12 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 		change = norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
 			cv::Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
 			/ norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
-		change2 = norm(currentParam.k - finalParam.k)
-			/ norm(currentParam.k);
+		change2 = norm(currentParam.k - finalParam.k) / norm(currentParam.k);
 
-		finalParam = currentParam;
+		if (a != 0)
+		{
+			finalParam = currentParam;
+		}
 
 		if (recompute_extrinsic)
 		{
@@ -1174,7 +1205,7 @@ double my_cv::fisheye_r_d::stereoCalibrate(cv::InputArrayOfArrays objectPoints, 
 		int a = cv::countNonZero(intrinsicLeft.isEstimate);
 		int b = cv::countNonZero(intrinsicRight.isEstimate);
 		cv::Mat deltas;
-		solve(J.t() * J, J.t()*e, deltas, cv::DECOMP_QR);
+		solve(J.t() * J, J.t()*e, deltas);
 		if (a > 0)
 			intrinsicLeft = intrinsicLeft + deltas.rowRange(0, a);
 		if (b > 0)

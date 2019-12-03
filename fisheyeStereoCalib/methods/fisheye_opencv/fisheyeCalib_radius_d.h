@@ -5,7 +5,7 @@
 
 namespace my_cv
 {
-	// r_d = r(1 + k[0] * r^2 + k[1] * r^4 + k[2] * r^6 + k[3] * r^8)
+	// r_d = r(1 + k[0] * r^2 + k[1] * r^4 + k[2] * r^6 + k[3] * r^8)//目前测试结果显示，只适用于 等距投影模型
 	namespace fisheye_r_d
 	{
 		CV_EXPORTS void projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints, const cv::Affine3d& affine,
