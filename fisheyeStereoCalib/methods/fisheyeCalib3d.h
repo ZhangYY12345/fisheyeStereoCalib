@@ -61,7 +61,9 @@ void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& li
 void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true, RIGHT_COUNT_SIDE mode = TOP_LEFT);
 void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, int grid_size);
 void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, 
-	int grid_size, int rowNum, int colNum, RIGHT_COUNT_SIDE mode, cv::Mat mask = cv::Mat::Mat());
+	int grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode, cv::Mat mask = cv::Mat::Mat());
+void detectPts2(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal,
+	int grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode, cv::Mat mask = cv::Mat::Mat());
 
 void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, std::map<RIGHT_COUNT_SIDE, std::vector<std::vector<std::string> > >& path_);
 bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize,

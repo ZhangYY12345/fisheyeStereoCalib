@@ -2096,9 +2096,119 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 		break;
 	}
 
-	cornerSubPix(ptsImg_, pts, cv::Size(3, 3), cv::Size(-1, -1),
-		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
+	cornerSubPix(ptsImg_, pts, cv::Size(5, 5), cv::Size(-1, -1),
+		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 700, 1e-8));
 
+}
+
+void detectPts2(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal,
+	int grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode, cv::Mat mask)
+{
+	cv::Mat lineV, lineV_inv;
+	cv::Mat lineH, lineH_inv;
+	detectLines_(src[0], src[1], lineV, lineV_inv, false);
+	detectLines_(src[2], src[3], lineH, lineH_inv, true);
+
+	bitwise_and(lineV, lineV_inv, lineV);
+	bitwise_and(lineH, lineH_inv, lineH);
+
+	if (!mask.empty())
+	{
+		bitwise_and(lineV, mask, lineV);
+		bitwise_and(lineH, mask, lineH);
+	}
+	std::map<int, std::vector<cv::Point2i> > lines_H, lines_V;
+	post_process(lineH, lines_H, true, mode);
+	post_process(lineV, lines_V, false, mode);
+
+	std::map<cv::Point2i, cv::Point2f, myCmp_map>  pts_H;
+
+	cv::Mat ptsImg;
+	bitwise_and(lineH, lineV, ptsImg);
+	cv::Mat ptsImg_;
+	bitwise_or(lineH, lineV, ptsImg_);
+
+	int height = ptsImg.rows;
+	int width = ptsImg.cols;
+
+	int max_h = lines_H.size() - 1;
+	int max_v = lines_V.size() - 1;
+
+	for(int h_i = 0; h_i <= max_h; h_i++)
+	{
+		cv::Mat h_img = cv::Mat::zeros(height, width, CV_8UC1);
+		for(auto it = lines_H[h_i].begin(); it != lines_H[h_i].end(); it++)
+		{
+			h_img.at<uchar>(it->y, it->x) = 255;
+		}
+		for(int v_i = 0; v_i <= max_v; v_i++)
+		{
+			cv::Point key_pt(h_i, v_i);
+
+			cv::Mat tmpImg = h_img.clone();
+			for(auto it_ = lines_V[v_i].begin(); it_ != lines_V[v_i].end(); it_++)
+			{
+				tmpImg.at<uchar>(it_->y, it_->x) = 255;
+			}
+
+			cv::Mat cornerDst;
+			cornerHarris(tmpImg, cornerDst, 15, 3, 0.04);
+			cv::Point maxPt;
+			minMaxLoc(cornerDst, NULL, NULL, NULL, &maxPt);
+
+			pts_H[cv::Point(h_i, v_i)] = maxPt;
+		}
+	}
+	if (!pts.empty())
+	{
+		pts.clear();
+	}
+	switch (mode)
+	{
+	case TOP_LEFT:
+	{
+		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
+		{
+			pts.push_back(it->second);
+			ptsReal.push_back(cv::Point3f(it->first.x * grid_size, it->first.y * grid_size, 0));
+		}
+	}
+	break;
+	case TOP_RIGHT:
+	{
+		int diff_v = vNum - 1 - max_v;
+		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
+		{
+			pts.push_back(it->second);
+			ptsReal.push_back(cv::Point3f(it->first.x * grid_size, (diff_v + it->first.y) * grid_size, 0));
+		}
+	}
+	break;
+	case BOTTOM_LEFT:
+	{
+		int diff_h = hNum - 1 - max_h;
+		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
+		{
+			pts.push_back(it->second);
+			ptsReal.push_back(cv::Point3f((diff_h + it->first.x) * grid_size, it->first.y * grid_size, 0));
+		}
+	}
+	break;
+	case BOTTOM_RIGHT:
+	{
+		int diff_h = hNum - 1 - max_h;
+		int diff_v = vNum - 1 - max_v;
+		for (auto it = pts_H.begin(); it != pts_H.end(); it++)
+		{
+			pts.push_back(it->second);
+			ptsReal.push_back(cv::Point3f((diff_h + it->first.x) * grid_size, (diff_v + it->first.y) * grid_size, 0));
+		}
+	}
+	break;
+	}
+
+	cornerSubPix(ptsImg_, pts, cv::Size(5, 5), cv::Size(-1, -1),
+		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 700, 1e-8));
 }
 
 void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SIDE, vector<vector<std::string> > >& path_)
@@ -2512,7 +2622,8 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	createMask_lines(mask_);
 	std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
-	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, 20, 9, 16, mask_);
+	double gridSize = 18.66666667;
+	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, gridSize, 9, 16, mask_);
 
 	if (!isSuc)
 	{
