@@ -126,16 +126,17 @@ int main()
 	std::string xmlpath_img = "D:/studying/stereo vision/research code/fisheye-stereo-calibrate/fisheyeStereoCalib/fisheyeStereoCalib/fisheyeStereoCalib/patternsL_corner_detection.xml";
 	double singleRms = fisheyeCamCalibSingle(xmlpath_img, xmlFilePath);
 
-	cv::Mat K, D;
+	cv::Mat K, D, DE;
 	cv::Size imgSize;
 	FileStorage fn(xmlFilePath, FileStorage::READ);
 	fn["ImgSize"] >> imgSize;
 	fn["CameraInnerPara"] >> K;
 	fn["CameraDistPara"] >> D;
+	fn["CameraDistPara_DE"] >> DE;
 	fn.release();
 
 	string to_undistort = "D:/studying/stereo vision/research code/data/20191017-3/left";
-	distortRectify_fisheye(K, D, imgSize, to_undistort);
+	distortRectify_fisheye(K, D, DE, imgSize, to_undistort);
 
 
 	//double errCalib = stereoFisheyeCamCalib_3(imgFilePath, xmlFilePath);

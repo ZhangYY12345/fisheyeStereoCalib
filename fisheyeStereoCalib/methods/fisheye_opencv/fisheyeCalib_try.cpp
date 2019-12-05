@@ -8,12 +8,12 @@
 camMode cur_fisheye_mode = EQUISOLID;
 
 my_cv::internal::IntrinsicParams::IntrinsicParams() :
-	f(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec6d::all(0)), alpha(0), isEstimate(11, 0)
+	f(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec6d::all(0)), ke(cv::Vec6d::all(0)), alpha(0), isEstimate(17, 0)
 {
 }
 
-my_cv::internal::IntrinsicParams::IntrinsicParams(cv::Vec2d _f, cv::Vec2d _c, cv::Vec6d _k, double _alpha) :
-	f(_f), c(_c), k(_k), alpha(_alpha), isEstimate(11, 0)
+my_cv::internal::IntrinsicParams::IntrinsicParams(cv::Vec2d _f, cv::Vec2d _c, cv::Vec6d _k, cv::Vec6d _ke, double _alpha) :
+	f(_f), c(_c), k(_k), ke(_ke), alpha(_alpha), isEstimate(17, 0)
 {
 }
 
@@ -35,6 +35,12 @@ my_cv::internal::IntrinsicParams my_cv::internal::IntrinsicParams::operator+(con
 	tmp.k[3] = this->k[3] + (isEstimate[8] ? ptr[j++] : 0);
 	tmp.k[4] = this->k[4] + (isEstimate[9] ? ptr[j++] : 0);
 	tmp.k[5] = this->k[5] + (isEstimate[10] ? ptr[j++] : 0);
+	tmp.ke[0] = this->ke[0] + (isEstimate[5] ? ptr[j++] : 0);
+	tmp.ke[1] = this->ke[1] + (isEstimate[6] ? ptr[j++] : 0);
+	tmp.ke[2] = this->ke[2] + (isEstimate[7] ? ptr[j++] : 0);
+	tmp.ke[3] = this->ke[3] + (isEstimate[8] ? ptr[j++] : 0);
+	tmp.ke[4] = this->ke[4] + (isEstimate[9] ? ptr[j++] : 0);
+	tmp.ke[5] = this->ke[5] + (isEstimate[10] ? ptr[j++] : 0);
 
 	tmp.isEstimate = isEstimate;
 	return tmp;
@@ -58,15 +64,22 @@ my_cv::internal::IntrinsicParams& my_cv::internal::IntrinsicParams::operator =(c
 	this->k[3] = isEstimate[8] ? ptr[j++] : 0;
 	this->k[4] = isEstimate[9] ? ptr[j++] : 0;
 	this->k[5] = isEstimate[10] ? ptr[j++] : 0;
+	this->ke[0] = isEstimate[11] ? ptr[j++] : 0;
+	this->ke[1] = isEstimate[12] ? ptr[j++] : 0;
+	this->ke[2] = isEstimate[13] ? ptr[j++] : 0;
+	this->ke[3] = isEstimate[14] ? ptr[j++] : 0;
+	this->ke[4] = isEstimate[15] ? ptr[j++] : 0;
+	this->ke[5] = isEstimate[16] ? ptr[j++] : 0;
 
 	return *this;
 }
 
-void my_cv::internal::IntrinsicParams::Init(const cv::Vec2d& _f, const cv::Vec2d& _c, const cv::Vec6d& _k, const double& _alpha)
+void my_cv::internal::IntrinsicParams::Init(const cv::Vec2d& _f, const cv::Vec2d& _c, const cv::Vec6d& _k, const cv::Vec6d& _ke, const double& _alpha)
 {
 	this->c = _c;
 	this->f = _f;
 	this->k = _k;
+	this->ke = _ke;
 	this->alpha = _alpha;
 }
 
@@ -89,18 +102,18 @@ void my_cv::internal::projectPoints(cv::InputOutputArray objectPoints, cv::Input
 		0, 0, 1);
 	switch(distortMode)
 	{
-	case ORIGIN_FISHEYE_CALIB:
-		cv::fisheye::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian);//////
-		break;
-	case THETA_D_FISHEYE_CALIB:
-		my_cv::fisheye::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian, cur_fisheye_mode);//////
-		break;
+	//case ORIGIN_FISHEYE_CALIB:
+	//	cv::fisheye::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.ke, param.alpha, jacobian);//////
+	//	break;
+	//case THETA_D_FISHEYE_CALIB:
+	//	my_cv::fisheye::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.ke, param.alpha, jacobian, cur_fisheye_mode);//////
+	//	break;
 	case RADIUS_D_FISHEYE_CALIB:
-		my_cv::fisheye_r_d::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian, cur_fisheye_mode);//////
+		my_cv::fisheye_r_d::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.ke, param.alpha, jacobian, cur_fisheye_mode);//////
 		break;
-	case RADIUS_RD_FISHEYE_CALIB:
-		my_cv::fisheye_r_rd::projectPoints(imagePoints, objectPoints, _rvec, _tvec, K, param.k, param.alpha, jacobian, cur_fisheye_mode);//////
-		break;
+	//case RADIUS_RD_FISHEYE_CALIB:
+	//	my_cv::fisheye_r_rd::projectPoints(imagePoints, objectPoints, _rvec, _tvec, K, param.k, param.ke, param.alpha, jacobian, cur_fisheye_mode);//////
+	//	break;
 	}
 }
 
@@ -128,7 +141,7 @@ void my_cv::internal::ComputeExtrinsicRefine(const cv::Mat& imagePoints, const c
 			cv::Mat ex = imagePoints - cv::Mat(x).t();
 			ex = ex.reshape(1, 2);
 
-			J = jacobians.colRange(10, 16).clone();
+			J = jacobians.colRange(16, 22).clone();
 
 			cv::SVD svd(J, cv::SVD::NO_UV);
 			double condJJ = svd.w.at<double>(0) / svd.w.at<double>(5);
@@ -161,7 +174,7 @@ void my_cv::internal::ComputeExtrinsicRefine(const cv::Mat& imagePoints, const c
 			cv::Mat ex = objectPoints - cv::Mat(x).t();
 			ex = ex.reshape(1, 3);
 
-			J = jacobians.colRange(10, 16).clone();
+			J = jacobians.colRange(16, 22).clone();
 
 			cv::SVD svd(J, cv::SVD::NO_UV);
 			double condJJ = svd.w.at<double>(0) / svd.w.at<double>(5);
@@ -313,7 +326,7 @@ cv::Mat my_cv::internal::NormalizePixels(const cv::Mat& imagePoints, const Intri
 		break;
 	case RADIUS_D_FISHEYE_CALIB:
 		//fisheye_r_d::
-		my_cv::fisheye_r_d::undistortPoints_H(imagePoints, undistorted, K, param.k, cur_fisheye_mode);
+		my_cv::fisheye_r_d::undistortPoints_H(imagePoints, undistorted, K, param.k, param.ke, cur_fisheye_mode);
 		break;
 	case RADIUS_RD_FISHEYE_CALIB:
 		//fisheye_r_rd::
@@ -434,8 +447,8 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 
 	int n = (int)objectPoints.total();
 
-	JJ2 = cv::Mat::zeros(11 + 6 * n, 11 + 6 * n, CV_64FC1);
-	ex3 = cv::Mat::zeros(11 + 6 * n, 1, CV_64FC1);
+	JJ2 = cv::Mat::zeros(17 + 6 * n, 17 + 6 * n, CV_64FC1);
+	ex3 = cv::Mat::zeros(17 + 6 * n, 1, CV_64FC1);
 
 	if (distortMode != RADIUS_RD_FISHEYE_CALIB)
 	{
@@ -453,24 +466,24 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 			projectPoints(object, x, om, T, param, jacobians, distortMode);
 			cv::Mat exkk = (imT ? image.t() : image) - cv::Mat(x);
 
-			cv::Mat A(jacobians.rows, 11, CV_64FC1);
+			cv::Mat A(jacobians.rows, 17, CV_64FC1);
 			jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
-			jacobians.col(16).copyTo(A.col(4));//alpha
+			jacobians.col(22).copyTo(A.col(4));//alpha
 			jacobians.colRange(4, 10).copyTo(A.colRange(5, 11));//k
-
+			jacobians.colRange(10, 16).copyTo(A.colRange(11, 17));//k
 			A = A.t();
 
-			cv::Mat B = jacobians.colRange(10, 16).clone();
+			cv::Mat B = jacobians.colRange(16, 22).clone();
 			B = B.t();
 
-			JJ2(cv::Rect(0, 0, 11, 11)) += A * A.t();
-			JJ2(cv::Rect(11 + 6 * image_idx, 11 + 6 * image_idx, 6, 6)) = B * B.t();
+			JJ2(cv::Rect(0, 0, 17, 17)) += A * A.t();
+			JJ2(cv::Rect(17 + 6 * image_idx, 17 + 6 * image_idx, 6, 6)) = B * B.t();
 
-			JJ2(cv::Rect(11 + 6 * image_idx, 0, 6, 11)) = A * B.t();
-			JJ2(cv::Rect(0, 11 + 6 * image_idx, 11, 6)) = JJ2(cv::Rect(11 + 6 * image_idx, 0, 6, 11)).t();
+			JJ2(cv::Rect(17 + 6 * image_idx, 0, 6, 17)) = A * B.t();
+			JJ2(cv::Rect(0, 17 + 6 * image_idx, 17, 6)) = JJ2(cv::Rect(17 + 6 * image_idx, 0, 6, 17)).t();
 
-			ex3.rowRange(0, 11) += A * exkk.reshape(1, 2 * exkk.rows);
-			ex3.rowRange(11 + 6 * image_idx, 11 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 2 * exkk.rows);
+			ex3.rowRange(0, 17) += A * exkk.reshape(1, 2 * exkk.rows);
+			ex3.rowRange(17 + 6 * image_idx, 17 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 2 * exkk.rows);
 
 			if (check_cond)
 			{

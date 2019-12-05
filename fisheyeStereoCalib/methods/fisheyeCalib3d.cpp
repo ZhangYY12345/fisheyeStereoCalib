@@ -1820,7 +1820,7 @@ void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines,
  * \param pts 
  * \param ptsReal 
  */
-void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, int grid_size)
+void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, double grid_size)
 {
 	cv::Mat lineV, lineV_inv;
 	cv::Mat lineH, lineH_inv;
@@ -1936,7 +1936,7 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
  * \param mode :indicate the complete side of the view
  */
 void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal,
-	int grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode, cv::Mat mask)
+	double grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode, cv::Mat mask)
 {
 	cv::Mat lineV, lineV_inv;
 	cv::Mat lineH, lineH_inv;
@@ -2102,8 +2102,8 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 		break;
 	}
 
-	cornerSubPix(ptsImg_, pts, cv::Size(3, 3), cv::Size(-1, -1),
-		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 1e-6));
+	cornerSubPix(ptsImg_, pts, cv::Size(5, 5), cv::Size(-1, -1),
+		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 700, 1e-8));
 
 }
 
@@ -2210,7 +2210,7 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SID
 	}
 }
 
-bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pts, douVecPt3f& ptsReal, int gridSize,
+bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pts, douVecPt3f& ptsReal, double gridSize,
 	int hNum, int vNum, cv::Mat mask)
 {
 	map<RIGHT_COUNT_SIDE, vector<vector<std::string> > > imgPaths;
@@ -2514,7 +2514,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
 	//bool isSuc = ptsCalib_Single(imgFilePath, imgSize, cornerPtsVec, objPts3d, 6, 9);
 
-	double gridSize = 18.78789;
+	double gridSize = 18.94736842;
 	cv::Mat mask_;
 	createMask_lines(mask_);
 	std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
@@ -2547,22 +2547,24 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	K.at<double>(0, 2) = 1280.0;
 	K.at<double>(1, 2) = 720.0;
 	cv::Mat D = cv::Mat::zeros(6, 1, CV_64FC1);		//the paramters of camera distortion
+	cv::Mat DE = cv::Mat::zeros(6, 1, CV_64FC1);		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
 	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,
-		K, D, R, T, flag,
+		K, D, DE, R, T, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 70, 1e-30));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	cout << "rms" << rms << endl;
 	cout << K << endl;
 	cout << D << endl;
+	cout << DE << endl;
 
-	waitKey(0);
 	//if (rms < 1)
 	//{
 		FileStorage fn(cameraParaPath, FileStorage::WRITE);
 		fn << "ImgSize" << imgSize;
 		fn << "CameraInnerPara" << K;
 		fn << "CameraDistPara" << D;
+		fn << "CameraDistPara_DE" << DE;
 		fn << "RMS" << rms;
 		fn.release();
 
@@ -2572,11 +2574,12 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//{
 	//	cout << "calibration failed" << endl;
 	//}
+	waitKey(0);
 
 	return rms;
 }
 
-void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string imgFilePath)
+void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Mat DE, cv::Size imgSize, std::string imgFilePath)
 {
 	//load all the images in the folder
 	String filePath = imgFilePath + "\\*.jpg";
@@ -2596,7 +2599,7 @@ void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string 
 
 		cv::Mat imgUndistort;
 
-		my_cv::fisheye_r_d::undistortImage(imgOrigin, imgUndistort, K_new, D, K_new, imgSize*1);
+		my_cv::fisheye_r_d::undistortImage(imgOrigin, imgUndistort, K_new, D, DE, K_new, imgSize*1);
 		imwrite(fileNames[i].substr(0, fileNames[i].length() - 4) + "_undistort.jpg", imgUndistort);
 	}
 }

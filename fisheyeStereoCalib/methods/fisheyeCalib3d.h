@@ -59,13 +59,13 @@ void connectEdge(cv::Mat& src, bool isHorizon = true);
 void myGetLines(cv::Mat& src, cv::Mat& tmp, cv::Point2i startPt, std::vector<cv::Point2i>& oneLine, int lenThres, bool isHorizon = true);
 void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true, RIGHT_COUNT_SIDE mode = TOP_LEFT);
 void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon = true, RIGHT_COUNT_SIDE mode = TOP_LEFT);
-void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, int grid_size);
+void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, double grid_size);
 void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, 
-	int grid_size, int rowNum, int colNum, RIGHT_COUNT_SIDE mode, cv::Mat mask = cv::Mat::Mat());
+	double grid_size, int rowNum, int colNum, RIGHT_COUNT_SIDE mode, cv::Mat mask = cv::Mat::Mat());
 
 void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, std::map<RIGHT_COUNT_SIDE, std::vector<std::vector<std::string> > >& path_);
 bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize,
-	douVecPt2f& pts, douVecPt3f& ptsReal, int gridSize, int hNum, int vNum, cv::Mat mask = cv::Mat::Mat());
+	douVecPt2f& pts, douVecPt3f& ptsReal, double gridSize, int hNum, int vNum, cv::Mat mask = cv::Mat::Mat());
 
 
 //----------------------------------------------------
@@ -83,8 +83,8 @@ double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPa
 */
 //single fisheye camera calibration
 double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath);
-void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string imgFilePath);
-void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string imgFilePath, 
+void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Mat DE, cv::Size imgSize, std::string imgFilePath);
+void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string imgFilePath,
 	std::vector<cv::Mat>& undistortImgs, bool isLeft = true);
 //stereo fisheye calibration
 double stereoFisheyeCamCalib(std::string imgFilePathL, std::string cameraParaPath);
