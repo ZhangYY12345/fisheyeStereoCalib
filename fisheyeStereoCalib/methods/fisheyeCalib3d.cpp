@@ -1595,6 +1595,217 @@ void connectEdge(cv::Mat& src, int winSize_thres, bool isHorizon)
 	}
 }
 
+void connectEdge2(cv::Mat& src, int winSize_thres, bool isHorizon)
+{
+	int width = src.cols;
+	int height = src.rows;
+
+	int half_winsize_thres = winSize_thres;
+
+	if (isHorizon)
+	{
+		cv::Mat tmp1, tmp2;
+		tmp1 = src.clone();
+		tmp2 = src.clone();
+
+		int offset_x1[2];
+		for (int y = height - 3; y <= 2 ; y--)
+		{
+			for (int x = width - 3; x <= 2 ; x--)
+			{
+				//如果该中心点为255,则考虑它的八邻域
+				if (tmp1.at<uchar>(y, x) == 255)
+				{
+					if (tmp1.at<uchar>(y - 1, x) == 255 || tmp1.at<uchar>(y + 1, x) == 255)
+					{
+						continue;
+					}
+					//检查8邻域
+					int num_8 = 0;
+					offset_x1[0] = -1;
+					//
+					int starty = 1;
+					for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+					{
+						if (tmp1.at<uchar>(y + offset_y1, x + offset_x1[0]) == 255)
+							num_8++;
+					}
+					while (num_8 == 0 && starty < half_winsize_thres)
+					{
+						offset_x1[0]--;
+						starty++;
+						for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+						{
+							if (!(y + offset_y1 >= 0 && y + offset_y1 < height && x + offset_x1[0] >= 0 && x + offset_x1[0] < width))
+							{
+								continue;
+							}
+							if (tmp1.at<uchar>(y + offset_y1, x + offset_x1[0]) == 255)
+							{
+								tmp1.at<uchar>(y + offset_y1 / 2, x + offset_x1[0] / 2) = 255;
+								if (offset_y1 / 2 <= 0 && offset_x1[0] / 2 <= 0 && starty > 2)
+								{
+									x = x + offset_x1[0] / 2 - 1;
+									y = y + offset_y1 / 2 - 1;
+								}
+								num_8++;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		for (int y = 2; y < height - 2; y++)
+		{
+			for (int x = 2; x < width - 2; x++)
+			{
+				//如果该中心点为255,则考虑它的八邻域
+				if (tmp2.at<uchar>(y, x) == 255)
+				{
+					if (tmp2.at<uchar>(y - 1, x) == 255 || tmp2.at<uchar>(y + 1, x) == 255)
+					{
+						continue;
+					}
+					//检查8邻域
+					int num_8 = 0;
+					int starty = 1;
+					offset_x1[1] = 1;
+
+					for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+					{
+						if (tmp2.at<uchar>(y + offset_y1, x + offset_x1[1]) == 255)
+							num_8++;
+					}
+					while (num_8 == 0 && starty < half_winsize_thres)
+					{
+						offset_x1[1]++;
+						starty++;
+						for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+						{
+							if (!(y + offset_y1 >= 0 && y + offset_y1 < height && x + offset_x1[1] >= 0 && x + offset_x1[1] < width))
+							{
+								continue;
+							}
+							if (tmp2.at<uchar>(y + offset_y1, x + offset_x1[1]) == 255)
+							{
+								tmp2.at<uchar>(y + offset_y1 / 2, x + offset_x1[1] / 2) = 255;
+								num_8++;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		bitwise_and(tmp1, tmp2, src);
+
+	}
+	else
+	{
+
+		cv::Mat tmp1, tmp2;
+		tmp1 = src.clone();
+		tmp2 = src.clone();
+
+		int offset_y1[2];
+		for (int y = height - 3; y <= 2; y--)
+		{
+			for (int x = width - 3; x <= 2; x--)
+			{
+				//如果该中心点为255,则考虑它的八邻域
+				if (tmp1.at<uchar>(y, x) == 255)
+				{
+					if (tmp1.at<uchar>(y, x - 1) == 255 || tmp1.at<uchar>(y, x + 1) == 255)
+					{
+						continue;
+					}
+
+					//检查8邻域
+					int num_8 = 0;
+					offset_y1[0] = -1;
+					//
+					int startx = 1;
+					for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+					{
+						if (tmp1.at<uchar>(y + offset_y1[0], x + offset_x1) == 255)
+							num_8++;
+					}
+					while (num_8 == 0 && startx < half_winsize_thres)
+					{
+						offset_y1[0]--;
+						startx++;
+						for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+						{
+							if (!(y + offset_y1[0] >= 0 && y + offset_y1[0] < height && x + offset_x1 >= 0 && x + offset_x1 < width))
+							{
+								continue;
+							}
+							if (tmp1.at<uchar>(y + offset_y1[0], x + offset_x1) == 255)
+							{
+								tmp1.at<uchar>(y + offset_y1[0] / 2, x + offset_x1 / 2) = 255;
+								if (offset_x1 / 2 <= 0 && offset_y1[0] / 2 <= 0 && startx > 2)
+								{
+									x = x + offset_x1 / 2 - 1;
+									y = y + offset_y1[0] / 2 - 1;
+								}
+								num_8++;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		//
+		for (int y = 2; y < height - 2; y++)
+		{
+			for (int x = 2; x < width - 2; x++)
+			{
+				//如果该中心点为255,则考虑它的八邻域
+				if (tmp2.at<uchar>(y, x) == 255)
+				{
+					if (tmp2.at<uchar>(y, x - 1) == 255 || tmp2.at<uchar>(y, x + 1) == 255)
+					{
+						continue;
+					}
+
+					//检查8邻域
+					offset_y1[1] = 1;
+					int num_8 = 0;
+					int startx = 1;
+
+					for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+					{
+						if (tmp2.at<uchar>(y + offset_y1[1], x + offset_x1) == 255)
+							num_8++;
+					}
+					while (num_8 == 0 && startx < half_winsize_thres)
+					{
+						offset_y1[1]++;
+						startx++;
+						for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+						{
+							if (!(y + offset_y1[1] >= 0 && y + offset_y1[1] < height && x + offset_x1 >= 0 && x + offset_x1 < width))
+							{
+								continue;
+							}
+							if (tmp2.at<uchar>(y + offset_y1[1], x + offset_x1) == 255)
+							{
+								tmp2.at<uchar>(y + offset_y1[1] / 2, x + offset_x1 / 2) = 255;
+								num_8++;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		bitwise_and(tmp1, tmp2, src);
+	}
+}
+
 void myGetLines(cv::Mat& src, cv::Mat& tmp, cv::Point2i startPt, std::vector<cv::Point2i>& oneLine, int lenThres, bool isHorizon)
 {
 	if(!oneLine.empty())
@@ -1808,10 +2019,11 @@ void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& li
 
 void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon, RIGHT_COUNT_SIDE mode)
 {
-	connectEdge(src, 4, isHorizon);
+	connectEdge(src, 5, isHorizon);
 	removeShortEdges(src, lines, 100, isHorizon, mode);
-	connectEdge(src, 20, isHorizon);
+	connectEdge(src, 10, isHorizon);
 	removeShortEdges(src, lines, 400, isHorizon, mode);
+	int a = lines.size();
 }
 
 /**
@@ -2096,7 +2308,12 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 		break;
 	}
 
-	cornerSubPix(ptsImg_, pts, cv::Size(5, 5), cv::Size(-1, -1),
+	cv::Mat src_1, src_2, dst_1;
+	threshold(src[0], src_1, 80, 255, THRESH_BINARY);
+	threshold(src[2], src_2, 80, 255, THRESH_BINARY);
+	bitwise_xor(src_1, src_2, dst_1);
+
+	cornerSubPix(dst_1, pts, cv::Size(5, 5), cv::Size(-1, -1),
 		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 700, 1e-8));
 
 }
@@ -2653,7 +2870,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
-	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,
+	double rms = my_cv::fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 7000, 1e-10));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	cout << "rms" << rms << endl;
