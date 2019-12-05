@@ -73,7 +73,7 @@ void my_cv::fisheye_r_rd::projectPoints(cv::InputArray imagePoints, cv::OutputAr
 	{
 		cv::Vec2d xpi = imagePoints.depth() == CV_32F ? (cv::Vec2d)xpf[i] : xpd[i];
 		cv::Vec2d x_d((xpi[0] - c[0]) / f[0], (xpi[1] - c[1]) / f[1]);
-		x_d[0] = x_d[0] - alpha * x_d[1];
+		x_d[0] -= alpha * x_d[1];
 
 		double r_d2 = x_d.dot(x_d);
 		double r_d = sqrt(r_d2);
@@ -786,11 +786,12 @@ double my_cv::fisheye_r_rd::calibrate(cv::InputArrayOfArrays objectPoints, cv::I
 	//-------------------------------Optimization
 	double change2 = 1;
 
+
 	for (int iter = 0; iter < std::numeric_limits<int>::max(); ++iter)
 	{
 		if ((criteria.type == 1 && iter >= criteria.maxCount) ||
-			(criteria.type == 2 && change <= criteria.epsilon && change2 <= criteria.epsilon) ||
-			(criteria.type == 3 && ((change <= criteria.epsilon && change2 <= criteria.epsilon) || iter >= criteria.maxCount)))
+			(criteria.type == 2 && change <= criteria.epsilon) ||
+			(criteria.type == 3 && ((change <= criteria.epsilon) || iter >= criteria.maxCount)))
 			break;
 
 		double alpha_smooth2 = 1 - std::pow(1 - alpha_smooth, iter + 1.0);
@@ -799,18 +800,21 @@ double my_cv::fisheye_r_rd::calibrate(cv::InputArrayOfArrays objectPoints, cv::I
 		ComputeJacobians(objectPoints, imagePoints, finalParam, omc, Tc, check_cond, thresh_cond, JJ2, ex3, RADIUS_RD_FISHEYE_CALIB);
 
 		cv::Mat G;
-		solve(JJ2, ex3, G);
-		currentParam = finalParam + alpha_smooth2 * G;
+		int a = solve(JJ2, ex3, G);
 
-		change = norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
-			cv::Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
-			/ norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
-		change2 = norm(cv::Vec4d(currentParam.k[0], currentParam.k[1], currentParam.k[2], currentParam.alpha) -
-			cv::Vec4d(finalParam.k[0], finalParam.k[1], finalParam.k[2], finalParam.alpha))
-			/ norm(cv::Vec4d(currentParam.k[0], currentParam.k[1], currentParam.k[2], currentParam.alpha));
+		if (a == 1)
+		{
+			currentParam = finalParam + alpha_smooth2 * G;
 
-		finalParam = currentParam;
+			change = norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
+				cv::Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
+				/ norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
+			change2 = norm(cv::Vec4d(currentParam.k[0], currentParam.k[1], currentParam.k[2], currentParam.alpha) -
+				cv::Vec4d(finalParam.k[0], finalParam.k[1], finalParam.k[2], finalParam.alpha))
+				/ norm(cv::Vec4d(currentParam.k[0], currentParam.k[1], currentParam.k[2], currentParam.alpha));
 
+			finalParam = currentParam;
+		}
 		if (recompute_extrinsic)
 		{
 			CalibrateExtrinsics(objectPoints, imagePoints, finalParam, check_cond,
