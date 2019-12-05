@@ -1820,7 +1820,7 @@ void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines,
  * \param pts 
  * \param ptsReal 
  */
-void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, int grid_size)
+void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal, double grid_size)
 {
 	cv::Mat lineV, lineV_inv;
 	cv::Mat lineH, lineH_inv;
@@ -1936,7 +1936,7 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
  * \param mode :indicate the complete side of the view
  */
 void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal,
-	int grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode, cv::Mat mask)
+	double grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode, cv::Mat mask)
 {
 	cv::Mat lineV, lineV_inv;
 	cv::Mat lineH, lineH_inv;
@@ -2102,7 +2102,7 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 }
 
 void detectPts2(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal,
-	int grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode, cv::Mat mask)
+	double grid_size, int hNum, int vNum, RIGHT_COUNT_SIDE mode, cv::Mat mask)
 {
 	cv::Mat lineV, lineV_inv;
 	cv::Mat lineH, lineH_inv;
@@ -2314,7 +2314,7 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SID
 	}
 }
 
-bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pts, douVecPt3f& ptsReal, int gridSize,
+bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pts, douVecPt3f& ptsReal, double gridSize,
 	int hNum, int vNum, cv::Mat mask)
 {
 	map<RIGHT_COUNT_SIDE, vector<vector<std::string> > > imgPaths;
