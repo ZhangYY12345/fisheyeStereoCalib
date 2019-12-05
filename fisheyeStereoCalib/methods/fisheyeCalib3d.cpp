@@ -2,6 +2,7 @@
 #include "fisheye_opencv/fisheyeCalib_theta_d.h"
 #include "fisheye_opencv/fisheyeCalib_radius_d.h"
 #include "fisheye_opencv/fisheyeCalib_radius_rd.h"
+#include "fisheye_opencv/fisheyeCalib_raduis_rd2.h"
 #include <stack>
 #include "fisheyeLib/calib_libs/tinyxml2.h"
 
@@ -2870,14 +2871,13 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
-	double rms = my_cv::fisheye_r_rd::calibrate(objPts3d, cornerPtsVec, imgSize,
+	double rms = my_cv::fisheye_r_rd2::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 7000, 1e-10));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	cout << "rms" << rms << endl;
 	cout << K << endl;
 	cout << D << endl;
 
-	waitKey(0);
 	//if (rms < 1)
 	//{
 		FileStorage fn(cameraParaPath, FileStorage::WRITE);
@@ -2893,6 +2893,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//{
 	//	cout << "calibration failed" << endl;
 	//}
+	waitKey(0);
 
 	return rms;
 }

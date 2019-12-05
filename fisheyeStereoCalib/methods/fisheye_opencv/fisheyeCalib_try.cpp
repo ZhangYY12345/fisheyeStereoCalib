@@ -4,6 +4,7 @@
 #include "fisheyeCalib_theta_d.h"
 #include "fisheyeCalib_radius_d.h"
 #include "fisheyeCalib_radius_rd.h"
+#include "fisheyeCalib_raduis_rd2.h"
 
 camMode cur_fisheye_mode = EQUISOLID;
 
@@ -71,7 +72,7 @@ void my_cv::internal::projectPoints(cv::InputOutputArray objectPoints, cv::Input
 	const IntrinsicParams& param, cv::OutputArray jacobian, DISTORT_Mode_Fisheye distortMode)
 {
 	if (distortMode == ORIGIN_FISHEYE_CALIB || distortMode == THETA_D_FISHEYE_CALIB
-		|| distortMode == RADIUS_D_FISHEYE_CALIB)
+		|| distortMode == RADIUS_D_FISHEYE_CALIB || distortMode == RADIUS_RD2_FISHEYE_CALIB)
 	{
 		CV_Assert(!objectPoints.empty() && (objectPoints.type() == CV_32FC3 || objectPoints.type() == CV_64FC3));
 	}
@@ -97,6 +98,8 @@ void my_cv::internal::projectPoints(cv::InputOutputArray objectPoints, cv::Input
 	case RADIUS_RD_FISHEYE_CALIB:
 		my_cv::fisheye_r_rd::projectPoints(imagePoints, objectPoints, _rvec, _tvec, K, param.k, param.alpha, jacobian, cur_fisheye_mode);//////
 		break;
+	case RADIUS_RD2_FISHEYE_CALIB:
+		my_cv::fisheye_r_rd2::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian, cur_fisheye_mode);
 	}
 }
 
@@ -315,6 +318,8 @@ cv::Mat my_cv::internal::NormalizePixels(const cv::Mat& imagePoints, const Intri
 		//fisheye_r_rd::
 		my_cv::fisheye_r_rd::undistortPoints(distorted, undistorted, cv::Matx33d::eye(), param.k, cv::noArray(), cv::noArray(), cur_fisheye_mode);
 		break;
+	case RADIUS_RD2_FISHEYE_CALIB:
+		my_cv::fisheye_r_rd2::undistortPoints_H(imagePoints, undistorted, K, param.k, cur_fisheye_mode);
 	}
 
 	return undistorted;
@@ -435,6 +440,14 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 
 	if (distortMode != RADIUS_RD_FISHEYE_CALIB)
 	{
+		int total_ex = 0;
+		for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
+		{
+			total_ex += (int)objectPoints.getMat(image_idx).total();
+		}
+		cv::Mat ex(total_ex, 1, CV_64FC2);
+		int insert_idx = 0;
+
 		for (int image_idx = 0; image_idx < n; ++image_idx)
 		{
 			cv::Mat image, object;
@@ -448,6 +461,8 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 			cv::Mat jacobians;
 			projectPoints(object, x, om, T, param, jacobians, distortMode);
 			cv::Mat exkk = (imT ? image.t() : image) - cv::Mat(x);
+			exkk.copyTo(ex.rowRange(insert_idx, insert_idx + exkk.rows));
+			insert_idx += exkk.rows;
 
 			cv::Mat A(jacobians.rows, 9, CV_64FC1);
 			jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
@@ -475,6 +490,8 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 				CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
 			}
 		}
+
+		double rms = sqrt(norm(ex, cv::NORM_L2SQR) / ex.total());
 	}
 	else
 	{

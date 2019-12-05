@@ -99,6 +99,9 @@
     <ClCompile Include="methods\polynomial-solve\root_finder.cpp">
       <Filter>源文件\methods\polynomial-solver</Filter>
     </ClCompile>
+    <ClCompile Include="methods\fisheye_opencv\fisheyeCalib_raduis_rd2.cpp">
+      <Filter>源文件\methods\fisheyeOpenCV</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="methods\fisheyeCalib3d.h">
@@ -169,6 +172,9 @@
     </ClInclude>
     <ClInclude Include="methods\polynomial-solve\root_finder.h">
       <Filter>源文件\methods\polynomial-solver</Filter>
+    </ClInclude>
+    <ClInclude Include="methods\fisheye_opencv\fisheyeCalib_raduis_rd2.h">
+      <Filter>源文件\methods\fisheyeOpenCV</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
