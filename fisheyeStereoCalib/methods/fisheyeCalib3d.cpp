@@ -1431,12 +1431,12 @@ void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, cv::Mat& dst_inv, bo
 	dst_inv = cross_inv.clone();
 }
 
-void connectEdge(cv::Mat& src, bool isHorizon)
+void connectEdge(cv::Mat& src, int winSize_thres, bool isHorizon)
 {
 	int width = src.cols;
 	int height = src.rows;
 
-	int half_winsize_thres = 10;
+	int half_winsize_thres = winSize_thres;
 
 	if (isHorizon)
 	{
@@ -1731,12 +1731,11 @@ void myGetLines(cv::Mat& src, cv::Mat& tmp, cv::Point2i startPt, std::vector<cv:
 	}
 }
 
-void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon, RIGHT_COUNT_SIDE mode)
+void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, int lenThres, bool isHorizon, RIGHT_COUNT_SIDE mode)
 {
 	int width = src.cols;
 	int height = src.rows;
 
-	int lenThres = 400;
 	int count = 0;
 	if(!lines.empty())
 	{
@@ -1809,9 +1808,10 @@ void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& li
 
 void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon, RIGHT_COUNT_SIDE mode)
 {
-	connectEdge(src, isHorizon);
-	connectEdge(src, isHorizon);
-	removeShortEdges(src, lines, isHorizon, mode);
+	connectEdge(src, 4, isHorizon);
+	removeShortEdges(src, lines, 100, isHorizon, mode);
+	connectEdge(src, 20, isHorizon);
+	removeShortEdges(src, lines, 400, isHorizon, mode);
 }
 
 /**
