@@ -53,12 +53,6 @@
       <pattern>./20191017-1-2/patternsImgL/7_pattern2.jpeg</pattern>
       <pattern>./20191017-1-2/patternsImgL/7_pattern3.jpeg</pattern>
   </pair>
-  <pair>
-      <pattern>./20191017-1-2/patternsImgL/10_pattern0.jpeg</pattern>
-      <pattern>./20191017-1-2/patternsImgL/10_pattern1.jpeg</pattern>
-      <pattern>./20191017-1-2/patternsImgL/10_pattern2.jpeg</pattern>
-      <pattern>./20191017-1-2/patternsImgL/10_pattern3.jpeg</pattern>
-  </pair>
 </images_tr>
 <images_bl>
   <pair>
@@ -69,6 +63,11 @@
   </pair>
 </images_bl>
 <images_br>
-
+  <pair>
+      <pattern>./20191017-1-2/patternsImgL/10_pattern0.jpeg</pattern>
+      <pattern>./20191017-1-2/patternsImgL/10_pattern1.jpeg</pattern>
+      <pattern>./20191017-1-2/patternsImgL/10_pattern2.jpeg</pattern>
+      <pattern>./20191017-1-2/patternsImgL/10_pattern3.jpeg</pattern>
+  </pair>
 </images_br>
 </all>
