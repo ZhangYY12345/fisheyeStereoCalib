@@ -9,12 +9,12 @@
 camMode cur_fisheye_mode = EQUISOLID;
 
 my_cv::internal::IntrinsicParams::IntrinsicParams() :
-	f(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec4d::all(0)), alpha(0), isEstimate(9, 0)
+	f(0), delta_xy(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec4d::all(0)), alpha(0), isEstimate(10, 0)
 {
 }
 
-my_cv::internal::IntrinsicParams::IntrinsicParams(cv::Vec2d _f, cv::Vec2d _c, cv::Vec4d _k, double _alpha) :
-	f(_f), c(_c), k(_k), alpha(_alpha), isEstimate(9, 0)
+my_cv::internal::IntrinsicParams::IntrinsicParams(double _f, cv::Vec2d _delta_xy, cv::Vec2d _c, cv::Vec4d _k, double _alpha) :
+	f(_f), delta_xy(_delta_xy), c(_c), k(_k), alpha(_alpha), isEstimate(10, 0)
 {
 }
 
@@ -25,15 +25,16 @@ my_cv::internal::IntrinsicParams my_cv::internal::IntrinsicParams::operator+(con
 	const double* ptr = a.ptr<double>();
 
 	int j = 0;
-	tmp.f[0] = this->f[0] + (isEstimate[0] ? ptr[j++] : 0);
-	tmp.f[1] = this->f[1] + (isEstimate[1] ? ptr[j++] : 0);
-	tmp.c[0] = this->c[0] + (isEstimate[2] ? ptr[j++] : 0);
-	tmp.c[1] = this->c[1] + (isEstimate[3] ? ptr[j++] : 0);
-	tmp.alpha = this->alpha + (isEstimate[4] ? ptr[j++] : 0);
-	tmp.k[0] = this->k[0] + (isEstimate[5] ? ptr[j++] : 0);
-	tmp.k[1] = this->k[1] + (isEstimate[6] ? ptr[j++] : 0);
-	tmp.k[2] = this->k[2] + (isEstimate[7] ? ptr[j++] : 0);
-	tmp.k[3] = this->k[3] + (isEstimate[8] ? ptr[j++] : 0);
+	tmp.f = this->f + (isEstimate[0] ? ptr[j++] : 0);
+	tmp.delta_xy[0] = this->delta_xy[0] + (isEstimate[1] ? ptr[j++] : 0);
+	tmp.delta_xy[1] = this->delta_xy[1] + (isEstimate[2] ? ptr[j++] : 0);
+	tmp.c[0] = this->c[0] + (isEstimate[3] ? ptr[j++] : 0);
+	tmp.c[1] = this->c[1] + (isEstimate[4] ? ptr[j++] : 0);
+	tmp.alpha = this->alpha + (isEstimate[5] ? ptr[j++] : 0);
+	tmp.k[0] = this->k[0] + (isEstimate[6] ? ptr[j++] : 0);
+	tmp.k[1] = this->k[1] + (isEstimate[7] ? ptr[j++] : 0);
+	tmp.k[2] = this->k[2] + (isEstimate[8] ? ptr[j++] : 0);
+	tmp.k[3] = this->k[3] + (isEstimate[9] ? ptr[j++] : 0);
 
 	tmp.isEstimate = isEstimate;
 	return tmp;
@@ -46,23 +47,25 @@ my_cv::internal::IntrinsicParams& my_cv::internal::IntrinsicParams::operator =(c
 
 	int j = 0;
 
-	this->f[0] = isEstimate[0] ? ptr[j++] : 0;
-	this->f[1] = isEstimate[1] ? ptr[j++] : 0;
-	this->c[0] = isEstimate[2] ? ptr[j++] : 0;
-	this->c[1] = isEstimate[3] ? ptr[j++] : 0;
-	this->alpha = isEstimate[4] ? ptr[j++] : 0;
-	this->k[0] = isEstimate[5] ? ptr[j++] : 0;
-	this->k[1] = isEstimate[6] ? ptr[j++] : 0;
-	this->k[2] = isEstimate[7] ? ptr[j++] : 0;
-	this->k[3] = isEstimate[8] ? ptr[j++] : 0;
+	this->f = isEstimate[0] ? ptr[j++] : 0;
+	this->delta_xy[0] = isEstimate[1] ? ptr[j++] : 0;
+	this->delta_xy[1] = isEstimate[2] ? ptr[j++] : 0;
+	this->c[0] = isEstimate[3] ? ptr[j++] : 0;
+	this->c[1] = isEstimate[4] ? ptr[j++] : 0;
+	this->alpha = isEstimate[5] ? ptr[j++] : 0;
+	this->k[0] = isEstimate[6] ? ptr[j++] : 0;
+	this->k[1] = isEstimate[7] ? ptr[j++] : 0;
+	this->k[2] = isEstimate[8] ? ptr[j++] : 0;
+	this->k[3] = isEstimate[9] ? ptr[j++] : 0;
 
 	return *this;
 }
 
-void my_cv::internal::IntrinsicParams::Init(const cv::Vec2d& _f, const cv::Vec2d& _c, const cv::Vec4d& _k, const double& _alpha)
+void my_cv::internal::IntrinsicParams::Init(const double& _f, const cv::Vec2d& _delta_xy, const cv::Vec2d& _c, const cv::Vec4d& _k, const double& _alpha)
 {
-	this->c = _c;
 	this->f = _f;
+	this->delta_xy = _delta_xy;
+	this->c = _c;
 	this->k = _k;
 	this->alpha = _alpha;
 }
@@ -81,8 +84,8 @@ void my_cv::internal::projectPoints(cv::InputOutputArray objectPoints, cv::Input
 		CV_Assert(!imagePoints.empty() && (imagePoints.type() == CV_32FC2 || imagePoints.type() == CV_64FC2));
 	}
 
-	cv::Matx33d K(param.f[0], param.f[0] * param.alpha, param.c[0],
-		0, param.f[1], param.c[1],
+	cv::Matx33d K(param.f / param.delta_xy[0], param.f / param.delta_xy[0] * param.alpha, param.c[0],
+		0, param.f / param.delta_xy[1], param.c[1],
 		0, 0, 1);
 	switch(distortMode)
 	{
@@ -99,7 +102,7 @@ void my_cv::internal::projectPoints(cv::InputOutputArray objectPoints, cv::Input
 		my_cv::fisheye_r_rd::projectPoints(imagePoints, objectPoints, _rvec, _tvec, K, param.k, param.alpha, jacobian, cur_fisheye_mode);//////
 		break;
 	case RADIUS_RD2_FISHEYE_CALIB:
-		my_cv::fisheye_r_rd2::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian, cur_fisheye_mode);
+		my_cv::fisheye_r_rd2::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.f, param.alpha, jacobian, cur_fisheye_mode);
 	}
 }
 
@@ -292,12 +295,12 @@ cv::Mat my_cv::internal::NormalizePixels(const cv::Mat& imagePoints, const Intri
 	cv::Vec2d* ptr_d = distorted.ptr<cv::Vec2d>();              //
 	for (size_t i = 0; i < imagePoints.total(); ++i)
 	{
-		ptr_d[i] = (ptr[i] - param.c).mul(cv::Vec2d(1.0 / param.f[0], 1.0 / param.f[1]));
+		ptr_d[i] = (ptr[i] - param.c).mul(cv::Vec2d(param.delta_xy[0] / param.f, param.delta_xy[1] / param.f));
 		ptr_d[i][0] -= param.alpha * ptr_d[i][1];
 	}
 
-	cv::Matx33d K(param.f[0], param.f[0] * param.alpha, param.c[0],
-		0, param.f[1], param.c[1],
+	cv::Matx33d K(param.f / param.delta_xy[0], param.f / param.delta_xy[0] * param.alpha, param.c[0],
+		0, param.f / param.delta_xy[1], param.c[1],
 		0, 0, 1);
 
 	switch (distortMode)
@@ -319,7 +322,7 @@ cv::Mat my_cv::internal::NormalizePixels(const cv::Mat& imagePoints, const Intri
 		my_cv::fisheye_r_rd::undistortPoints(distorted, undistorted, cv::Matx33d::eye(), param.k, cv::noArray(), cv::noArray(), cur_fisheye_mode);
 		break;
 	case RADIUS_RD2_FISHEYE_CALIB:
-		my_cv::fisheye_r_rd2::undistortPoints_H(imagePoints, undistorted, K, param.k, cur_fisheye_mode);
+		my_cv::fisheye_r_rd2::undistortPoints_H(imagePoints, undistorted, K, param.k, param.f, cur_fisheye_mode);
 	}
 
 	return undistorted;
@@ -435,8 +438,8 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 
 	int n = (int)objectPoints.total();
 
-	JJ2 = cv::Mat::zeros(9 + 6 * n, 9 + 6 * n, CV_64FC1);
-	ex3 = cv::Mat::zeros(9 + 6 * n, 1, CV_64FC1);
+	JJ2 = cv::Mat::zeros(10 + 6 * n, 10 + 6 * n, CV_64FC1);
+	ex3 = cv::Mat::zeros(10 + 6 * n, 1, CV_64FC1);
 
 	if (distortMode != RADIUS_RD_FISHEYE_CALIB)
 	{
@@ -464,24 +467,24 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 			exkk.copyTo(ex.rowRange(insert_idx, insert_idx + exkk.rows));
 			insert_idx += exkk.rows;
 
-			cv::Mat A(jacobians.rows, 9, CV_64FC1);
-			jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
-			jacobians.col(14).copyTo(A.col(4));//alpha
-			jacobians.colRange(4, 8).copyTo(A.colRange(5, 9));//k
+			cv::Mat A(jacobians.rows, 10, CV_64FC1);
+			jacobians.colRange(0, 5).copyTo(A.colRange(0, 5));//f,dxdy,c
+			jacobians.col(15).copyTo(A.col(6));//alpha
+			jacobians.colRange(5, 9).copyTo(A.colRange(6, 10));//k
 
 			A = A.t();
 
-			cv::Mat B = jacobians.colRange(8, 14).clone();
+			cv::Mat B = jacobians.colRange(9, 15).clone();
 			B = B.t();
 
-			JJ2(cv::Rect(0, 0, 9, 9)) += A * A.t();
-			JJ2(cv::Rect(9 + 6 * image_idx, 9 + 6 * image_idx, 6, 6)) = B * B.t();
+			JJ2(cv::Rect(0, 0, 10, 10)) += A * A.t();
+			JJ2(cv::Rect(10 + 6 * image_idx, 10 + 6 * image_idx, 6, 6)) = B * B.t();
 
-			JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)) = A * B.t();
-			JJ2(cv::Rect(0, 9 + 6 * image_idx, 9, 6)) = JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)).t();
+			JJ2(cv::Rect(10 + 6 * image_idx, 0, 6, 10)) = A * B.t();
+			JJ2(cv::Rect(0, 10 + 6 * image_idx, 10, 6)) = JJ2(cv::Rect(10 + 6 * image_idx, 0, 6, 10)).t();
 
-			ex3.rowRange(0, 9) += A * exkk.reshape(1, 2 * exkk.rows);
-			ex3.rowRange(9 + 6 * image_idx, 9 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 2 * exkk.rows);
+			ex3.rowRange(0, 10) += A * exkk.reshape(1, 2 * exkk.rows);
+			ex3.rowRange(10 + 6 * image_idx, 10 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 2 * exkk.rows);
 
 			if (check_cond)
 			{
@@ -492,6 +495,7 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 		}
 
 		double rms = sqrt(norm(ex, cv::NORM_L2SQR) / ex.total());
+		std::cout <<"rms:" << rms << std::endl;
 	}
 	else
 	{
@@ -767,55 +771,55 @@ cv::Vec3d my_cv::internal::median3d(cv::InputArray m)
 	return cv::Vec3d(median(M.row(0)), median(M.row(1)), median(M.row(2)));
 }
 
-double getR(double theta, camMode mode)
+double getR(double theta, double f, camMode mode)
 {
 	double r;
 	switch (mode)
 	{
 	case STEREOGRAPHIC:
-		r = 2 * tan(theta / 2.0);
+		r = 2 * f * tan(theta / 2.0);
 		break;
 	case EQUIDISTANCE:
-		r = theta;
+		r = f * theta;
 		break;
 	case EQUISOLID:
-		r = 2 * sin(theta / 2.0);
+		r = 2 * f * sin(theta / 2.0);
 		break;
-	case ORTHOGONAL:
-		r = sin(theta);
+	case ORTHOGONAL: 
+		r = f * sin(theta);
 		break;
 	case IDEAL_PERSPECTIVE:
-		r = tan(theta);
+		r = f * tan(theta);
 		break;
 	}
 	return r;
 }
 
-double getTheta(double r, camMode mode)
+double getTheta(double r, double f, camMode mode)
 {
 	double theta;
 	switch (mode)
 	{
 	case STEREOGRAPHIC:
-		theta = 2 * atan(r / 2.0);
+		theta = 2 * atan(r / (2.0 * f));
 		break;
 	case EQUIDISTANCE:
-		theta = r;
+		theta = r / f;
 		break;
 	case EQUISOLID:
-		theta = 2 * asin(r / 2.0);
+		theta = 2 * asin(r / (2.0 * f));
 		break;
 	case ORTHOGONAL:
-		theta = asin(r);
+		theta = asin(r / f);
 		break;
 	case IDEAL_PERSPECTIVE:
-		theta = atan(r);
+		theta = atan(r / f);
 		break;
 	}
 	return theta;
 }
 
-double get_drdtheta(double theta, camMode mode)
+double get_drdtheta(double theta, double f, camMode mode)
 {
 	double drdtheta;
 	switch (mode)
@@ -824,23 +828,23 @@ double get_drdtheta(double theta, camMode mode)
 	{
 		double temp = cos(theta / 2.0);
 		temp = temp * temp;
-		drdtheta = 1.0 / temp;
+		drdtheta = f / temp;
 	}
 	break;
 	case EQUIDISTANCE:
-		drdtheta = 1.0;
+		drdtheta = f;
 		break;
 	case EQUISOLID:
-		drdtheta = cos(theta / 2.0);
+		drdtheta = f * cos(theta / 2.0);
 		break;
 	case ORTHOGONAL:
-		drdtheta = cos(theta);
+		drdtheta = f * cos(theta);
 		break;
 	case IDEAL_PERSPECTIVE:
 	{
 		double temp_ = cos(theta);
 		temp_ = temp_ * temp_;
-		drdtheta = 1.0 / temp_;
+		drdtheta = f / temp_;
 	}
 	break;
 	}
@@ -848,28 +852,81 @@ double get_drdtheta(double theta, camMode mode)
 	return drdtheta;
 }
 
-double get_dthetadr(double r, camMode mode)
+double get_drdf(double theta, camMode mode)
+{
+	double drdf;
+	switch (mode)
+	{
+	case STEREOGRAPHIC:
+		drdf = 2 * tan(theta / 2.0);
+		break;
+	case EQUIDISTANCE:
+		drdf = theta;
+		break;
+	case EQUISOLID:
+		drdf = 2 * sin(theta / 2);
+		break;
+	case ORTHOGONAL:
+		drdf = sin(theta);
+		break;
+	case IDEAL_PERSPECTIVE:
+		drdf = tan(theta);
+		break;
+	}
+
+	return drdf;
+}
+
+double get_dthetadr(double r, double f, camMode mode)
 {
 	double r2 = r * r;
+	double f2 = f * f;
 	double dthetadr;
 	switch (mode)
 	{
 	case STEREOGRAPHIC:
-		dthetadr = 4.0 / (4.0 + r2);
+		dthetadr = 4.0 * f2 / (4.0 * f2 + r2);
 		break;
 	case EQUIDISTANCE:
-		dthetadr = 1.0;
+		dthetadr = 1.0 / f;
 		break;
 	case EQUISOLID:
-		dthetadr = 2.0 / sqrt(4.0 - r2);
+		dthetadr = 2.0 * f / sqrt(4.0 * f2 - r2);
 		break;
 	case ORTHOGONAL:
-		dthetadr = 1.0 / sqrt(1.0 - r2);
+		dthetadr = f / sqrt(f2 - r2);
 		break;
 	case IDEAL_PERSPECTIVE:
-		dthetadr = 1.0 / (1.0 + r2);
+		dthetadr = f2 / (f2 + r2);
 		break;
 	}
 	return dthetadr;
+}
+
+double get_dthetadf(double r, double f, camMode mode)
+{
+	double r2 = r * r;
+	double f2 = f * f;
+
+	double dthetadf;
+	switch (mode)
+	{
+	case STEREOGRAPHIC:
+		dthetadf = - 4.0 * r / (4.0 * f2 + r2);
+		break;
+	case EQUIDISTANCE:
+		dthetadf = - r / f2;
+		break;
+	case EQUISOLID:
+		dthetadf = - 2.0 * r / (f * sqrt(4.0 * f2 - r2));
+		break;
+	case ORTHOGONAL:
+		dthetadf = - r / (f * sqrt(f2 - r2));
+		break;
+	case IDEAL_PERSPECTIVE:
+		dthetadf = - r / (f2 + r2);
+		break;
+	}
+	return dthetadf;
 }
 

@@ -986,7 +986,7 @@ bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts, douVecPt3f& pts
 	return true;
 }
 
-void createMask_lines(cv::Mat& dst)
+void createMask_lines_LEFT(cv::Mat& dst)
 {
 	vector<vector<cv::Point2i> > contours;
 	{
@@ -1099,6 +1099,99 @@ void createMask_lines(cv::Mat& dst)
 		oneContour.push_back(p14);
 		oneContour.push_back(p15);
 		oneContour.push_back(p16);
+
+		contours.push_back(oneContour);
+	}
+
+	int width = 2560;
+	int height = 1440;
+	cv::Mat img = cv::Mat::zeros(height, width, CV_8UC1);
+
+	drawContours(img, contours, -1, 255, FILLED);
+	//imwrite("img_.jpg", img);
+	bitwise_not(img, dst);
+}
+
+void createMask_lines_RIGHT(cv::Mat& dst)
+{
+	cv::Mat img_1 = imread("D:/studying/stereo vision/research code/data/20191017-1/right/9_pattern0.jpeg");
+	cv::Mat img_2 = imread("D:/studying/stereo vision/research code/data/20191017-1/right/5_pattern0.jpeg");
+
+	vector<vector<cv::Point2i> > contours;
+	{
+		vector<cv::Point2i> oneContour;
+
+		cv::Point2i p1(2559, 0);
+		cv::Point2i p2(2203, 0);
+		cv::Point2i p3(2285, 109);
+		cv::Point2i p4(2310, 152);
+		cv::Point2i p5(2371, 259);
+		cv::Point2i p6(2413, 384);
+		cv::Point2i p7(2434, 497);
+		cv::Point2i p8(2455, 703);
+		cv::Point2i p9(2449, 875);
+		cv::Point2i p10(2424, 1012);
+		cv::Point2i p11(2352, 1207);
+		cv::Point2i p12(2258, 1373);
+		cv::Point2i p13(2210, 1439);
+		cv::Point2i p14(2559, 1439);
+
+		oneContour.push_back(p1);
+		oneContour.push_back(p2);
+		oneContour.push_back(p3);
+		oneContour.push_back(p4);
+		oneContour.push_back(p5);
+		oneContour.push_back(p6);
+		oneContour.push_back(p7);
+		oneContour.push_back(p8);
+		oneContour.push_back(p9);
+		oneContour.push_back(p10);
+		oneContour.push_back(p11);
+		oneContour.push_back(p12);
+		oneContour.push_back(p13);
+		oneContour.push_back(p14);
+
+		contours.push_back(oneContour);
+	}
+	//
+	{
+		vector<cv::Point2i> oneContour;
+
+		cv::Point2i p1(0, 0);
+		cv::Point2i p2(430, 0);
+		cv::Point2i p3(309, 152);
+		cv::Point2i p4(206, 329);
+		cv::Point2i p5(194, 345);
+		cv::Point2i p6(147, 381);
+		cv::Point2i p7(108, 570);
+		cv::Point2i p8(121, 632);
+		cv::Point2i p9(129, 707);
+		cv::Point2i p10(128, 789);
+		cv::Point2i p11(118, 855);
+		cv::Point2i p12(109, 900);
+		cv::Point2i p13(136, 1034);
+		cv::Point2i p14(197, 1161);
+		cv::Point2i p15(268, 1318);
+		cv::Point2i p16(352, 1439);
+		cv::Point2i p17(0, 1439);
+
+		oneContour.push_back(p1);
+		oneContour.push_back(p2);
+		oneContour.push_back(p3);
+		oneContour.push_back(p4);
+		oneContour.push_back(p5);
+		oneContour.push_back(p6);
+		oneContour.push_back(p7);
+		oneContour.push_back(p8);
+		oneContour.push_back(p9);
+		oneContour.push_back(p10);
+		oneContour.push_back(p11);
+		oneContour.push_back(p12);
+		oneContour.push_back(p13);
+		oneContour.push_back(p14);
+		oneContour.push_back(p15);
+		oneContour.push_back(p16);
+		oneContour.push_back(p17);
 
 		contours.push_back(oneContour);
 	}
@@ -2837,10 +2930,10 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//bool isSuc = ptsCalib_Single(imgFilePath, imgSize, cornerPtsVec, objPts3d, 6, 9);
 	
 	cv::Mat mask_;
-	createMask_lines(mask_);
+	createMask_lines_LEFT(mask_);
 	std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
-	double gridSize = 18.66666667;
+	double gridSize = 1080.0 / 57;
 	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, gridSize, 9, 16, mask_);
 
 	if (!isSuc)
@@ -2869,10 +2962,11 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	K.at<double>(0, 2) = 1280.0;
 	K.at<double>(1, 2) = 720.0;
 	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
+	double f = 1.68;
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
 	double rms = my_cv::fisheye_r_rd2::calibrate(objPts3d, cornerPtsVec, imgSize,
-		K, D, R, T, flag,
+		K, D, f, R, T, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 7000, 1e-10));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	cout << "rms" << rms << endl;
 	cout << K << endl;

@@ -52,7 +52,8 @@ struct myCmp_map
 	}
 };
 
-void createMask_lines(cv::Mat& dst);
+void createMask_lines_LEFT(cv::Mat& dst);
+void createMask_lines_RIGHT(cv::Mat& dst);
 cv::Mat detectLines_(cv::Mat& src1, cv::Mat& src2, bool isHorizon);
 void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, cv::Mat& dst_inv, bool isHorizon);
 void connectEdge(cv::Mat& src, int winSize_thres, bool isHorizon = true);

@@ -11,7 +11,8 @@ namespace my_cv
 	{
 		struct JacobianRow
 		{
-			cv::Vec2d df, dc;
+			double df;
+			cv::Vec2d d_delta_xy, dc;
 			cv::Vec4d dk;
 			cv::Vec3d dom, dT;
 			double dalpha;
@@ -47,17 +48,18 @@ namespace my_cv
 	namespace internal {
 		struct CV_EXPORTS IntrinsicParams
 		{
-			cv::Vec2d f;
+			double f;
+			cv::Vec2d delta_xy;
 			cv::Vec2d c;
 			cv::Vec4d k;
 			double alpha;
 			std::vector<uchar> isEstimate;
 
 			IntrinsicParams();
-			IntrinsicParams(cv::Vec2d f, cv::Vec2d c, cv::Vec4d k, double alpha = 0);
+			IntrinsicParams(double f, cv::Vec2d delta_xy, cv::Vec2d c, cv::Vec4d k, double alpha = 0);
 			IntrinsicParams operator+(const cv::Mat& a);
 			IntrinsicParams& operator =(const cv::Mat& a);
-			void Init(const cv::Vec2d& f, const cv::Vec2d& c, const cv::Vec4d& k = cv::Vec4d(0, 0, 0, 0), const double& alpha = 0);
+			void Init(const double& _f, const cv::Vec2d& _delta_xy, const cv::Vec2d& c, const cv::Vec4d& k = cv::Vec4d(0, 0, 0, 0), const double& alpha = 0);
 		};
 		void projectPoints(cv::InputOutputArray objectPoints, cv::InputOutputArray imagePoints,
 			cv::InputArray _rvec, cv::InputArray _tvec,
@@ -108,7 +110,9 @@ namespace my_cv
 	}
 }
 
-double getR(double theta, camMode mode);
-double getTheta(double r, camMode mode);
-double get_drdtheta(double theta, camMode mode);
-double get_dthetadr(double r, camMode mode);
+double getR(double theta, double f, camMode mode);
+double getTheta(double r, double f, camMode mode);
+double get_drdtheta(double theta, double f, camMode mode);
+double get_drdf(double theta, camMode mode);
+double get_dthetadr(double r, double f, camMode mode);
+double get_dthetadf(double r, double f, camMode mode);
