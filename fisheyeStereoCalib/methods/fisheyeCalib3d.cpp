@@ -2840,7 +2840,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	createMask_lines(mask_);
 	std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
-	double gridSize = 18.66666667;
+	double gridSize = 1080.0 / 57;
 	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, gridSize, 9, 16, mask_);
 
 	if (!isSuc)

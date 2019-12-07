@@ -814,6 +814,9 @@ double my_cv::fisheye_r_rd::calibrate(cv::InputArrayOfArrays objectPoints, cv::I
 				/ norm(cv::Vec4d(currentParam.k[0], currentParam.k[1], currentParam.k[2], currentParam.alpha));
 
 			finalParam = currentParam;
+			std::cout << "f:" << finalParam.f << std::endl;
+			std::cout << "c:" << finalParam.c << std::endl;
+			std::cout << "k:" << finalParam.k << std::endl;
 		}
 		if (recompute_extrinsic)
 		{
