@@ -904,7 +904,7 @@ double my_cv::fisheye_r_rd2::calibrate(cv::InputArrayOfArrays objectPoints, cv::
 			cv::Vec2d(image_size.width / 2.0 - 0.5, image_size.height / 2.0 - 0.5));
 	}
 
-	f0 = f;
+	f0 = 1 / _K(0, 0);
 	errors.isEstimate = finalParam.isEstimate;
 
 	std::vector<cv::Vec3d> omc(objectPoints.total()), Tc(objectPoints.total());
@@ -938,6 +938,8 @@ double my_cv::fisheye_r_rd2::calibrate(cv::InputArrayOfArrays objectPoints, cv::
 			change2 = norm(currentParam.k - finalParam.k) / norm(currentParam.k);
 
 			finalParam = currentParam;
+			std::cout << "changes_:" << alpha_smooth2 * G << std::endl;
+			std::cout << "changes:" << change << std::endl;
 
 			std::cout << "f:" << finalParam.f << std::endl;
 			std::cout << "dx:" << finalParam.delta_xy[0] << std::endl;
