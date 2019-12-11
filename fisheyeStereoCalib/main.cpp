@@ -123,7 +123,9 @@ int main()
 	//std::string imgFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera";
 	//std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera\\stereoCalibrateData20190710.xml";
 
-	std::string xmlpath_img = "D:/studying/stereo vision/research code/fisheye-stereo-calibrate/fisheyeStereoCalib/fisheyeStereoCalib/fisheyeStereoCalib/patternsL_corner_detection.xml";
+	std::string xmlpath_img = "D:/studying/stereo vision/research code/fisheye-stereo-calibrate/fisheyeStereoCalib/fisheyeStereoCalib/fisheyeStereoCalib/patternsL20191211.xml";
+	std::string xmlFile_path = "D:/studying/stereo vision/research code/fisheye-stereo-calibrate/fisheyeStereoCalib/fisheyeStereoCalib/fisheyeStereoCalib/20191211res_r_d.xml";
+
 	double singleRms = fisheyeCamCalibSingle(xmlpath_img, xmlFilePath);
 
 	cv::Mat K, D;

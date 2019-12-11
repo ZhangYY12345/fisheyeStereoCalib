@@ -789,6 +789,7 @@ double my_cv::fisheye_r_rd::calibrate(cv::InputArrayOfArrays objectPoints, cv::I
 
 	for (int iter = 0; iter < std::numeric_limits<int>::max(); ++iter)
 	{
+		std::cout << "iter£º" << iter << "-----------" << std::endl;
 		if ((criteria.type == 1 && iter >= criteria.maxCount) ||
 			(criteria.type == 2 && change <= criteria.epsilon) ||
 			(criteria.type == 3 && ((change <= criteria.epsilon) || iter >= criteria.maxCount)))
@@ -814,9 +815,12 @@ double my_cv::fisheye_r_rd::calibrate(cv::InputArrayOfArrays objectPoints, cv::I
 				/ norm(cv::Vec4d(currentParam.k[0], currentParam.k[1], currentParam.k[2], currentParam.alpha));
 
 			finalParam = currentParam;
+
+			std::cout << "changes:" << alpha_smooth2 * G << std::endl;
 			std::cout << "f:" << finalParam.f << std::endl;
 			std::cout << "c:" << finalParam.c << std::endl;
 			std::cout << "k:" << finalParam.k << std::endl;
+			std::cout << "alpha:" << finalParam.alpha << std::endl;
 		}
 		if (recompute_extrinsic)
 		{

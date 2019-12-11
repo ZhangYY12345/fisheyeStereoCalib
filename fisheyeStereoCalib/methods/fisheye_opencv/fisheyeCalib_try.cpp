@@ -6,7 +6,7 @@
 #include "fisheyeCalib_radius_rd.h"
 #include "fisheyeCalib_raduis_rd2.h"
 
-camMode cur_fisheye_mode = EQUISOLID;
+camMode cur_fisheye_mode = EQUIDISTANCE;
 
 my_cv::internal::IntrinsicParams::IntrinsicParams() :
 	f(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec4d::all(0)), alpha(0), isEstimate(9, 0)
@@ -490,11 +490,30 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 				CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
 			}
 		}
+		std::vector<cv::Mat> ex_split;
+		cv::split(ex, ex_split);
+		double rms_x = sqrt(norm(ex_split[0], cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms_x:" << rms_x << std::endl;
+		double rms_y = sqrt(norm(ex_split[1], cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms_y:" << rms_y << std::endl;
 
 		double rms = sqrt(norm(ex, cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms:" << rms << std::endl;
+		if(rms < 1)
+		{
+			cv::waitKey(0);
+		}
 	}
 	else
 	{
+		int total_ex = 0;
+		for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
+		{
+			total_ex += (int)objectPoints.getMat(image_idx).total();
+		}
+		cv::Mat ex(total_ex, 1, CV_64FC3);
+		int insert_idx = 0;
+
 		for (int image_idx = 0; image_idx < n; ++image_idx)
 		{
 			cv::Mat image, object;
@@ -508,6 +527,8 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 			cv::Mat jacobians;
 			projectPoints(x, image, om, T, param, jacobians, distortMode);
 			cv::Mat exkk = (objT ? object.t() : object) - cv::Mat(x);
+			exkk.copyTo(ex.rowRange(insert_idx, insert_idx + exkk.rows));
+			insert_idx += exkk.rows;
 
 			cv::Mat A(jacobians.rows, 9, CV_64FC1);
 			jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
@@ -535,6 +556,22 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 				CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
 			}
 		}
+		std::vector<cv::Mat> ex_split;
+		cv::split(ex, ex_split);
+		double rms_x = sqrt(norm(ex_split[0], cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms_x:" << rms_x << std::endl;
+		double rms_y = sqrt(norm(ex_split[1], cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms_y:" << rms_y << std::endl;
+		double rms_z = sqrt(norm(ex_split[2], cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms_z:" << rms_z << std::endl;
+
+		double rms = sqrt(norm(ex, cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms:" << rms << std::endl;
+		if (rms < 1)
+		{
+			cv::waitKey(0);
+		}
+
 	}
 
 	std::vector<uchar> idxs(param.isEstimate);

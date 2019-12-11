@@ -477,6 +477,7 @@ void my_cv::fisheye_r_rd2::undistortPoints_H(cv::InputArray distorted, cv::Outpu
 	{
 		cv::Vec2d pi = sdepth == CV_32F ? (cv::Vec2d)srcf[i] : srcd[i];  // image point
 		cv::Vec2d pw((pi[0] - c[0]) / f[0], (pi[1] - c[1]) / f[1]);      // 
+		pw[0] -= alpha * pw[1];
 
 		double scale = 1.0;
 
@@ -487,9 +488,28 @@ void my_cv::fisheye_r_rd2::undistortPoints_H(cv::InputArray distorted, cv::Outpu
 		double r = r_d + k[0] * r_d3 + k[1] * r_d5 + k[2] * r_d7 + k[3] * r_d9;
 
 		// reproject
-		double theta = getTheta(r, mode);
-
-		double r_ = getR(theta, IDEAL_PERSPECTIVE);
+		double r_;	
+		if(r > 1 && mode == ORTHOGONAL)
+		{
+			r_ = 1;
+		}
+		else if(r > 2 && mode == EQUISOLID)
+		{
+			r_ = 2;
+		}
+		else
+		{
+			double theta = getTheta(r, mode);
+			if (theta - PI / 2 < 1e-8)
+			{
+				r_ = r;
+			}
+			else
+			{
+				r_ = getR(theta, IDEAL_PERSPECTIVE);
+			}
+		}
+		 ;
 		double newScale = r_ / r_d;
 		cv::Vec2d pfi = pw * newScale;
 
@@ -848,7 +868,7 @@ double my_cv::fisheye_r_rd2::calibrate(cv::InputArrayOfArrays objectPoints, cv::
 	const double alpha_smooth = 0.4;
 	const double thresh_cond = 1e6;
 	double change = 1;
-	double change2 = 1;
+	double change2 = DBL_MIN;
 	cv::Vec2d err_std;
 
 	cv::Matx33d _K;
@@ -881,6 +901,7 @@ double my_cv::fisheye_r_rd2::calibrate(cv::InputArrayOfArrays objectPoints, cv::
 	//-------------------------------Optimization
 	for (int iter = 0; iter < std::numeric_limits<int>::max(); ++iter)
 	{
+		std::cout << "iter£º" << iter << "-----------" << std::endl;
 		if ((criteria.type == 1 && iter >= criteria.maxCount) ||
 			(criteria.type == 2 && change <= criteria.epsilon && change2 <= criteria.epsilon) ||
 			(criteria.type == 3 && ((change <= criteria.epsilon && change2 <= criteria.epsilon) || iter >= criteria.maxCount)))
@@ -897,12 +918,25 @@ double my_cv::fisheye_r_rd2::calibrate(cv::InputArrayOfArrays objectPoints, cv::
 		{
 			currentParam = finalParam + alpha_smooth2 * G;
 
+			std::cout << "changes:" << alpha_smooth2 * G << std::endl;
+
 			change = norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
 				cv::Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
 				/ norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
-			change2 = norm(currentParam.k - finalParam.k) / norm(currentParam.k);
+			//change2 = norm(currentParam.k - finalParam.k) / norm(currentParam.k);
 
 			finalParam = currentParam;
+			std::cout << "f:" << finalParam.f<<std::endl;
+			std::cout << "c:" << finalParam.c << std::endl;
+			std::cout << "k:" << finalParam.k << std::endl;
+			std::cout << "alpha:" << finalParam.alpha << std::endl;
+
+			if (recompute_extrinsic)
+			{
+				CalibrateExtrinsics(objectPoints, imagePoints, finalParam, check_cond,
+					thresh_cond, omc, Tc, RADIUS_RD2_FISHEYE_CALIB);
+			}
+
 		}
 
 		if (recompute_extrinsic)
