@@ -1431,12 +1431,12 @@ void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, cv::Mat& dst_inv, bo
 	dst_inv = cross_inv.clone();
 }
 
-void connectEdge(cv::Mat& src, bool isHorizon)
+void connectEdge(cv::Mat& src, int thres, bool isHorizon)
 {
 	int width = src.cols;
 	int height = src.rows;
 
-	int half_winsize_thres = 10;
+	int half_winsize_thres = thres;
 
 	if (isHorizon)
 	{
@@ -1592,6 +1592,171 @@ void connectEdge(cv::Mat& src, bool isHorizon)
 			}
 		}
 
+	}
+}
+
+void connectEdge_(cv::Mat& src, int winSize_thres, bool isHorizon)
+{
+	int width = src.cols;
+	int height = src.rows;
+
+	int half_winsize_thres = winSize_thres;
+
+	if (isHorizon)
+	{
+		for (int y = 2; y < height - 2; y++)
+		{
+			for (int x = 2; x < width - 2; x++)
+			{
+				//如果该中心点为255,则考虑它的八邻域
+				if (src.at<uchar>(y, x) == 255)
+				{
+					if (src.at<uchar>(y - 1, x) == 255 || src.at<uchar>(y + 1, x) == 255)
+					{
+						continue;
+					}
+					//检查8邻域
+					int num_8 = 0;
+					int offset_x1[2] = { -1, 1 };
+					//
+					int starty = 1;
+					for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+					{
+						if (src.at<uchar>(y + offset_y1, x + offset_x1[0]) == 255)
+							num_8++;
+					}
+					starty++;
+					while (num_8 == 0 && -offset_x1[0] < half_winsize_thres)
+					{
+						offset_x1[0]--;
+						for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+						{
+							if (!(y + offset_y1 >= 0 && y + offset_y1 < height && x + offset_x1[0] >= 0 && x + offset_x1[0] < width))
+							{
+								continue;
+							}
+							if (src.at<uchar>(y + offset_y1, x + offset_x1[0]) == 255)
+							{
+								src.at<uchar>(y + offset_y1 / 2, x + offset_x1[0] / 2) = 255;
+								if (offset_y1 / 2 <= 0 && offset_x1[0] / 2 <= 0 && starty > 2)
+								{
+									x = x + offset_x1[0] / 2 - 1;
+									y = y + offset_y1 / 2 - 1;
+								}
+								num_8++;
+								break;
+							}
+						}
+					}
+					//
+					starty = 1;
+					num_8 = 0;
+					for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+					{
+						if (src.at<uchar>(y + offset_y1, x + offset_x1[1]) == 255)
+							num_8++;
+					}
+					starty++;
+					while (num_8 == 0 && offset_x1[1] < half_winsize_thres)
+					{
+						offset_x1[1]++;
+						for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+						{
+							if (!(y + offset_y1 >= 0 && y + offset_y1 < height && x + offset_x1[1] >= 0 && x + offset_x1[1] < width))
+							{
+								continue;
+							}
+							if (src.at<uchar>(y + offset_y1, x + offset_x1[1]) == 255)
+							{
+								src.at<uchar>(y + offset_y1 / 2, x + offset_x1[1] / 2) = 255;
+								num_8++;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+	}
+	else
+	{
+		for (int y = 2; y < height - 2; y++)
+		{
+			for (int x = 2; x < width - 2; x++)
+			{
+				//如果该中心点为255,则考虑它的八邻域
+				if (src.at<uchar>(y, x) == 255)
+				{
+					if (src.at<uchar>(y, x - 1) == 255 || src.at<uchar>(y, x + 1) == 255)
+					{
+						continue;
+					}
+
+					//检查8邻域
+					int num_8 = 0;
+					int offset_y1[2] = { -1, 1 };
+					//
+					int startx = 1;
+					for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+					{
+						if (src.at<uchar>(y + offset_y1[0], x + offset_x1) == 255)
+							num_8++;
+					}
+					startx++;
+					while (num_8 == 0 && -offset_y1[0] < half_winsize_thres)
+					{
+						offset_y1[0]--;
+						//startx++;
+						for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+						{
+							if (!(y + offset_y1[0] >= 0 && y + offset_y1[0] < height && x + offset_x1 >= 0 && x + offset_x1 < width))
+							{
+								continue;
+							}
+							if (src.at<uchar>(y + offset_y1[0], x + offset_x1) == 255)
+							{
+								src.at<uchar>(y + offset_y1[0] / 2, x + offset_x1 / 2) = 255;
+								if (offset_x1 / 2 <= 0 && offset_y1[0] / 2 <= 0 && startx > 2)
+								{
+									x = x + offset_x1 / 2 - 1;
+									y = y + offset_y1[0] / 2 - 1;
+								}
+								num_8++;
+								break;
+							}
+						}
+					}
+					//
+					startx = 1;
+					num_8 = 0;
+					for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+					{
+						if (src.at<uchar>(y + offset_y1[1], x + offset_x1) == 255)
+							num_8++;
+					}
+					startx++;
+					while (num_8 == 0 && offset_y1[1] < half_winsize_thres)
+					{
+						offset_y1[1]++;
+						//startx++;
+						for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+						{
+							if (!(y + offset_y1[1] >= 0 && y + offset_y1[1] < height && x + offset_x1 >= 0 && x + offset_x1 < width))
+							{
+								continue;
+							}
+							if (src.at<uchar>(y + offset_y1[1], x + offset_x1) == 255)
+							{
+								src.at<uchar>(y + offset_y1[1] / 2, x + offset_x1 / 2) = 255;
+								num_8++;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -1807,11 +1972,145 @@ void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& li
 	}
 }
 
+int removeShortEdges2(cv::Mat& src, std::map<int, std::vector<cv::Point2i>>& lines, int lenThres, bool isHorizon,
+	RIGHT_COUNT_SIDE mode)
+{
+	int width = src.cols;
+	int height = src.rows;
+
+	int count = 0;
+	if (!lines.empty())
+	{
+		lines.clear();
+	}
+
+cv:Mat tmp = src.clone();
+
+	int maxLen = 0;
+	if (isHorizon)
+	{
+		if (mode == TOP_LEFT || mode == BOTTOM_LEFT)
+		{
+			for (int y = 2; y < height - 2; y++)
+			{
+				for (int x = 2; x < width - 2; x++)
+				{
+					if (tmp.at<uchar>(y, x) == 255)
+					{
+						std::vector<cv::Point2i> line;
+						myGetLines(src, tmp, cv::Point2i(x, y), line, lenThres, isHorizon);
+						if (!line.empty())
+						{
+							lines[count] = line;
+							count++;
+							if (maxLen < line.size())
+							{
+								maxLen = line.size();
+							}
+						}
+					}
+				}
+			}
+		}
+		else if (mode == TOP_RIGHT || mode == BOTTOM_RIGHT)
+		{
+			for (int y = 2; y < height - 2; y++)
+			{
+				for (int x = width - 3; x > 1; x--)
+				{
+					if (tmp.at<uchar>(y, x) == 255)
+					{
+						std::vector<cv::Point2i> line;
+						myGetLines(src, tmp, cv::Point2i(x, y), line, lenThres, isHorizon);
+						if (!line.empty())
+						{
+							lines[count] = line;
+							count++;
+							if (maxLen < line.size())
+							{
+								maxLen = line.size();
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		for (int x = 2; x < width - 2; x++)
+		{
+			for (int y = 2; y < height - 2; y++)
+			{
+				if (tmp.at<uchar>(y, x) == 255)
+				{
+					std::vector<cv::Point2i> line;
+					myGetLines(src, tmp, cv::Point2i(x, y), line, lenThres, isHorizon);
+					if (!line.empty())
+					{
+						lines[count] = line;
+						count++;
+						if (maxLen < line.size())
+						{
+							maxLen = line.size();
+						}
+					}
+				}
+			}
+		}
+	}
+	return maxLen;
+}
+
+void post_removeShortEdges2(cv::Mat& src, std::map<int, std::vector<cv::Point2i>>& lines, int lenThres, bool isHorizon,
+	RIGHT_COUNT_SIDE mode)
+{
+	int width = src.cols;
+	int height = src.rows;
+
+	if (isHorizon)
+	{
+		for (auto it = lines.begin(); it != lines.end(); it++)
+		{
+			if (it->second.size() < lenThres)
+			{
+				for (std::vector<cv::Point2i>::iterator it_ = it->second.begin(); it_ != it->second.end(); it_++)
+				{
+					cv::Point2i pt = *it_;
+					src.at<uchar>(pt.y, pt.x) = 0;
+				}
+			}
+		}
+	}
+	else
+	{
+		for (auto it = lines.begin(); it != lines.end(); it++)
+		{
+			if (it->second.size() < lenThres)
+			{
+				for (std::vector<cv::Point2i>::iterator it_ = it->second.begin(); it_ != it->second.end(); it_++)
+				{
+					cv::Point2i pt = *it_;
+					src.at<uchar>(pt.y, pt.x) = 0;
+				}
+			}
+		}
+	}
+
+	removeShortEdges2(src, lines, lenThres, isHorizon, mode);
+}
+
 void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon, RIGHT_COUNT_SIDE mode)
 {
-	connectEdge(src, isHorizon);
-	connectEdge(src, isHorizon);
-	removeShortEdges(src, lines, isHorizon, mode);
+	//connectEdge(src, isHorizon);
+	//connectEdge(src, isHorizon);
+	//removeShortEdges(src, lines, isHorizon, mode);
+	connectEdge(src, 5, isHorizon);
+	//int maxLen = removeShortEdges2(src, lines, 100, isHorizon, mode);
+	//post_removeShortEdges2(src, lines, maxLen / 2, isHorizon, mode);
+	int maxLen = removeShortEdges2(src, lines, 100, isHorizon, mode);
+	connectEdge_(src, 10, isHorizon);
+	post_removeShortEdges2(src, lines, maxLen / 2, isHorizon, mode);
 }
 
 /**
@@ -1940,8 +2239,8 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 {
 	cv::Mat lineV, lineV_inv;
 	cv::Mat lineH, lineH_inv;
-	detectLines_(src[0], src[1], lineV, lineV_inv, false);
-	detectLines_(src[2], src[3], lineH, lineH_inv, true);
+	detectLines_(src[2], src[3], lineV, lineV_inv, false);
+	detectLines_(src[0], src[1], lineH, lineH_inv, true);
 
 	bitwise_and(lineV, lineV_inv, lineV);
 	bitwise_and(lineH, lineH_inv, lineH);
@@ -2102,7 +2401,7 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 		break;
 	}
 
-	cornerSubPix(ptsImg_, pts, cv::Size(5, 5), cv::Size(-1, -1),
+	cornerSubPix(src[4], pts, cv::Size(5, 5), cv::Size(-1, -1),
 		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 700, 1e-8));
 
 }
@@ -2120,11 +2419,11 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SID
 	tinyxml2::XMLElement *root_tl = root->FirstChildElement("images_tl");
 	tinyxml2::XMLElement *node_tl = root_tl->FirstChildElement("pair");
 	while (node_tl) {
-		vector<string> filenames(4);
+		vector<string> filenames(5);
 
 		tinyxml2::XMLElement *filename = node_tl->FirstChildElement("pattern");
 		int count;
-		for (count = 0; count < 4; ++count) {
+		for (count = 0; count < 5; ++count) {
 			if (!filename) {
 				break;
 			}
@@ -2144,11 +2443,11 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SID
 	tinyxml2::XMLElement *root_tr = root->FirstChildElement("images_tr");
 	tinyxml2::XMLElement *node_tr = root_tr->FirstChildElement("pair");
 	while (node_tr) {
-		vector<string> filenames(4);
+		vector<string> filenames(5);
 
 		tinyxml2::XMLElement *filename = node_tr->FirstChildElement("pattern");
 		int count;
-		for (count = 0; count < 4; ++count) {
+		for (count = 0; count < 5; ++count) {
 			if (!filename) {
 				break;
 			}
@@ -2167,11 +2466,11 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SID
 	tinyxml2::XMLElement *root_bl = root->FirstChildElement("images_bl");
 	tinyxml2::XMLElement *node_bl = root_bl->FirstChildElement("pair");
 	while (node_bl) {
-		vector<string> filenames(4);
+		vector<string> filenames(5);
 
 		tinyxml2::XMLElement *filename = node_bl->FirstChildElement("pattern");
 		int count;
-		for (count = 0; count < 4; ++count) {
+		for (count = 0; count < 5; ++count) {
 			if (!filename) {
 				break;
 			}
@@ -2190,11 +2489,11 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SID
 	tinyxml2::XMLElement *root_br = root->FirstChildElement("images_br");
 	tinyxml2::XMLElement *node_br = root_br->FirstChildElement("pair");
 	while (node_br) {
-		vector<string> filenames(4);
+		vector<string> filenames(5);
 
 		tinyxml2::XMLElement *filename = node_br->FirstChildElement("pattern");
 		int count;
-		for (count = 0; count < 4; ++count) {
+		for (count = 0; count < 5; ++count) {
 			if (!filename) {
 				break;
 			}
@@ -2227,102 +2526,27 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 
 	for(auto it = imgPaths.begin(); it != imgPaths.end(); it++)
 	{
-		if(it->first == TOP_LEFT)
+		if(it->first == TOP_LEFT || it->first == TOP_RIGHT || it->first == BOTTOM_LEFT || it->first == BOTTOM_RIGHT)
 		{
 			for(auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
 			{
 				vector<cv::Point2f> oneImgPts;
 				vector<cv::Point3f> oneObjPts;
 
-				if((*it_1).size() != 4)
+				if((*it_1).size() != 5)
 				{
 					continue;
 				}
 
 				vector<cv::Mat> oneImgs;
-				for(int i = 0; i < 4; i++)
+				for(int i = 0; i < 5; i++)
 				{
 					cv::Mat img = imread((*it_1)[i]);
 					cvtColor(img, img, COLOR_BGR2GRAY);
 					oneImgs.push_back(img);
 				}
 
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, TOP_LEFT, mask);
-				pts.push_back(oneImgPts);
-				ptsReal.push_back(oneObjPts);
-			}
-		}
-		else if(it->first == TOP_RIGHT)
-		{
-			for (auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
-			{
-				vector<cv::Point2f> oneImgPts;
-				vector<cv::Point3f> oneObjPts;
-
-				if ((*it_1).size() != 4)
-				{
-					continue;
-				}
-
-				vector<cv::Mat> oneImgs;
-				for (int i = 0; i < 4; i++)
-				{
-					cv::Mat img = imread((*it_1)[i]);
-					cvtColor(img, img, COLOR_BGR2GRAY);
-					oneImgs.push_back(img);
-				}
-
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, TOP_RIGHT, mask);
-				pts.push_back(oneImgPts);
-				ptsReal.push_back(oneObjPts);
-			}
-		}
-		else if(it->first == BOTTOM_LEFT)
-		{
-			for (auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
-			{
-				vector<cv::Point2f> oneImgPts;
-				vector<cv::Point3f> oneObjPts;
-
-				if ((*it_1).size() != 4)
-				{
-					continue;
-				}
-
-				vector<cv::Mat> oneImgs;
-				for (int i = 0; i < 4; i++)
-				{
-					cv::Mat img = imread((*it_1)[i]);
-					cvtColor(img, img, COLOR_BGR2GRAY);
-					oneImgs.push_back(img);
-				}
-
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, BOTTOM_LEFT, mask);
-				pts.push_back(oneImgPts);
-				ptsReal.push_back(oneObjPts);
-			}
-		}
-		else if(it->first == BOTTOM_RIGHT)
-		{
-			for (auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
-			{
-				vector<cv::Point2f> oneImgPts;
-				vector<cv::Point3f> oneObjPts;
-
-				if ((*it_1).size() != 4)
-				{
-					continue;
-				}
-
-				vector<cv::Mat> oneImgs;
-				for (int i = 0; i < 4; i++)
-				{
-					cv::Mat img = imread((*it_1)[i]);
-					cvtColor(img, img, COLOR_BGR2GRAY);
-					oneImgs.push_back(img);
-				}
-
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, BOTTOM_RIGHT, mask);
+				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, it->first, mask);
 				pts.push_back(oneImgPts);
 				ptsReal.push_back(oneObjPts);
 			}
@@ -2514,9 +2738,9 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
 	//bool isSuc = ptsCalib_Single(imgFilePath, imgSize, cornerPtsVec, objPts3d, 6, 9);
 
-	double gridSize = 18.94736842;
+	double gridSize = 16.5;
 	cv::Mat mask_;
-	createMask_lines(mask_);
+	//createMask_lines(mask_);
 	std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
 	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, gridSize, 9, 16, mask_);
