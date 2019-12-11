@@ -6,7 +6,7 @@
 #include "fisheyeCalib_radius_rd.h"
 #include "fisheyeCalib_raduis_rd2.h"
 
-camMode cur_fisheye_mode = EQUIDISTANCE;
+camMode cur_fisheye_mode = STEREOGRAPHIC;
 
 my_cv::internal::IntrinsicParams::IntrinsicParams() :
 	f(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec4d::all(0)), alpha(0), isEstimate(9, 0)

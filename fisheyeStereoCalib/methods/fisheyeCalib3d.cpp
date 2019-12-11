@@ -2461,6 +2461,9 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 	post_process(lineH, lines_H, true, mode);
 	post_process(lineV, lines_V, false, mode);
 
+	cout << lines_H.size() << endl;
+	cout << lines_V.size() << endl;
+
 	std::map<cv::Point2i, cv::Point2f, myCmp_map>  pts_H;
 
 	cv::Mat ptsImg;
@@ -2842,33 +2845,9 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 
 	for(auto it = imgPaths.begin(); it != imgPaths.end(); it++)
 	{
-		if(it->first == TOP_LEFT)
+		if (it->first == TOP_LEFT || it->first == TOP_RIGHT || it->first == BOTTOM_LEFT || it->first == BOTTOM_RIGHT)
 		{
-			for(auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
-			{
-				vector<cv::Point2f> oneImgPts;
-				vector<cv::Point3f> oneObjPts;
 
-				if((*it_1).size() != 5)
-				{
-					continue;
-				}
-
-				vector<cv::Mat> oneImgs;
-				for(int i = 0; i < 5; i++)
-				{
-					cv::Mat img = imread((*it_1)[i]);
-					cvtColor(img, img, COLOR_BGR2GRAY);
-					oneImgs.push_back(img);
-				}
-
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, TOP_LEFT, mask);
-				pts.push_back(oneImgPts);
-				ptsReal.push_back(oneObjPts);
-			}
-		}
-		else if(it->first == TOP_RIGHT)
-		{
 			for (auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
 			{
 				vector<cv::Point2f> oneImgPts;
@@ -2887,57 +2866,7 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 					oneImgs.push_back(img);
 				}
 
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, TOP_RIGHT, mask);
-				pts.push_back(oneImgPts);
-				ptsReal.push_back(oneObjPts);
-			}
-		}
-		else if(it->first == BOTTOM_LEFT)
-		{
-			for (auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
-			{
-				vector<cv::Point2f> oneImgPts;
-				vector<cv::Point3f> oneObjPts;
-
-				if ((*it_1).size() != 5)
-				{
-					continue;
-				}
-
-				vector<cv::Mat> oneImgs;
-				for (int i = 0; i < 5; i++)
-				{
-					cv::Mat img = imread((*it_1)[i]);
-					cvtColor(img, img, COLOR_BGR2GRAY);
-					oneImgs.push_back(img);
-				}
-
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, BOTTOM_LEFT, mask);
-				pts.push_back(oneImgPts);
-				ptsReal.push_back(oneObjPts);
-			}
-		}
-		else if(it->first == BOTTOM_RIGHT)
-		{
-			for (auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
-			{
-				vector<cv::Point2f> oneImgPts;
-				vector<cv::Point3f> oneObjPts;
-
-				if ((*it_1).size() != 5)
-				{
-					continue;
-				}
-
-				vector<cv::Mat> oneImgs;
-				for (int i = 0; i < 5; i++)
-				{
-					cv::Mat img = imread((*it_1)[i]);
-					cvtColor(img, img, COLOR_BGR2GRAY);
-					oneImgs.push_back(img);
-				}
-
-				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, BOTTOM_RIGHT, mask);
+				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, it->first, mask);
 				pts.push_back(oneImgPts);
 				ptsReal.push_back(oneObjPts);
 			}
