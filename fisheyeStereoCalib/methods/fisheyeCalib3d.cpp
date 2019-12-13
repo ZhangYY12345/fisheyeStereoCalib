@@ -2743,7 +2743,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//createMask_lines(mask_);
 	std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
-	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, gridSize, 9, 16, mask_);
+	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, gridSize, 17, 31, mask_);
 
 	if (!isSuc)
 	{
@@ -2755,7 +2755,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	int flag = 0;
 	flag |= fisheye::CALIB_RECOMPUTE_EXTRINSIC;
 	//flag |= fisheye::CALIB_CHECK_COND;
-	//flag |= fisheye::CALIB_FIX_SKEW;
+	flag |= fisheye::CALIB_FIX_SKEW;
 	//flag |= fisheye::CALIB_FIX_K1;
 	//flag |= fisheye::CALIB_FIX_K2;
 	//flag |= fisheye::CALIB_FIX_K3;
@@ -2770,8 +2770,8 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	K.at<double>(1, 1) = 832.7025533;
 	K.at<double>(0, 2) = 1280.0;
 	K.at<double>(1, 2) = 720.0;
-	cv::Mat D = cv::Mat::zeros(6, 1, CV_64FC1);		//the paramters of camera distortion
-	cv::Mat DE = cv::Mat::zeros(6, 1, CV_64FC1);		//the paramters of camera distortion
+	cv::Mat D = cv::Mat::ones(6, 1, CV_64FC1) * -(1e-5);		//the paramters of camera distortion
+	cv::Mat DE = cv::Mat::ones(6, 1, CV_64FC1) * 1e-5;		//the paramters of camera distortion
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
 	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,

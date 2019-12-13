@@ -904,8 +904,8 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 	const int recompute_extrinsic = flags & cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC ? 1 : 0;
 	const int check_cond = flags & cv::fisheye::CALIB_CHECK_COND ? 1 : 0;
 
-	const double alpha_smooth = 0.4;
 	const double thresh_cond = 1e6;
+	double alpha_smooth = 10;
 	double change = 1;
 	double change2 = 1e-100;
 	cv::Vec2d err_std;
@@ -944,12 +944,13 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 	//-------------------------------Optimization
 	for (int iter = 0; iter < std::numeric_limits<int>::max(); ++iter)
 	{
+		std::cout << "iter:" << iter << "---------------" << std::endl;
+
 		if ((criteria.type == 1 && iter >= criteria.maxCount) ||
 			(criteria.type == 2 && change <= criteria.epsilon && change2 <= criteria.epsilon) ||
 			(criteria.type == 3 && ((change <= criteria.epsilon && change2 <= criteria.epsilon) || iter >= criteria.maxCount)))
 			break;
 
-		double alpha_smooth2 = 1 - std::pow(1 - alpha_smooth, iter + 1.0);
 
 		cv::Mat JJ2, ex3;
 		ComputeJacobians(objectPoints, imagePoints, finalParam, omc, Tc, check_cond, thresh_cond, JJ2, ex3, RADIUS_D_FISHEYE_CALIB);
@@ -957,65 +958,29 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 		int count = 1;
 		cv::Mat G;
 		int a = solve(JJ2, ex3, G, cv::DECOMP_LU);
-		while(a == 0)
+
+		if (a != 1)
 		{
-			switch (count)
-			{
-			case 1:
-				a = cv::solve(JJ2, ex3, G, cv::DECOMP_CHOLESKY);
-				count++;
-				break;
-			case 2:
-				a = cv::solve(JJ2, ex3, G, cv::DECOMP_QR);
-				count++;
-				break;
-			case 3:
-				a = cv::solve(JJ2, ex3, G, cv::DECOMP_EIG);
-				count++;
-				break;
-			case 4:
-				a = cv::solve(JJ2, ex3, G, cv::DECOMP_SVD);
-				count++;
-				break;
-			case 5:
-				cv::solve(JJ2, ex3, G, cv::DECOMP_NORMAL);
-				a = 1;
-				count++;
-				break;
-			}
+			G.setTo(1e-5);
+			alpha_smooth = alpha_smooth * 10;
 		}
-		currentParam = finalParam + alpha_smooth2 * G;
-
-		//for(int image_idx = 0; image_idx < objectPoints.total(); image_idx++)
-		//{
-		//	cv::Mat image, object;
-		//	objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
-		//	imagePoints.getMat(image_idx).convertTo(image, CV_64FC2);
-
-		//	bool imT = image.rows < image.cols;
-		//	cv::Mat om(omc[image_idx]), T(Tc[image_idx]);
-
-		//	std::vector<cv::Point2d> x;
-		//	cv::Mat jacobians;
-		//	my_cv::internal::projectPoints(object, x, om, T, finalParam, jacobians, RADIUS_D_FISHEYE_CALIB);
-		//	cv::Mat exkk = (imT ? image.t() : image) - cv::Mat(x);
-
-		//	std::vector<cv::Point2d> x_cur;
-		//	cv::Mat jacobians_cur;
-		//	my_cv::internal::projectPoints(object, x_cur, om, T, currentParam, jacobians_cur, RADIUS_D_FISHEYE_CALIB);
-		//	cv::Mat exkk_cur = (imT ? image.t() : image) - cv::Mat(x_cur);
-		//}
-
+		else
+		{
+			alpha_smooth = alpha_smooth / 10;
+		}
+		currentParam = finalParam + alpha_smooth * G;
 
 		change = norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
 			cv::Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
 			/ norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
 		//change2 = norm(currentParam.k - finalParam.k) / norm(currentParam.k);
 
-		if (a != 0)
-		{
-			finalParam = currentParam;
-		}
+		finalParam = currentParam;
+		std::cout << "f:" << finalParam.f;
+		std::cout << "c:" << finalParam.c << std::endl;
+		std::cout << "k:" << finalParam.k << std::endl;
+		std::cout << "ke:" << finalParam.ke << std::endl;
+		std::cout << "alpha:" << finalParam.alpha << std::endl;
 
 		if (recompute_extrinsic)
 		{
