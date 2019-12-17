@@ -2246,8 +2246,8 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 {
 	cv::Mat lineV, lineV_inv;
 	cv::Mat lineH, lineH_inv;
-	detectLines_(src[0], src[1], lineV, lineV_inv, false);
-	detectLines_(src[2], src[3], lineH, lineH_inv, true);
+	detectLines_(src[2], src[3], lineV, lineV_inv, false);
+	detectLines_(src[0], src[1], lineH, lineH_inv, true);
 
 	bitwise_and(lineV, lineV_inv, lineV);
 	bitwise_and(lineH, lineH_inv, lineH);
