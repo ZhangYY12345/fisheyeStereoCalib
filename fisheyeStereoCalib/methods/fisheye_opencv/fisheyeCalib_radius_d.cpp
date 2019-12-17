@@ -1,6 +1,7 @@
-#include "fisheyeCalib_radius_d.h"
+Ôªø#include "fisheyeCalib_radius_d.h"
 #include "fisheyeCalib_try.h"
 #include "../polynomial-solve/root_finder.h"
+#include "../fisheyeLib/calib_libs/IncidentVector.h"
 
 extern camMode cur_fisheye_mode;
 
@@ -103,7 +104,7 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 		if (isJacobianNeeded)
 		{
 			//cv::Vec3d Xi = pdepth == CV_32F ? (cv::Vec3d)Xf[i] : Xd[i];
-			//cv::Vec3d Y = aff*Xi;				Y---->œ‡ª˙◊¯±Íœµ
+			//cv::Vec3d Y = aff*Xi;				Y---->Áõ∏Êú∫ÂùêÊ†áÁ≥ª
 			double dYdR[] = { Xi[0], Xi[1], Xi[2], 0, 0, 0, 0, 0, 0,
 							  0, 0, 0, Xi[0], Xi[1], Xi[2], 0, 0, 0,
 							  0, 0, 0, 0, 0, 0, Xi[0], Xi[1], Xi[2] };//?todo
@@ -114,7 +115,7 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 			cv::Matx33d dYdT_data = cv::Matx33d::eye();
 			const cv::Vec3d *dYdT = (cv::Vec3d*)dYdT_data.val;
 
-			//cv::Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);	x--->πÈ“ªªØœ‡ª˙◊¯±Íœµ
+			//cv::Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);	x--->ÂΩí‰∏ÄÂåñÁõ∏Êú∫ÂùêÊ†áÁ≥ª
 			cv::Vec3d dxdom[2];
 			dxdom[0] = (1.0 / Y[2]) * dYdom[0] - x[0] / Y[2] * dYdom[2];
 			dxdom[1] = (1.0 / Y[2]) * dYdom[1] - x[1] / Y[2] * dYdom[2];
@@ -308,7 +309,7 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 	if (!P.empty())
 	{
 		P.getMat().colRange(0, 3).convertTo(PP, CV_64F);
-		RRR = PP * RR;//PP∂‘”¶ƒ⁄≤Œæÿ’Û£¨ RRŒ™–˝◊™æÿ’Û
+		RRR = PP * RR;//PPÂØπÂ∫îÂÜÖÂèÇÁü©ÈòµÔºå RR‰∏∫ÊóãËΩ¨Áü©Èòµ
 	}
 
 	// start undistorting
@@ -822,7 +823,6 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 	const double alpha_smooth = 0.4;
 	const double thresh_cond = 1e6;
 	double change = 1;
-	double change2 = 1;
 	cv::Vec2d err_std;
 
 	cv::Matx33d _K;
@@ -853,67 +853,118 @@ double my_cv::fisheye_r_d::calibrate(cv::InputArrayOfArrays objectPoints, cv::In
 
 
 	//-------------------------------Optimization
+	double smooth_ = 0.00001;
 	for (int iter = 0; iter < std::numeric_limits<int>::max(); ++iter)
 	{
-		std::cout << "iter£∫" << iter << "-----------" << std::endl;
+		std::cout << "iterÔºö" << iter << "-----------" << std::endl;
 
 		if ((criteria.type == 1 && iter >= criteria.maxCount) ||
-			(criteria.type == 2 && change <= criteria.epsilon && change2 <= criteria.epsilon) ||
-			(criteria.type == 3 && ((change <= criteria.epsilon && change2 <= criteria.epsilon) || iter >= criteria.maxCount)))
+			(criteria.type == 2 && change <= criteria.epsilon ) ||
+			(criteria.type == 3 && (change <= criteria.epsilon || iter >= criteria.maxCount)))
 			break;
 
 		double alpha_smooth2 = 1 - std::pow(1 - alpha_smooth, iter + 1.0);
 
 		cv::Mat JJ2, ex3;
-		ComputeJacobians(objectPoints, imagePoints, finalParam, omc, Tc, check_cond, thresh_cond, JJ2, ex3, RADIUS_D_FISHEYE_CALIB);
+		cv::Mat ex_all;
+		ComputeJacobians(objectPoints, imagePoints, finalParam, omc, Tc, check_cond, thresh_cond, JJ2, ex3, ex_all, RADIUS_D_FISHEYE_CALIB);
 
-		cv::Mat G;
-		int a = solve(JJ2, ex3, G, cv::DECOMP_SVD);
-		if (a == 1)
+		double rms0 = sqrt(norm(ex_all, cv::NORM_L2SQR) / ex_all.total());
+		double subIter = 0;	
+		while (true)
 		{
-			currentParam = finalParam + alpha_smooth2 * G;
+			std::cout << "iter:" << iter << "\tsubIter: " << subIter << "------------------" << std::endl;
+			std::cout << "smooth_:" << smooth_ << std::endl;
+			cv::Mat cmat = cv::Mat::ones(JJ2.rows, JJ2.cols, CV_64F); // To calculate (1+C)
+			for (int i = 0; i < JJ2.rows; ++i) {
+				cmat.at<double>(i, i) = 1 + smooth_;
+			}
 
-			//for(int image_idx = 0; image_idx < objectPoints.total(); image_idx++)
-			//{
-			//	cv::Mat image, object;
-			//	objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
-			//	imagePoints.getMat(image_idx).convertTo(image, CV_64FC2);
+			currentParam = finalParam;
+			double rms_;
+			for (int i = 0; i < 20; i++)
+			{
+				std::cout << "iter:" << iter << "\tsubIter: " << subIter << "\tsub_sub_iter:" << i << "------------------" << std::endl;
+				std::cout << "smooth_:" << smooth_ << std::endl;
+				cv::Mat G;
+				int a = solve(JJ2.mul(cmat), ex3, G, cv::DECOMP_LU);
+				if (a == 1)
+				{
+					currentParam = currentParam + alpha_smooth2 * G;
 
-			//	bool imT = image.rows < image.cols;
-			//	cv::Mat om(omc[image_idx]), T(Tc[image_idx]);
+					if (recompute_extrinsic)
+					{
+						CalibrateExtrinsics(objectPoints, imagePoints, currentParam, check_cond,
+							thresh_cond, omc, Tc, RADIUS_D_FISHEYE_CALIB);
+					}
+					cv::Mat JJ2_, ex3_;
+					cv::Mat ex_all_;
+					ComputeJacobians(objectPoints, imagePoints, currentParam, omc, Tc, check_cond, thresh_cond, JJ2_, ex3_, ex_all_, RADIUS_D_FISHEYE_CALIB);
+					rms_ = sqrt(norm(ex_all_, cv::NORM_L2SQR) / ex_all_.total());
 
-			//	std::vector<cv::Point2d> x;
-			//	cv::Mat jacobians;
-			//	my_cv::internal::projectPoints(object, x, om, T, finalParam, jacobians, RADIUS_D_FISHEYE_CALIB);
-			//	cv::Mat exkk = (imT ? image.t() : image) - cv::Mat(x);
+					if (rms_ < rms0)
+					{
+						change = norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
+							cv::Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
+							/ norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
 
-			//	std::vector<cv::Point2d> x_cur;
-			//	cv::Mat jacobians_cur;
-			//	my_cv::internal::projectPoints(object, x_cur, om, T, currentParam, jacobians_cur, RADIUS_D_FISHEYE_CALIB);
-			//	cv::Mat exkk_cur = (imT ? image.t() : image) - cv::Mat(x_cur);
-			//}
+						//if(change < 1e-11 && rms0 < 1)
+						//{
+						//	_K = cv::Matx33d(finalParam.f[0], finalParam.f[0] * finalParam.alpha, finalParam.c[0],
+						//		0, finalParam.f[1], finalParam.c[1],
+						//		0, 0, 1);
+						//	cv::Mat(finalParam.k).convertTo(D, D.empty() ? CV_64FC1 : D.type());
 
+						//	cv::FileStorage fn("calib.xml", cv::FileStorage::WRITE);
+						//	fn << "ImgSize" << image_size;
+						//	fn << "CameraInnerPara" << _K;
+						//	fn << "CameraDistPara" << D;
+						//	fn << "RMS" << rms0;
+						//	fn.release();
+						//	return rms0;
+						//}
+						finalParam = currentParam;
+						//std::cout << "changes:" << alpha_smooth2 * G << std::endl;
+						std::cout << "f:" << finalParam.f << std::endl;
+						std::cout << "c:" << finalParam.c << std::endl;
+						std::cout << "k:" << finalParam.k << std::endl;
+						std::cout << "alpha:" << finalParam.alpha << std::endl;
 
-			change = norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
-				cv::Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
-				/ norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
-			change2 = norm(currentParam.k - finalParam.k) / norm(currentParam.k);
-
-			finalParam = currentParam;
-
-			std::cout << "changes:" << alpha_smooth2 * G << std::endl;
-			std::cout << "f:" << finalParam.f << std::endl;
-			std::cout << "c:" << finalParam.c << std::endl;
-			std::cout << "k:" << finalParam.k << std::endl;
-			std::cout << "alpha:" << finalParam.alpha << std::endl;
-
+						smooth_ /= 10.0;
+						break;
+					}
+				}
+				else
+				{
+					break;
+				}
+			}
+			if (rms_ < rms0)
+			{
+				break;
+			}
+			smooth_ *= 10.0;			
+			subIter++;
 		}
-		if (recompute_extrinsic)
-		{
-			CalibrateExtrinsics(objectPoints, imagePoints, finalParam, check_cond,
-				thresh_cond, omc, Tc, RADIUS_D_FISHEYE_CALIB);
-		}
+		smooth_ = 0.00001;
+		//change = norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
+		//	cv::Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
+		//	/ norm(cv::Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
+		//change2 = norm(currentParam.k - finalParam.k) / norm(currentParam.k);
+
+
+
+		//std::cout << "changes:" << alpha_smooth2 * G << std::endl;
+		//std::cout << "f:" << finalParam.f << std::endl;
+		//std::cout << "c:" << finalParam.c << std::endl;
+		//std::cout << "k:" << finalParam.k << std::endl;
+		//std::cout << "alpha:" << finalParam.alpha << std::endl;
+
 	}
+
+
+		
+	
 
 	//-------------------------------Validation
 	double rms;

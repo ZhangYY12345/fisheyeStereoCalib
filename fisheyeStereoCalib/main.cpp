@@ -37,9 +37,9 @@ int main()
 	/*
 	//single fisheye camera calibration
 	fisheyeCalibInfo calibInfoL, calibInfoR;
-	calibInfoL.calibPatternFile = "./20191119/patternsL.xml";
-	calibInfoL.calibLineDetected = "./20191119/linesDetectedL.xml";
-	calibInfoL.calibFile = "./20191119/resCalibL.xml";
+	calibInfoL.calibPatternFile = "patternsL_equalSolid.xml";//20191211
+	calibInfoL.calibLineDetected = "./20191211/linesDetectedL_equalSolid.xml";
+	calibInfoL.calibFile = "./20191211/resCalibL_equalSolid.xml";
 	fisheyeCalib_(calibInfoL);
 
 	calibInfoR.calibPatternFile = "./20191119/patternsR.xml";

@@ -6,7 +6,7 @@
 #include "fisheyeCalib_radius_rd.h"
 #include "fisheyeCalib_raduis_rd2.h"
 
-camMode cur_fisheye_mode = STEREOGRAPHIC;
+camMode cur_fisheye_mode = EQUISOLID;
 
 my_cv::internal::IntrinsicParams::IntrinsicParams() :
 	f(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec4d::all(0)), alpha(0), isEstimate(9, 0)
@@ -556,6 +556,185 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 				CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
 			}
 		}
+		std::vector<cv::Mat> ex_split;
+		cv::split(ex, ex_split);
+		double rms_x = sqrt(norm(ex_split[0], cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms_x:" << rms_x << std::endl;
+		double rms_y = sqrt(norm(ex_split[1], cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms_y:" << rms_y << std::endl;
+		double rms_z = sqrt(norm(ex_split[2], cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms_z:" << rms_z << std::endl;
+
+		double rms = sqrt(norm(ex, cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms:" << rms << std::endl;
+		if (rms < 1)
+		{
+			cv::waitKey(0);
+		}
+
+	}
+
+	std::vector<uchar> idxs(param.isEstimate);
+	idxs.insert(idxs.end(), 6 * n, 1);
+
+	subMatrix(JJ2, JJ2, idxs, idxs);
+	subMatrix(ex3, ex3, std::vector<uchar>(1, 1), idxs);
+}
+
+void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::InputArrayOfArrays imagePoints,
+	const IntrinsicParams& param, cv::InputArray omc, cv::InputArray Tc, const int& check_cond,
+	const double& thresh_cond, cv::Mat& JJ2, cv::Mat& ex3, cv::Mat& ex_all, DISTORT_Mode_Fisheye distortMode)
+{
+	CV_Assert(!objectPoints.empty() && (objectPoints.type() == CV_32FC3 || objectPoints.type() == CV_64FC3));
+	CV_Assert(!imagePoints.empty() && (imagePoints.type() == CV_32FC2 || imagePoints.type() == CV_64FC2));
+
+	CV_Assert(!omc.empty() && omc.type() == CV_64FC3);
+	CV_Assert(!Tc.empty() && Tc.type() == CV_64FC3);
+
+	int n = (int)objectPoints.total();
+
+	JJ2 = cv::Mat::zeros(9 + 6 * n, 9 + 6 * n, CV_64FC1);
+	ex3 = cv::Mat::zeros(9 + 6 * n, 1, CV_64FC1);
+
+	if (distortMode != RADIUS_RD_FISHEYE_CALIB)
+	{
+		int total_ex = 0;
+		for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
+		{
+			total_ex += (int)objectPoints.getMat(image_idx).total();
+		}
+		cv::Mat ex(total_ex, 1, CV_64FC2);
+		int insert_idx = 0;
+
+		for (int image_idx = 0; image_idx < n; ++image_idx)
+		{
+			cv::Mat image, object;
+			objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
+			imagePoints.getMat(image_idx).convertTo(image, CV_64FC2);
+
+			bool imT = image.rows < image.cols;
+			cv::Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
+
+			std::vector<cv::Point2d> x;
+			cv::Mat jacobians;
+			projectPoints(object, x, om, T, param, jacobians, distortMode);
+			cv::Mat exkk = (imT ? image.t() : image) - cv::Mat(x);
+			exkk.copyTo(ex.rowRange(insert_idx, insert_idx + exkk.rows));
+			insert_idx += exkk.rows;
+
+			int count_ = 0;
+			int count__ = 0;
+			for(int i = 0; i < exkk.rows; i++)
+			{
+				if(fabs(exkk.at<double>(i, 0)) > 1)
+				{
+					count_++;
+				}
+				if(fabs(exkk.at<double>(i, 0)) > 2)
+				{
+					count__++;
+				}
+			}
+			std::cout << "image " << image_idx << "has\t" << count_ << "/" << exkk.total() << ">1\t" << count__ << "/" << exkk.total()<< ">2 error points" << std::endl;
+
+
+			cv::Mat A(jacobians.rows, 9, CV_64FC1);
+			jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
+			jacobians.col(14).copyTo(A.col(4));//alpha
+			jacobians.colRange(4, 8).copyTo(A.colRange(5, 9));//k
+
+			A = A.t();
+
+			cv::Mat B = jacobians.colRange(8, 14).clone();
+			B = B.t();
+
+			JJ2(cv::Rect(0, 0, 9, 9)) += A * A.t();
+			JJ2(cv::Rect(9 + 6 * image_idx, 9 + 6 * image_idx, 6, 6)) = B * B.t();
+
+			JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)) = A * B.t();
+			JJ2(cv::Rect(0, 9 + 6 * image_idx, 9, 6)) = JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)).t();
+
+			ex3.rowRange(0, 9) += A * exkk.reshape(1, 2 * exkk.rows);
+			ex3.rowRange(9 + 6 * image_idx, 9 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 2 * exkk.rows);
+
+			if (check_cond)
+			{
+				cv::Mat JJ_kk = B.t();
+				cv::SVD svd(JJ_kk, cv::SVD::NO_UV);
+				CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
+			}
+		}
+		ex_all = ex.clone();
+
+		std::vector<cv::Mat> ex_split;
+		cv::split(ex, ex_split);
+		double rms_x = sqrt(norm(ex_split[0], cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms_x:" << rms_x << std::endl;
+		double rms_y = sqrt(norm(ex_split[1], cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms_y:" << rms_y << std::endl;
+
+		double rms = sqrt(norm(ex, cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms:" << rms << std::endl;
+		if (rms < 1)
+		{
+			cv::waitKey(0);
+		}
+	}
+	else
+	{
+		int total_ex = 0;
+		for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
+		{
+			total_ex += (int)objectPoints.getMat(image_idx).total();
+		}
+		cv::Mat ex(total_ex, 1, CV_64FC3);
+		int insert_idx = 0;
+
+		for (int image_idx = 0; image_idx < n; ++image_idx)
+		{
+			cv::Mat image, object;
+			objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
+			imagePoints.getMat(image_idx).convertTo(image, CV_64FC2);
+
+			bool objT = object.rows < object.cols;
+			cv::Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
+
+			std::vector<cv::Point3d> x;
+			cv::Mat jacobians;
+			projectPoints(x, image, om, T, param, jacobians, distortMode);
+			cv::Mat exkk = (objT ? object.t() : object) - cv::Mat(x);
+			exkk.copyTo(ex.rowRange(insert_idx, insert_idx + exkk.rows));
+			insert_idx += exkk.rows;
+
+			cv::Mat A(jacobians.rows, 9, CV_64FC1);
+			jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
+			jacobians.col(14).copyTo(A.col(4));//alpha
+			jacobians.colRange(4, 8).copyTo(A.colRange(5, 9));//k
+
+			A = A.t();
+
+			cv::Mat B = jacobians.colRange(8, 14).clone();
+			B = B.t();
+
+			JJ2(cv::Rect(0, 0, 9, 9)) += A * A.t();
+			JJ2(cv::Rect(9 + 6 * image_idx, 9 + 6 * image_idx, 6, 6)) = B * B.t();
+
+			JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)) = A * B.t();
+			JJ2(cv::Rect(0, 9 + 6 * image_idx, 9, 6)) = JJ2(cv::Rect(9 + 6 * image_idx, 0, 6, 9)).t();
+
+			ex3.rowRange(0, 9) += A * exkk.reshape(1, 3 * exkk.rows);
+			ex3.rowRange(9 + 6 * image_idx, 9 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 3 * exkk.rows);
+
+			if (check_cond)
+			{
+				cv::Mat JJ_kk = B.t();
+				cv::SVD svd(JJ_kk, cv::SVD::NO_UV);
+				CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
+			}
+		}
+
+		ex_all = ex.clone();
+
 		std::vector<cv::Mat> ex_split;
 		cv::split(ex, ex_split);
 		double rms_x = sqrt(norm(ex_split[0], cv::NORM_L2SQR) / ex.total());

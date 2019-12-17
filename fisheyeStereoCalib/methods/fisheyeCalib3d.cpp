@@ -3086,14 +3086,26 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 
 	//left camera calibration
 	cv::Mat K = cv::Mat::eye(3, 3, CV_64FC1);		//the inner parameters of camera
-	K.at<double>(0, 0) = 832.7025533;
-	K.at<double>(1, 1) = 832.7025533;
-	K.at<double>(0, 2) = 1280.0;
-	K.at<double>(1, 2) = 720.0;
+	//K.at<double>(0, 0) = 832.7025533;
+	//K.at<double>(1, 1) = 832.7025533;
+	//K.at<double>(0, 2) = 1280.0;
+	//K.at<double>(1, 2) = 720.0;
+	K.at<double>(0, 0) = 917.727;
+	K.at<double>(1, 1) = 918.834;
+	K.at<double>(0, 2) = 1268.49;
+	K.at<double>(1, 2) = 713.665;
+
+	K.at<double>(0, 1) = -0.000827654 * K.at<double>(0, 0);
+
 	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
+	D.at<double>(0, 0) = -0.137318;
+	D.at<double>(1, 0) = 0.0101285;
+	D.at<double>(2, 0) = 0.00267487;
+	D.at<double>(3, 0) = -0.000678746;
+
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
-	double rms = cv::fisheye::calibrate(objPts3d, cornerPtsVec, imgSize,
+	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 7000, 1e-10));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	cout << "rms" << rms << endl;
@@ -3107,7 +3119,7 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 		fn << "CameraInnerPara" << K;
 		fn << "CameraDistPara" << D;
 		fn << "RMS" << rms;
-		fn.release();
+ 		fn.release();
 
 		//distortRectify_fisheye(K, D, imgSize, imgFilePath);
 	//}

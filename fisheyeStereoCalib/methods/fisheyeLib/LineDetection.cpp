@@ -424,14 +424,14 @@ void LineDetection::processAllImages()
 //                    img[i].convertTo(tmp, CV_64F);
 //                    cv::resize(tmp, img[i], cv::Size(), unit, unit, cv::INTER_CUBIC);
                 }
-                edges[0] = detectLines(img[0], img[1], false);
+                edges[0] = detectLines( img[2], img[3],false);
 				//removeNoiseLine(edges[0], false);
 				//removeNoisePts(edges[0], img[0].size(), false);
                 //edges[0] = detectValley(img[0], img[1]);
                 //display(cv::Size2i(img[0].cols, img[0].rows), edges[0], "edges");
                 //edges[1] = detectValley(img[2], img[3]);
 				std::cout << edges[0].size() << std::endl;
-                edges[1] = detectLines(img[2], img[3], true);
+                edges[1] = detectLines(img[0], img[1], true);
                 //display(cv::Size2i(img[2].cols, img[2].rows), edges[1], "edges");
 				std::cout << edges[1].size() << std::endl;
 				//removeNoiseLine(edges[1], true);
@@ -558,7 +558,7 @@ std::vector<std::vector<cv::Point2i> > LineDetection::detectLines(cv::Mat &img1,
     cv::Mat diff = img1-img2;
     cv::Mat cross = cv::Mat::zeros(diff.rows, diff.cols, CV_8UC1);
     cv::Mat cross_inv = cv::Mat::zeros(diff.rows, diff.cols, CV_8UC1);
-	double thresh = 100;//185 for 20191017
+	double thresh = 50;//185 for 20191017
     bool positive; // Whether previous found cross point was positive
     bool search; // Whether serching
     bool found_first;
@@ -757,7 +757,7 @@ std::vector<std::vector<cv::Point2i> > LineDetection::detectLines(cv::Mat &img1,
 	cv::Mat dst_cross;
 	cv::bitwise_and(cross, cross_inv, dst_cross);
 
-    lines = extractEdges(cross);
+    lines = extractEdges(dst_cross);
     
     // Remove noise
     int min = (img_size.width > img_size.height) ? img_size.height/4 : img_size.width/4;

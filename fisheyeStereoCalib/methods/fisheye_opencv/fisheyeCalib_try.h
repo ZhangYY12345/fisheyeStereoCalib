@@ -81,7 +81,12 @@ namespace my_cv
 
 		void ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::InputArrayOfArrays imagePoints,
 			const IntrinsicParams& param, cv::InputArray omc, cv::InputArray Tc,
-			const int& check_cond, const double& thresh_cond, cv::Mat& JJ2_inv, cv::Mat& ex3,
+			const int& check_cond, const double& thresh_cond, cv::Mat& JJ2, cv::Mat& ex3,
+			DISTORT_Mode_Fisheye distortMode);
+
+		void ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::InputArrayOfArrays imagePoints,
+			const IntrinsicParams& param, cv::InputArray omc, cv::InputArray Tc,
+			const int& check_cond, const double& thresh_cond, cv::Mat& JJ2, cv::Mat& ex3, cv::Mat& ex_all,
 			DISTORT_Mode_Fisheye distortMode);
 
 		CV_EXPORTS void  EstimateUncertainties(cv::InputArrayOfArrays objectPoints, cv::InputArrayOfArrays imagePoints,
