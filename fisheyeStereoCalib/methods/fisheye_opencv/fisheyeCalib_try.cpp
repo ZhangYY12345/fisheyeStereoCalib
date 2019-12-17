@@ -397,7 +397,7 @@ void my_cv::internal::CalibrateExtrinsics(cv::InputArrayOfArrays objectPoints, c
 	if (omc.empty()) omc.create(1, (int)objectPoints.total(), CV_64FC3);
 	if (Tc.empty()) Tc.create(1, (int)objectPoints.total(), CV_64FC3);
 
-	const int maxIter = 20;
+	const int maxIter = 70;
 
 	for (int image_idx = 0; image_idx < (int)imagePoints.total(); ++image_idx)
 	{
@@ -499,6 +499,14 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 	}
 	else
 	{
+		int total_ex = 0;
+		for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
+		{
+			total_ex += (int)objectPoints.getMat(image_idx).total();
+		}
+		cv::Mat ex(total_ex, 1, CV_64FC3);
+		int insert_idx = 0;
+
 		for (int image_idx = 0; image_idx < n; ++image_idx)
 		{
 			cv::Mat image, object;
@@ -512,6 +520,8 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 			cv::Mat jacobians;
 			projectPoints(x, image, om, T, param, jacobians, distortMode);
 			cv::Mat exkk = (objT ? object.t() : object) - cv::Mat(x);
+			exkk.copyTo(ex.rowRange(insert_idx, insert_idx + exkk.rows));
+			insert_idx += exkk.rows;
 
 			cv::Mat A(jacobians.rows, 9, CV_64FC1);
 			jacobians.colRange(0, 4).copyTo(A.colRange(0, 4));//f,c
@@ -539,6 +549,9 @@ void my_cv::internal::ComputeJacobians(cv::InputArrayOfArrays objectPoints, cv::
 				CV_Assert(svd.w.at<double>(0) / svd.w.at<double>(svd.w.rows - 1) < thresh_cond);
 			}
 		}
+		double rms = sqrt(norm(ex, cv::NORM_L2SQR) / ex.total());
+		std::cout << "rms:" << rms << std::endl;
+
 	}
 
 	std::vector<uchar> idxs(param.isEstimate);

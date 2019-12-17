@@ -2402,12 +2402,12 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 		break;
 	}
 
-	cv::Mat src_1, src_2, dst_1;
-	threshold(src[0], src_1, 80, 255, THRESH_BINARY);
-	threshold(src[2], src_2, 80, 255, THRESH_BINARY);
-	bitwise_xor(src_1, src_2, dst_1);
+	//cv::Mat src_1, src_2, dst_1;
+	//threshold(src[0], src_1, 80, 255, THRESH_BINARY);
+	//threshold(src[2], src_2, 80, 255, THRESH_BINARY);
+	//bitwise_xor(src_1, src_2, dst_1);
 
-	cornerSubPix(dst_1, pts, cv::Size(5, 5), cv::Size(-1, -1),
+	cornerSubPix(src[4], pts, cv::Size(5, 5), cv::Size(-1, -1),
 		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 700, 1e-8));
 
 }
@@ -2535,11 +2535,11 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SID
 	tinyxml2::XMLElement *root_tl = root->FirstChildElement("images_tl");
 	tinyxml2::XMLElement *node_tl = root_tl->FirstChildElement("pair");
 	while (node_tl) {
-		vector<string> filenames(4);
+		vector<string> filenames(5);
 
 		tinyxml2::XMLElement *filename = node_tl->FirstChildElement("pattern");
 		int count;
-		for (count = 0; count < 4; ++count) {
+		for (count = 0; count < 5; ++count) {
 			if (!filename) {
 				break;
 			}
@@ -2559,11 +2559,11 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SID
 	tinyxml2::XMLElement *root_tr = root->FirstChildElement("images_tr");
 	tinyxml2::XMLElement *node_tr = root_tr->FirstChildElement("pair");
 	while (node_tr) {
-		vector<string> filenames(4);
+		vector<string> filenames(5);
 
 		tinyxml2::XMLElement *filename = node_tr->FirstChildElement("pattern");
 		int count;
-		for (count = 0; count < 4; ++count) {
+		for (count = 0; count < 5; ++count) {
 			if (!filename) {
 				break;
 			}
@@ -2582,11 +2582,11 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SID
 	tinyxml2::XMLElement *root_bl = root->FirstChildElement("images_bl");
 	tinyxml2::XMLElement *node_bl = root_bl->FirstChildElement("pair");
 	while (node_bl) {
-		vector<string> filenames(4);
+		vector<string> filenames(5);
 
 		tinyxml2::XMLElement *filename = node_bl->FirstChildElement("pattern");
 		int count;
-		for (count = 0; count < 4; ++count) {
+		for (count = 0; count < 5; ++count) {
 			if (!filename) {
 				break;
 			}
@@ -2605,11 +2605,11 @@ void loadXML_imgPath(std::string xmlPath, cv::Size& imgSize, map<RIGHT_COUNT_SID
 	tinyxml2::XMLElement *root_br = root->FirstChildElement("images_br");
 	tinyxml2::XMLElement *node_br = root_br->FirstChildElement("pair");
 	while (node_br) {
-		vector<string> filenames(4);
+		vector<string> filenames(5);
 
 		tinyxml2::XMLElement *filename = node_br->FirstChildElement("pattern");
 		int count;
-		for (count = 0; count < 4; ++count) {
+		for (count = 0; count < 5; ++count) {
 			if (!filename) {
 				break;
 			}
@@ -2649,13 +2649,13 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 				vector<cv::Point2f> oneImgPts;
 				vector<cv::Point3f> oneObjPts;
 
-				if((*it_1).size() != 4)
+				if((*it_1).size() != 5)
 				{
 					continue;
 				}
 
 				vector<cv::Mat> oneImgs;
-				for(int i = 0; i < 4; i++)
+				for(int i = 0; i < 5; i++)
 				{
 					cv::Mat img = imread((*it_1)[i]);
 					cvtColor(img, img, COLOR_BGR2GRAY);
@@ -2674,13 +2674,13 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 				vector<cv::Point2f> oneImgPts;
 				vector<cv::Point3f> oneObjPts;
 
-				if ((*it_1).size() != 4)
+				if ((*it_1).size() != 5)
 				{
 					continue;
 				}
 
 				vector<cv::Mat> oneImgs;
-				for (int i = 0; i < 4; i++)
+				for (int i = 0; i < 5; i++)
 				{
 					cv::Mat img = imread((*it_1)[i]);
 					cvtColor(img, img, COLOR_BGR2GRAY);
@@ -2699,13 +2699,13 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 				vector<cv::Point2f> oneImgPts;
 				vector<cv::Point3f> oneObjPts;
 
-				if ((*it_1).size() != 4)
+				if ((*it_1).size() != 5)
 				{
 					continue;
 				}
 
 				vector<cv::Mat> oneImgs;
-				for (int i = 0; i < 4; i++)
+				for (int i = 0; i < 5; i++)
 				{
 					cv::Mat img = imread((*it_1)[i]);
 					cvtColor(img, img, COLOR_BGR2GRAY);
@@ -2724,13 +2724,13 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 				vector<cv::Point2f> oneImgPts;
 				vector<cv::Point3f> oneObjPts;
 
-				if ((*it_1).size() != 4)
+				if ((*it_1).size() != 5)
 				{
 					continue;
 				}
 
 				vector<cv::Mat> oneImgs;
-				for (int i = 0; i < 4; i++)
+				for (int i = 0; i < 5; i++)
 				{
 					cv::Mat img = imread((*it_1)[i]);
 					cvtColor(img, img, COLOR_BGR2GRAY);
@@ -2930,11 +2930,11 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//bool isSuc = ptsCalib_Single(imgFilePath, imgSize, cornerPtsVec, objPts3d, 6, 9);
 	
 	cv::Mat mask_;
-	createMask_lines_LEFT(mask_);
+	//createMask_lines_LEFT(mask_);
 	std::vector<std::vector<Point2f> > cornerPtsVec;		//store the detected inner corners of each image
 	std::vector<std::vector<Point3f> > objPts3d;			//calculated coordination of corners in world coordinate system
-	double gridSize = 1080.0 / 57;
-	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, gridSize, 9, 16, mask_);
+	double gridSize = 16.5;
+	bool isSuc = ptsCalib_single2(imgFilePath, imgSize, cornerPtsVec, objPts3d, gridSize, 17, 31, mask_);
 
 	if (!isSuc)
 	{
@@ -2957,12 +2957,16 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 
 	//left camera calibration
 	cv::Mat K = cv::Mat::eye(3, 3, CV_64FC1);		//the inner parameters of camera
-	K.at<double>(0, 0) = 832.7025533;
-	K.at<double>(1, 1) = 832.7025533;
-	K.at<double>(0, 2) = 1280.0;
-	K.at<double>(1, 2) = 720.0;
+	K.at<double>(0, 0) = 716.75472904048979;
+	K.at<double>(1, 1) = 716.75472904048979;
+	K.at<double>(0, 2) = 1302.9725003480021;
+	K.at<double>(1, 2) = 695.40983814283538;
 	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
-	double f = 1.68;
+	D.at<double>(0, 0) = -0.16480113833074678;
+	D.at<double>(1, 0) = 0.063428620988963999;
+	D.at<double>(2, 0) = -0.015247203553192703;
+	D.at<double>(3, 0) = 0.0028862065078858351;
+	double f = 716.75472904048979;
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
 	double rms = my_cv::fisheye_r_rd2::calibrate(objPts3d, cornerPtsVec, imgSize,

@@ -904,7 +904,7 @@ double my_cv::fisheye_r_rd2::calibrate(cv::InputArrayOfArrays objectPoints, cv::
 			cv::Vec2d(image_size.width / 2.0 - 0.5, image_size.height / 2.0 - 0.5));
 	}
 
-	f0 = 1 / _K(0, 0);
+	f0 = 832.0;
 	errors.isEstimate = finalParam.isEstimate;
 
 	std::vector<cv::Vec3d> omc(objectPoints.total()), Tc(objectPoints.total());
