@@ -3090,22 +3090,26 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	//K.at<double>(1, 1) = 832.7025533;
 	//K.at<double>(0, 2) = 1280.0;
 	//K.at<double>(1, 2) = 720.0;
-	K.at<double>(0, 0) = 917.727;
-	K.at<double>(1, 1) = 918.834;
-	K.at<double>(0, 2) = 1268.49;
-	K.at<double>(1, 2) = 713.665;
+	//K.at<double>(0, 0) = 917.727;
+	//K.at<double>(1, 1) = 918.834;
+	//K.at<double>(0, 2) = 1268.49;
+	//K.at<double>(1, 2) = 713.665;
+	//K.at<double>(0, 1) = -0.000827654 * K.at<double>(0, 0);
+	K.at<double>(0, 0) = 716.75472904048979;
+	K.at<double>(1, 1) = 716.75472904048979;
+	K.at<double>(0, 2) = 1302.9725003480021;
+	K.at<double>(1, 2) = 695.40983814283538;
 
-	K.at<double>(0, 1) = -0.000827654 * K.at<double>(0, 0);
 
 	cv::Mat D = cv::Mat::zeros(4, 1, CV_64FC1);		//the paramters of camera distortion
-	D.at<double>(0, 0) = -0.137318;
-	D.at<double>(1, 0) = 0.0101285;
-	D.at<double>(2, 0) = 0.00267487;
-	D.at<double>(3, 0) = -0.000678746;
+	D.at<double>(0, 0) = -0.16480113833074678;
+	D.at<double>(1, 0) = 0.063428620988963999;
+	D.at<double>(2, 0) = -0.015247203553192703;
+	D.at<double>(3, 0) = 0.0028862065078858351;
 
 	std::vector<cv::Mat> T;										//matrix T of each image:translation
 	std::vector<cv::Mat> R;										//matrix R of each image:rotation
-	double rms = my_cv::fisheye_r_d::calibrate(objPts3d, cornerPtsVec, imgSize,
+	double rms = my_cv::fisheye_r_rd2::calibrate(objPts3d, cornerPtsVec, imgSize,
 		K, D, R, T, flag,
 		cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 7000, 1e-10));// | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 | CALIB_FIX_ASPECT_RATIO 
 	cout << "rms" << rms << endl;
