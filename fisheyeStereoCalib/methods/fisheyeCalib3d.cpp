@@ -1900,6 +1900,171 @@ void connectEdge2(cv::Mat& src, int winSize_thres, bool isHorizon)
 	}
 }
 
+void connectEdge_(cv::Mat& src, int winSize_thres, bool isHorizon)
+{
+	int width = src.cols;
+	int height = src.rows;
+
+	int half_winsize_thres = winSize_thres;
+
+	if (isHorizon)
+	{
+		for (int y = 2; y < height - 2; y++)
+		{
+			for (int x = 2; x < width - 2; x++)
+			{
+				//如果该中心点为255,则考虑它的八邻域
+				if (src.at<uchar>(y, x) == 255)
+				{
+					if (src.at<uchar>(y - 1, x) == 255 || src.at<uchar>(y + 1, x) == 255)
+					{
+						continue;
+					}
+					//检查8邻域
+					int num_8 = 0;
+					int offset_x1[2] = { -1, 1 };
+					//
+					int starty = 1;
+					for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+					{
+						if (src.at<uchar>(y + offset_y1, x + offset_x1[0]) == 255)
+							num_8++;
+					}
+					starty++;
+					while (num_8 == 0 && -offset_x1[0] < half_winsize_thres)
+					{
+						offset_x1[0]--;
+						for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+						{
+							if (!(y + offset_y1 >= 0 && y + offset_y1 < height && x + offset_x1[0] >= 0 && x + offset_x1[0] < width))
+							{
+								continue;
+							}
+							if (src.at<uchar>(y + offset_y1, x + offset_x1[0]) == 255)
+							{
+								src.at<uchar>(y + offset_y1 / 2, x + offset_x1[0] / 2) = 255;
+								if (offset_y1 / 2 <= 0 && offset_x1[0] / 2 <= 0 && starty > 2)
+								{
+									x = x + offset_x1[0] / 2 - 1;
+									y = y + offset_y1 / 2 - 1;
+								}
+								num_8++;
+								break;
+							}
+						}
+					}
+					//
+					starty = 1;
+					num_8 = 0;
+					for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+					{
+						if (src.at<uchar>(y + offset_y1, x + offset_x1[1]) == 255)
+							num_8++;
+					}
+					starty++;
+					while (num_8 == 0 && offset_x1[1] < half_winsize_thres)
+					{
+						offset_x1[1]++;
+						for (int offset_y1 = -starty; offset_y1 <= starty; offset_y1++)
+						{
+							if (!(y + offset_y1 >= 0 && y + offset_y1 < height && x + offset_x1[1] >= 0 && x + offset_x1[1] < width))
+							{
+								continue;
+							}
+							if (src.at<uchar>(y + offset_y1, x + offset_x1[1]) == 255)
+							{
+								src.at<uchar>(y + offset_y1 / 2, x + offset_x1[1] / 2) = 255;
+								num_8++;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+	}
+	else
+	{
+		for (int y = 2; y < height - 2; y++)
+		{
+			for (int x = 2; x < width - 2; x++)
+			{
+				//如果该中心点为255,则考虑它的八邻域
+				if (src.at<uchar>(y, x) == 255)
+				{
+					if (src.at<uchar>(y, x - 1) == 255 || src.at<uchar>(y, x + 1) == 255)
+					{
+						continue;
+					}
+
+					//检查8邻域
+					int num_8 = 0;
+					int offset_y1[2] = { -1, 1 };
+					//
+					int startx = 1;
+					for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+					{
+						if (src.at<uchar>(y + offset_y1[0], x + offset_x1) == 255)
+							num_8++;
+					}
+					startx++;
+					while (num_8 == 0 && -offset_y1[0] < half_winsize_thres)
+					{
+						offset_y1[0]--;
+						//startx++;
+						for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+						{
+							if (!(y + offset_y1[0] >= 0 && y + offset_y1[0] < height && x + offset_x1 >= 0 && x + offset_x1 < width))
+							{
+								continue;
+							}
+							if (src.at<uchar>(y + offset_y1[0], x + offset_x1) == 255)
+							{
+								src.at<uchar>(y + offset_y1[0] / 2, x + offset_x1 / 2) = 255;
+								if (offset_x1 / 2 <= 0 && offset_y1[0] / 2 <= 0 && startx > 2)
+								{
+									x = x + offset_x1 / 2 - 1;
+									y = y + offset_y1[0] / 2 - 1;
+								}
+								num_8++;
+								break;
+							}
+						}
+					}
+					//
+					startx = 1;
+					num_8 = 0;
+					for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+					{
+						if (src.at<uchar>(y + offset_y1[1], x + offset_x1) == 255)
+							num_8++;
+					}
+					startx++;
+					while (num_8 == 0 && offset_y1[1] < half_winsize_thres)
+					{
+						offset_y1[1]++;
+						//startx++;
+						for (int offset_x1 = -startx; offset_x1 <= startx; offset_x1++)
+						{
+							if (!(y + offset_y1[1] >= 0 && y + offset_y1[1] < height && x + offset_x1 >= 0 && x + offset_x1 < width))
+							{
+								continue;
+							}
+							if (src.at<uchar>(y + offset_y1[1], x + offset_x1) == 255)
+							{
+								src.at<uchar>(y + offset_y1[1] / 2, x + offset_x1 / 2) = 255;
+								num_8++;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 void myGetLines(cv::Mat& src, cv::Mat& tmp, cv::Point2i startPt, std::vector<cv::Point2i>& oneLine, int lenThres, bool isHorizon)
 {
 	if(!oneLine.empty())
@@ -2110,14 +2275,145 @@ void removeShortEdges(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& li
 		}
 	}
 }
+int removeShortEdges2(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, int lenThres, bool isHorizon,
+	RIGHT_COUNT_SIDE mode)
+{
+	int width = src.cols;
+	int height = src.rows;
 
+	int count = 0;
+	if (!lines.empty())
+	{
+		lines.clear();
+	}
+
+cv:Mat tmp = src.clone();
+
+	int maxLen = 0;
+	if (isHorizon)
+	{
+		if (mode == TOP_LEFT || mode == BOTTOM_LEFT)
+		{
+			for (int y = 2; y < height - 2; y++)
+			{
+				for (int x = 2; x < width - 2; x++)
+				{
+					if (tmp.at<uchar>(y, x) == 255)
+					{
+						std::vector<cv::Point2i> line;
+						myGetLines(src, tmp, cv::Point2i(x, y), line, lenThres, isHorizon);
+						if (!line.empty())
+						{
+							lines[count] = line;
+							count++;
+							if (maxLen < line.size())
+							{
+								maxLen = line.size();
+							}
+						}
+					}
+				}
+			}
+		}
+		else if (mode == TOP_RIGHT || mode == BOTTOM_RIGHT)
+		{
+			for (int y = 2; y < height - 2; y++)
+			{
+				for (int x = width - 3; x > 1; x--)
+				{
+					if (tmp.at<uchar>(y, x) == 255)
+					{
+						std::vector<cv::Point2i> line;
+						myGetLines(src, tmp, cv::Point2i(x, y), line, lenThres, isHorizon);
+						if (!line.empty())
+						{
+							lines[count] = line;
+							count++;
+							if (maxLen < line.size())
+							{
+								maxLen = line.size();
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		for (int x = 2; x < width - 2; x++)
+		{
+			for (int y = 2; y < height - 2; y++)
+			{
+				if (tmp.at<uchar>(y, x) == 255)
+				{
+					std::vector<cv::Point2i> line;
+					myGetLines(src, tmp, cv::Point2i(x, y), line, lenThres, isHorizon);
+					if (!line.empty())
+					{
+						lines[count] = line;
+						count++;
+						if (maxLen < line.size())
+						{
+							maxLen = line.size();
+						}
+					}
+				}
+			}
+		}
+	}
+	return maxLen;
+}
+
+void post_removeShortEdges2(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, int lenThres, bool isHorizon, RIGHT_COUNT_SIDE mode)
+{
+	int width = src.cols;
+	int height = src.rows;
+
+	if (isHorizon)
+	{
+		for (auto it = lines.begin(); it != lines.end(); it++)
+		{
+			if (it->second.size() < lenThres)
+			{
+				for (std::vector<cv::Point2i>::iterator it_ = it->second.begin(); it_ != it->second.end(); it_++)
+				{
+					cv::Point2i pt = *it_;
+					src.at<uchar>(pt.y, pt.x) = 0;
+				}
+			}
+		}
+	}
+	else
+	{
+		for (auto it = lines.begin(); it != lines.end(); it++)
+		{
+			if (it->second.size() < lenThres)
+			{
+				for (std::vector<cv::Point2i>::iterator it_ = it->second.begin(); it_ != it->second.end(); it_++)
+				{
+					cv::Point2i pt = *it_;
+					src.at<uchar>(pt.y, pt.x) = 0;
+				}
+			}
+		}
+	}
+
+	removeShortEdges2(src, lines, lenThres, isHorizon, mode);
+}
 void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon, RIGHT_COUNT_SIDE mode)
 {
 	connectEdge(src, 5, isHorizon);
-	removeShortEdges(src, lines, 100, isHorizon, mode);
-	connectEdge(src, 10, isHorizon);
-	removeShortEdges(src, lines, 400, isHorizon, mode);
-	int a = lines.size();
+	//int maxLen = removeShortEdges2(src, lines, 100, isHorizon, mode);
+	//post_removeShortEdges2(src, lines, maxLen / 2, isHorizon, mode);
+	int maxLen = removeShortEdges2(src, lines, 100, isHorizon, mode);
+	connectEdge_(src, 10, isHorizon);
+	post_removeShortEdges2(src, lines, maxLen / 2, isHorizon, mode);
+	//connectEdge(src, 5, isHorizon);
+	//removeShortEdges(src, lines, 100, isHorizon, mode);
+	//connectEdge(src, 10, isHorizon);
+	//removeShortEdges(src, lines, 400, isHorizon, mode);
+	//int a = lines.size();
 }
 
 /**
@@ -2260,6 +2556,8 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 	std::map<int, std::vector<cv::Point2i> > lines_H, lines_V;
 	post_process(lineH, lines_H, true, mode);
 	post_process(lineV, lines_V, false, mode);
+	cout << lines_H.size() << endl;
+	cout << lines_V.size() << endl;
 
 	std::map<cv::Point2i, cv::Point2f, myCmp_map>  pts_H;
 

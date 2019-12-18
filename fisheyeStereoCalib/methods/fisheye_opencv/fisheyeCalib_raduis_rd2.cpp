@@ -890,13 +890,13 @@ double my_cv::fisheye_r_rd2::calibrate(cv::InputArrayOfArrays objectPoints, cv::
 	{
 		K.getMat().convertTo(_K, CV_64FC1);
 		D.getMat().convertTo(_D, CV_64FC1);
-		finalParam.Init(f, cv::Vec2d(f / _K(0, 0), f / _K(1, 1)),
+		finalParam.Init(f, cv::Vec2d(1.0, 1.0),
 			cv::Vec2d(_K(0, 2), _K(1, 2)),
 			cv::Vec4d(flags & cv::fisheye::CALIB_FIX_K1 ? 0 : _D[0],
 				flags & cv::fisheye::CALIB_FIX_K2 ? 0 : _D[1],
 				flags & cv::fisheye::CALIB_FIX_K3 ? 0 : _D[2],
 				flags & cv::fisheye::CALIB_FIX_K4 ? 0 : _D[3]),
-			_K(0, 1) / _K(0, 0));
+			0);
 	}
 	else
 	{
