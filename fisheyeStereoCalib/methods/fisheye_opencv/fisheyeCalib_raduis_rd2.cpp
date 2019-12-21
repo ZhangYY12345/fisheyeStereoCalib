@@ -6,6 +6,7 @@ extern camMode cur_fisheye_mode;
 
 // fisheye raius distort
 //
+double f0 = 832.0;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::projectPoints
@@ -82,14 +83,14 @@ void my_cv::fisheye_r_rd2::projectPoints(cv::InputArray objectPoints, cv::Output
 		double theta = getTheta(r_, IDEAL_PERSPECTIVE);
 		double r = getR(theta, mode);
 
-		double r_d = r;
+		double r_d = r/f0;
 		if (r > 1e-8)
 		{
 			// compensate distortion iteratively
 			//r = r_d;
 
 			Eigen::VectorXd coeffs(10);
-			coeffs(9) = -r;
+			coeffs(9) = -r/f0;
 			coeffs(8) = 1;
 			coeffs(7) = coeffs(5) = coeffs(3) = coeffs(1) = 0;
 			coeffs(6) = k[0];
@@ -115,8 +116,9 @@ void my_cv::fisheye_r_rd2::projectPoints(cv::InputArray objectPoints, cv::Output
 		double r_d2 = r_d * r_d, r_d4 = r_d2 * r_d2, r_d6 = r_d4 * r_d2, r_d8 = r_d4 * r_d4,
 			r_d3 = r_d * r_d2, r_d5 = r_d3 * r_d2, r_d7 = r_d5 * r_d2, r_d9 = r_d7 * r_d2;
 
+		r_d = r_d * f0;
 		double inv_r_ = r_ > 1e-8 ? 1.0 / r_ : 1;
-		double cdist = r_ > 1e-8 ? r_d * inv_r_ : 1;
+		double cdist = r_ > 1e-8 ? r_d *  inv_r_ : 1;
 
 		cv::Vec2d xd1 = x * cdist;
 		cv::Vec2d xd3(xd1[0] + alpha * xd1[1], xd1[1]);
@@ -177,6 +179,11 @@ void my_cv::fisheye_r_rd2::projectPoints(cv::InputArray objectPoints, cv::Output
 			cv::Vec3d dr_ddom = drdom / drdr_d;
 			cv::Vec3d dr_ddT = drdT / drdr_d;
 			cv::Vec4d dr_ddk = drdk / drdr_d;
+
+			double dr_d_dr_d = f0;
+			dr_ddom = dr_ddom * dr_d_dr_d;
+			dr_ddT = dr_ddT * dr_d_dr_d;
+			dr_ddk = dr_ddk * dr_d_dr_d;
 
 			//double inv_r_ = r_ > 1e-8 ? 1.0/r_ : 1;
 			//double cdist = r_ > 1e-8 ? r_d / r_ : 1;
@@ -386,6 +393,8 @@ void my_cv::fisheye_r_rd2::undistortPoints(cv::InputArray distorted, cv::OutputA
 		double r_d2 = pw[0] * pw[0] + pw[1] * pw[1];
 		double r_d = sqrt(r_d2);
 
+		r_d = r_d / f0;
+		r_d2 = r_d2 / (f0 * f0);
 		double r_d3 = r_d2 * r_d, r_d5 = r_d3 * r_d2, r_d7 = r_d5 * r_d2, r_d9 = r_d7 * r_d2;
 		double r = r_d + k[0] * r_d3 + k[1] * r_d5 + k[2] * r_d7 + k[3] * r_d9;
 
@@ -393,6 +402,7 @@ void my_cv::fisheye_r_rd2::undistortPoints(cv::InputArray distorted, cv::OutputA
 		cv::Vec2d pu = pw * scale; //undistorted point in the image space
 
 		// reproject
+		r = r * f0;// /f[0]
 		double theta = getTheta(r, mode);
 
 		cv::Vec2d pfi = pw / r_d;
@@ -483,9 +493,13 @@ void my_cv::fisheye_r_rd2::undistortPoints_H(cv::InputArray distorted, cv::Outpu
 
 		double r_d2 = pw[0] * pw[0] + pw[1] * pw[1];
 		double r_d = sqrt(r_d2);
+		r_d = r_d / f0;
+		r_d2 = r_d2 / (f0 * f0);
 
 		double r_d3 = r_d2 * r_d, r_d5 = r_d3 * r_d2, r_d7 = r_d5 * r_d2, r_d9 = r_d7 * r_d2;
 		double r = r_d + k[0] * r_d3 + k[1] * r_d5 + k[2] * r_d7 + k[3] * r_d9;
+		r = r * f0;// /f[0]
+		r_d = r_d * f0;
 
 		// reproject
 		double r_;	

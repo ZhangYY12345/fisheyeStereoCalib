@@ -518,17 +518,20 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap(cv::InputArray K, cv::InputArra
 	CV_Assert(P.empty() || P.size() == cv::Size(3, 3) || P.size() == cv::Size(4, 3));
 
 	cv::Vec2d f, c;
+	double alpha;
 	if (K.depth() == CV_32F)
 	{
 		cv::Matx33f camMat = K.getMat();
 		f = cv::Vec2f(camMat(0, 0), camMat(1, 1));
 		c = cv::Vec2f(camMat(0, 2), camMat(1, 2));
+		alpha = camMat(0, 1) / camMat(0, 0);
 	}
 	else
 	{
 		cv::Matx33d camMat = K.getMat();
 		f = cv::Vec2d(camMat(0, 0), camMat(1, 1));
 		c = cv::Vec2d(camMat(0, 2), camMat(1, 2));
+		alpha = camMat(0, 1) / camMat(0, 0);
 	}
 
 	cv::Vec4d k = cv::Vec4d::all(0);
@@ -558,31 +561,28 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap(cv::InputArray K, cv::InputArra
 		short*  m1 = (short*)m1f;
 		ushort* m2 = (ushort*)m2f;
 
-		double _x = i * iR(0, 1) + iR(0, 2),
-			_y = i * iR(1, 1) + iR(1, 2),
-			_w = i * iR(2, 1) + iR(2, 2);
 
 		for (int j = 0; j < size.width; ++j)
 		{
-			double u, v;
-			if (_w <= 0)
-			{
-				u = (_x > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
-				v = (_y > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
-			}
-			else
-			{
-				double x = _x / _w, y = _y / _w;
+			cv::Vec2d x(j, i);
+			cv::Vec2d px = cv::Vec2d((x[0] - c[0]) / f[0], (x[1] - c[1]) / f[1]);
+			px[0] -= alpha * px[1];
+			double r_ = sqrt(px.dot(px));
+			double theta_ = getTheta(r_, IDEAL_PERSPECTIVE);
+			double r = getR(theta_, mode);
 
-				double r = sqrt(x * x + y * y);
+			double r2 = r * r, r4 = r2 * r2, r6 = r4 * r2, r8 = r4 * r4;
+			double r_d = r * (1 + k[0] * r2 + k[1] * r4 + k[2] * r6 + k[3] * r8);
 
-				double r2 = r * r, r4 = r2 * r2, r6 = r4 * r2, r8 = r4 * r4;
-				double r_d = r * (1 + k[0] * r2 + k[1] * r4 + k[2] * r6 + k[3] * r8);
+			double u, v;			
+			double inv_r_ = r_ > 1e-8 ? 1.0 / r_ : 1;
+			double cdist = r_ > 1e-8 ? r_d * inv_r_ : 1;
 
-				double scale = (r == 0) ? 1.0 : r_d / r;
-				u = f[0] * x*scale + c[0];
-				v = f[1] * y*scale + c[1];
-			}
+			cv::Vec2d xd1 = px * cdist;
+			cv::Vec2d xd3(xd1[0] + alpha * xd1[1], xd1[1]);
+			cv::Vec2d final_point(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
+			u = final_point[0];
+			v = final_point[1];
 
 			if (m1type == CV_16SC2)
 			{
@@ -598,9 +598,6 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap(cv::InputArray K, cv::InputArra
 				m2f[j] = (float)v;
 			}
 
-			_x += iR(0, 0);
-			_y += iR(1, 0);
-			_w += iR(2, 0);
 		}
 	}
 }
