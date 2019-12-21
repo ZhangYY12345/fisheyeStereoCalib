@@ -126,7 +126,7 @@ int main()
 	std::string xmlpath_img = "D:/studying/stereo vision/research code/fisheye-stereo-calibrate/fisheyeStereoCalib/fisheyeStereoCalib/fisheyeStereoCalib/patternsL20191211.xml";
 	std::string xmlFile_path = "D:/studying/stereo vision/research code/fisheye-stereo-calibrate/fisheyeStereoCalib/fisheyeStereoCalib/fisheyeStereoCalib/20191211res_r_d.xml";
 
-	//double singleRms = fisheyeCamCalibSingle(xmlpath_img, xmlFilePath);
+	double singleRms = fisheyeCamCalibSingle(xmlpath_img, xmlFilePath);
 
 	std::string resPath_ = "D:/studying/stereo vision/research code/fisheye-stereo-calibrate/fisheyeStereoCalib/fisheyeStereoCalib/fisheyeStereoCalib/20191211/patternsImgL/基于模板的标定结果/stereoCalibData20191211_equalDistance.xml";
 	cv::Mat K, D;

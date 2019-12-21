@@ -117,3 +117,8 @@ double getR(double theta, camMode mode);
 double getTheta(double r, camMode mode);
 double get_drdtheta(double theta, camMode mode);
 double get_dthetadr(double r, camMode mode);
+
+cv::Vec2d getNormalizedImgCoord(cv::Vec3d X_c, camMode mode);
+cv::Vec3d get_dx0dX_c(double x0, cv::Vec3d X_c, camMode mode);
+cv::Vec3d get_dx1dX_c(double x1, cv::Vec3d X_c, camMode mode);
+cv::Vec3d getCameraCoord(cv::Vec2d x, camMode mode);

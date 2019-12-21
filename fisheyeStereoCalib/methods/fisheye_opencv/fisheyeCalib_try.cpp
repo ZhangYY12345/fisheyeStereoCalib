@@ -1089,3 +1089,252 @@ double get_dthetadr(double r, camMode mode)
 	return dthetadr;
 }
 
+cv::Vec2d getNormalizedImgCoord(cv::Vec3d X_c, camMode mode)
+{
+	cv::Vec2d x;
+	switch (mode)
+	{
+	case STEREOGRAPHIC:
+	{
+		double R2 = X_c.dot(X_c);
+		double bt = sqrt(R2) + X_c[2];
+		x[0] = X_c[0] / bt;
+		x[1] = X_c[1] / bt;
+	}
+	break;
+	case EQUIDISTANCE:
+	{
+		double r2 = X_c[0] * X_c[0] + X_c[1] * X_c[1];
+		double r = sqrt(r2);
+		if (X_c[2] < DBL_MIN)
+		{
+			X_c[2] = 1.0;
+		}
+		double t = atan(r / X_c[2]);
+		x[0] = X_c[0] * t / r;
+		x[1] = X_c[1] * t / r;
+	}
+	break;
+	case ORTHOGONAL:
+	{
+		if (X_c[2] < 1e-20)
+		{
+			std::cout << "data error" << std::endl;
+			break;
+		}
+		double R2 = X_c.dot(X_c);
+		double bt = sqrt(R2);
+		x[0] = X_c[0] / bt;
+		x[1] = X_c[1] / bt;
+	}
+	break;
+	case EQUISOLID:
+	{
+		double R2 = X_c.dot(X_c);
+		double r2 = X_c[0] * X_c[0] + X_c[1] * X_c[1];
+		double t = sqrt(1 - X_c[2] / R2);
+		double bt = sqrt(2 * r2);
+		x[0] = X_c[0] * t / bt;
+		x[1] = X_c[1] * t / bt;
+	}
+	break;
+	default:
+	{
+		if (X_c[2] < DBL_MIN)
+		{
+			X_c[2] = 1.0;
+		}
+		x[0] = X_c[0] / X_c[2];
+		x[1] = X_c[1] / X_c[2];
+	}
+	}
+	return x;
+}
+
+cv::Vec3d get_dx0dX_c(double x0, cv::Vec3d X_c, camMode mode)
+{
+	cv::Vec3d d;
+	switch (mode)
+	{
+	case STEREOGRAPHIC:
+	{
+		double R2 = X_c.dot(X_c);
+		double bt = sqrt(R2) + X_c[2];
+		double bt2 = bt * bt;
+		d[0] = (bt - X_c[0] * X_c[0] / sqrt(R2)) / bt2;
+		d[1] = - X_c[0] * X_c[1] / sqrt(R2) / bt2;
+		d[2] = -X_c[0] * (X_c[2] / sqrt(R2) + 1) / bt2;
+	}
+	break;
+	case EQUIDISTANCE:
+	{
+		double R2 = X_c.dot(X_c);
+		double r2 = X_c[0] * X_c[0] + X_c[1] * X_c[1];
+		double r = sqrt(r2);
+		if (X_c[2] < DBL_MIN)
+		{
+			X_c[2] = 1.0;
+		}
+		double t = atan(r / X_c[2]);
+		d[0] = ((r * t + X_c[0] * X_c[0] * X_c[2] / R2) - x0 * X_c[0]) / r2;
+		d[1] = ( X_c[0] * X_c[1] * X_c[2] / R2 - x0 * X_c[1]) / r2;
+		d[2] = -X_c[0] / R2;
+	}
+	break;
+	case ORTHOGONAL:
+	{
+		if (X_c[2] < 1e-20)
+		{
+			std::cout << "data error" << std::endl;
+			break;
+		}
+		double R2 = X_c.dot(X_c);
+		double bt = sqrt(R2) * R2;
+		d[0] = (X_c[1] * X_c[1] + X_c[2] * X_c[2]) / bt;
+		d[1] = -X_c[0] * X_c[1] / bt;
+		d[2] = -X_c[0] * X_c[2] / bt;;
+	}
+	break;
+	case EQUISOLID:
+	{
+		double R2 = X_c.dot(X_c);
+		double r2 = X_c[0] * X_c[0] + X_c[1] * X_c[1];
+		d[0] = x0 / X_c[0] + x0 * X_c[0] * X_c[2] / (R2 * (R2 - X_c[2])) - x0 * X_c[0] / r2;
+		d[1] = x0 * X_c[1] * X_c[2] / (R2 * (R2 - X_c[2])) - x0 * X_c[1] / r2;
+		d[2] = x0 * (X_c[2] * X_c[2] - r2) / (2 * R2 * (R2 - X_c[2]));
+	}
+	break;
+	default:
+	{
+		if (X_c[2] < DBL_MIN)
+		{
+			X_c[2] = 1.0;
+		}
+		d[0] = 1.0 / X_c[2];
+		d[1] = 0;
+		d[2] = -x0 / X_c[2];
+	}
+	}
+	return d;
+
+}
+
+cv::Vec3d get_dx1dX_c(double x1, cv::Vec3d X_c, camMode mode)
+{
+	cv::Vec3d d;
+	switch (mode)
+	{
+	case STEREOGRAPHIC:
+	{
+		double R2 = X_c.dot(X_c);
+		double bt = sqrt(R2) + X_c[2];
+		double bt2 = bt * bt;
+
+		d[0] = (-X_c[1] * X_c[0] / sqrt(R2)) / bt2;
+		d[1] = (bt - X_c[1] * X_c[1] / sqrt(R2)) / bt2;
+		d[2] = -X_c[1] * (X_c[2] / sqrt(R2) + 1) / bt2;
+	}
+	break;
+	case EQUIDISTANCE:
+	{
+		double R2 = X_c.dot(X_c);
+		double r2 = X_c[0] * X_c[0] + X_c[1] * X_c[1];
+		double r = sqrt(r2);
+		if (X_c[2] < DBL_MIN)
+		{
+			X_c[2] = 1.0;
+		}
+		double t = atan(r / X_c[2]);
+		d[0] = (X_c[0] * X_c[1] * X_c[2] / R2 - X_c[0] * x1) / r2;
+		d[1] = ((r * t + X_c[1] * X_c[1] * X_c[2] / R2) - x1 * X_c[1]) / r2;
+		d[2] = -X_c[1] / R2;
+	}
+	break;
+	case ORTHOGONAL:
+	{
+		if (X_c[2] < 1e-20)
+		{
+			std::cout << "data error" << std::endl;
+			break;
+		}
+		double R2 = X_c.dot(X_c);
+		double bt = sqrt(R2) * R2;
+		d[0] = -X_c[1] * X_c[0] / bt;
+		d[1] = (X_c[0] * X_c[0] + X_c[2] * X_c[2]) / bt;
+		d[2] = -X_c[1] * X_c[2] / bt;;
+	}
+	break;
+	case EQUISOLID:
+	{
+		double R2 = X_c.dot(X_c);
+		double r2 = X_c[0] * X_c[0] + X_c[1] * X_c[1];
+		double t = sqrt(1 - X_c[2] / R2);
+		double bt = sqrt(2 * r2);
+		d[0] = x1 * X_c[0] * X_c[2] / (R2 * (R2 - X_c[2])) - x1 * X_c[0] / r2;
+		d[1] = x1 / X_c[1] + x1 * X_c[1] * X_c[2] / (R2 * (R2 - X_c[2])) - x1 * X_c[1] / r2;
+		d[2] = x1 * (X_c[2] * X_c[2] - r2) / (2 * R2 * (R2 - X_c[2]));
+	}
+	break;
+	default:
+	{
+		if (X_c[2] < DBL_MIN)
+		{
+			X_c[2] = 1.0;
+		}
+		d[0] = 0;
+		d[1] = 1.0 / X_c[2];
+		d[2] = -x1 / X_c[2];
+	}
+	}
+	return d;
+}
+
+cv::Vec3d getCameraCoord(cv::Vec2d x, camMode mode)
+{
+	cv::Vec3d X;
+	switch (mode)
+	{
+	case STEREOGRAPHIC:
+	{
+		double r2 = x[0] * x[0] + x[1] * x[1];
+		X[0] = 2 * x[0] / (1.0 + r2);
+		X[1] = 2 * x[1] / (1.0 + r2);
+		X[2] = (1.0 - r2) / (1.0 + r2);
+	}
+	break;
+	case EQUIDISTANCE:
+	{
+		double r2 = x[0] * x[0] + x[1] * x[1];
+		double r = sqrt(r2);
+		X[0] = x[0] * sin(r) / r;
+		X[1] = x[1] * sin(r) / r;
+		X[2] = cos(r);
+	}
+	break;
+	case ORTHOGONAL:
+	{
+		double r2 = x[0] * x[0] + x[1] * x[1];
+		X[0] = x[0];
+		X[1] = x[1];
+		X[2] = sqrt(1.0 - r2);
+	}
+	break;
+	case EQUISOLID:
+	{
+		double r2 = x[0] * x[0] + x[1] * x[1];
+		X[0] = 2 * x[0] * sqrt(1.0 - r2);
+		X[1] = 2 * x[1] * sqrt(1.0 - r2);
+		X[2] = sqrt(1.0 - r2);
+	}
+	break;
+	default:
+	{
+		X[0] = x[0];
+		X[1] = x[1];
+		X[2] = 1.0;
+	}
+	break;
+	}
+	return X;
+}
+

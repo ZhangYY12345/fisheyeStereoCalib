@@ -76,21 +76,19 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 		cv::Vec3d Y = aff * Xi;
 		if (fabs(Y[2]) < DBL_MIN)
 			Y[2] = 1;
-		cv::Vec2d x(Y[0] / Y[2], Y[1] / Y[2]);
+		cv::Vec2d x = getNormalizedImgCoord(Y, mode);
 
-		double r_2 = x.dot(x);
-		double r_ = std::sqrt(r_2);
-		double theta = getTheta(r_, IDEAL_PERSPECTIVE);
-		double r = getR(theta, mode);
+		double r2 = x.dot(x);
+		double r = std::sqrt(r2);
 
 		// r_d = r(1 + k[0] * r^2 + k[1] * r^4 + k[2] * r^6 + k[3] * r^8)
-		double r2 = r * r, r3 = r2 * r, r4 = r2 * r2, r5 = r4 * r,
+		double r3 = r2 * r, r4 = r2 * r2, r5 = r4 * r,
 			r6 = r3 * r3, r7 = r6 * r, r8 = r4 * r4, r9 = r8 * r;
 
 		double r_d = r + k[0] * r3 + k[1] * r5 + k[2] * r7 + k[3] * r9;
 
-		double inv_r_ = r_ > 1e-8 ? 1.0 / r_ : 1;
-		double cdist = r_ > 1e-8 ? r_d * inv_r_ : 1;
+		double inv_r_ = r > 1e-8 ? 1.0 / r : 1;
+		double cdist = r > 1e-8 ? r_d * inv_r_ : 1;
 
 		cv::Vec2d xd1 = x * cdist;
 		cv::Vec2d xd3(xd1[0] + alpha * xd1[1], xd1[1]);
@@ -116,30 +114,26 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 			const cv::Vec3d *dYdT = (cv::Vec3d*)dYdT_data.val;
 
 			//cv::Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);	x--->归一化相机坐标系
+			//cv::Vec2d x = getNormalizedImgCoord(Y, mode);
+			cv::Vec3d dx0dY = get_dx0dX_c(x[0], Y, mode);
+			cv::Vec3d dx1dY = get_dx1dX_c(x[1], Y, mode);
+
 			cv::Vec3d dxdom[2];
-			dxdom[0] = (1.0 / Y[2]) * dYdom[0] - x[0] / Y[2] * dYdom[2];
-			dxdom[1] = (1.0 / Y[2]) * dYdom[1] - x[1] / Y[2] * dYdom[2];
+			dxdom[0] = dx0dY[0] * dYdom[0] + dx0dY[1] * dYdom[1] + dx0dY[2] * dYdom[2];
+			dxdom[1] = dx1dY[0] * dYdom[0] + dx1dY[1] * dYdom[1] + dx1dY[2] * dYdom[2];
 
 			cv::Vec3d dxdT[2];
 			dxdT[0] = (1.0 / Y[2]) * dYdT[0] - x[0] / Y[2] * dYdT[2];
 			dxdT[1] = (1.0 / Y[2]) * dYdT[1] - x[1] / Y[2] * dYdT[2];
 
-			//double r_2 = x.dot(x);
-			cv::Vec3d dr_2dom = 2 * x[0] * dxdom[0] + 2 * x[1] * dxdom[1];
-			cv::Vec3d dr_2dT = 2 * x[0] * dxdT[0] + 2 * x[1] * dxdT[1];
+			//double r2 = x.dot(x);
+			cv::Vec3d dr2dom = 2 * x[0] * dxdom[0] + 2 * x[1] * dxdom[1];
+			cv::Vec3d dr2dT = 2 * x[0] * dxdT[0] + 2 * x[1] * dxdT[1];
 
-			//double r_ = std::sqrt(r_2);
-			double dr_dr_2 = r_ > 1e-8 ? 1.0/(2.0*r_) : 1;
-			cv::Vec3d dr_dom = dr_dr_2 * dr_2dom;
-			cv::Vec3d dr_dT = dr_dr_2 * dr_2dT;
-
-			double dthetadr_ = 1.0 / (1 + r_2);
-			cv::Vec3d dthetadom = dthetadr_ * dr_dom;
-			cv::Vec3d dthetadT = dthetadr_ * dr_dT;
-
-			double drdtheta = get_drdtheta(theta, mode);
-			cv::Vec3d drdom = drdtheta * dthetadom;
-			cv::Vec3d drdT = drdtheta * dthetadT;
+			//double r = std::sqrt(r_2);
+			double drdr2 = r > 1e-8 ? 1.0/(2.0*r) : 1;
+			cv::Vec3d drdom = drdr2 * dr2dom;
+			cv::Vec3d drdT = drdr2 * dr2dT;
 
 			//double r_d = r + k[0]*r3 + k[1]*r5 + k[2]*r7 + k[3]*r9;
 			double dr_ddr = 1 + 3 * k[0] * r2 + 5 * k[1] * r4 + 7 * k[2] * r6 + 9 * k[3] * r8;
@@ -147,11 +141,11 @@ void my_cv::fisheye_r_d::projectPoints(cv::InputArray objectPoints, cv::OutputAr
 			cv::Vec3d dr_ddT = dr_ddr * drdT;
 			cv::Vec4d dr_ddk = cv::Vec4d(r3, r5, r7, r9);
 
-			//double inv_r_ = r_ > 1e-8 ? 1.0/r_ : 1;
-			//double cdist = r_ > 1e-8 ? r_d / r_ : 1;
+			//double inv_r_ = r > 1e-8 ? 1.0/r : 1;
+			//double cdist = r > 1e-8 ? r_d / r : 1;
 
-			cv::Vec3d dcdistdom = inv_r_ * (dr_ddom - cdist * dr_dom);
-			cv::Vec3d dcdistdT = inv_r_ * (dr_ddT - cdist * dr_dT);
+			cv::Vec3d dcdistdom = inv_r_ * (dr_ddom - cdist * drdom);
+			cv::Vec3d dcdistdT = inv_r_ * (dr_ddT - cdist * drdT);
 			cv::Vec4d dcdistdk = inv_r_ * dr_ddk;
 
 			//cv::Vec2d xd1 = x * cdist;
@@ -362,21 +356,14 @@ void my_cv::fisheye_r_d::undistortPoints(cv::InputArray distorted, cv::OutputArr
 			scale = r / r_d;
 		}
 
-		cv::Vec2d pu = pw * scale; //undistorted point in the image space
 
 		// reproject
-		double theta = getTheta(r, mode);
-
 		cv::Vec2d pfi = pw / r_d;
-		cv::Vec3d pr3d = cv::Vec3d(sin(theta) * pfi[0], sin(theta) * pfi[1], cos(theta));
-		cv::Vec3d rotate_pr3d = RR * pr3d;
-		cv::Vec2d new_Xc = cv::Vec2d(rotate_pr3d[0] / rotate_pr3d[2], rotate_pr3d[1] / rotate_pr3d[2]);
-		double new_r_2 = new_Xc.dot(new_Xc);
-		double new_r_ = sqrt(new_r_2);
-		double new_theta = getTheta(new_r_, IDEAL_PERSPECTIVE);
-		double new_r = getR(new_theta, mode);
+		cv::Vec2d pu = pw * scale; //undistorted point in the image space
+		cv::Vec3d pr3d = getCameraCoord(pu, mode);
 
-		cv::Vec2d new_pu = new_r * pfi;
+		cv::Vec3d rotate_pr3d = RR * pr3d;
+		cv::Vec2d new_pu = getNormalizedImgCoord(rotate_pr3d, mode);
 		cv::Vec2d xd3(new_pu[0] + alpha * new_pu[1], new_pu[1]);
 		cv::Vec2d fi(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
 
@@ -478,6 +465,7 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 					r = *r_si;
 				}
 			}
+			scale = r / r_d;
 		}
 
 		//cv::Vec2d pu = pw / r_d; //undistorted point in the image space
@@ -487,11 +475,16 @@ void my_cv::fisheye_r_d::undistortPoints_H(cv::InputArray distorted, cv::OutputA
 		//	dstd[i] = pu;
 
 		// reproject
-		double theta = getTheta(r, mode);
+		cv::Vec2d pu = pw * scale; //undistorted point in the image space
+		cv::Vec3d pr3d = getCameraCoord(pu, mode);
 
-		double r_ = getR(theta, IDEAL_PERSPECTIVE);
-		double newScale = r_ / r_d;
-		cv::Vec2d pfi = pw * newScale;
+		cv::Vec2d pfi = getNormalizedImgCoord(pr3d, mode);
+
+		////double theta = getTheta(r, mode);
+
+		////double r_ = getR(theta, IDEAL_PERSPECTIVE);
+		////double newScale = r_ / r_d;
+		////cv::Vec2d pfi = pw * newScale;
 		//cv::Vec3d fi = cv::Vec3d(pfi[0], pfi[1], cos(theta));
 
 		if (sdepth == CV_32F)
