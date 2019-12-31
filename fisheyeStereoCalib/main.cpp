@@ -123,6 +123,8 @@ int main()
 	//std::string imgFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera";
 	//std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\camera\\stereoCalibrateData20190710.xml";
 
+	/*
+	// single camera calibration
 	std::string xmlpath_img = "D:/studying/stereo vision/research code/fisheye-stereo-calibrate/fisheyeStereoCalib/fisheyeStereoCalib/fisheyeStereoCalib/patternsR20191225.xml";
 	std::string xmlFile_path = "D:/studying/stereo vision/research code/fisheye-stereo-calibrate/fisheyeStereoCalib/fisheyeStereoCalib/fisheyeStereoCalib/20191225res_r_d.xml";
 
@@ -139,26 +141,33 @@ int main()
 
 	string to_undistort = "D:/studying/stereo vision/research code/fisheye-stereo-calibrate/fisheyeStereoCalib/fisheyeStereoCalib/fisheyeStereoCalib/20191211/patternsImgL/rectify_test";
 	distortRectify_fisheye(K, D, imgSize, to_undistort);
+*/
 
+	//stereo calibration
+	std::string xmlFilePathL = "patternsL20191227.xml";	//150
+	std::string xmlFilePathR = "patternsR20191227.xml";	//221
+	std::string calibResL_Path = "stereoCalibData20191225_equalDistance.xml";//150
+	std::string calibResR_Path = "stereoCalibData20191211_equalDistance.xml";//221
+	std::string stereoCalibRes = "20191227/stereoRes.xml";
+
+	//stereoFisheyeCamCalib_(xmlFilePathL, xmlFilePathR, calibResL_Path, calibResR_Path, stereoCalibRes);
+	cv::Mat left_ = imread("D:/studying/stereo vision/research code/data/20191227/testImgL/5_pattern0.jpg");//imgFilePath_ + "\\testL.jpg"
+	cv::Mat right_ = imread("D:/studying/stereo vision/research code/data/20191227/testImgR/5_pattern0.jpg");//imgFilePath_ + "\\testR.jpg"
+	cv::Mat undistL, undistR;
+
+	stereoFisheyeUndistort_2(left_, right_, stereoCalibRes, undistL, undistR);
 
 	//double errCalib = stereoFisheyeCamCalib_3(imgFilePath, xmlFilePath);
 
 	//rectify_(xmlFilePath, imgFilePath);
 
 	//std::string xmlFilePath = "D:\\studying\\stereo vision\\research code\\data\\2019-07-08\\stereoCalibrateDataResult368_2.xml";
-	cv::Mat left_ = imread(imgFilePath_ + "\\testL.jpg");
-	cv::Mat right_ = imread(imgFilePath_ + "\\testR.jpg");
 	//copyMakeBorder(left_, left_, 0, 0, 0, 8, BORDER_CONSTANT, Scalar(0, 0, 0));
 	//imwrite("D:/1_.jpg", left_);
 	//imwrite("D:/2_.jpg", right_);
 
 	//cv::Mat left_ = imread("D:\\studying\\stereo vision\\research code\\data\\CALIB20190702\\rectifiedLeft.jpg");
 	//cv::Mat right_ = imread("D:\\studying\\stereo vision\\research code\\data\\CALIB20190702\\rectifiedRight.jpg");
-
-
-
-	cv::Mat undistL, undistR;
-	stereoFisheyeUndistort(left_, right_, xmlFilePath, undistL, undistR);
 
 	return 0;
 }

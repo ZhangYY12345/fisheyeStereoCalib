@@ -52,7 +52,15 @@ struct myCmp_map
 	}
 };
 
+//guided filter
+cv::Mat multiChl_to_oneChl_mul(cv::Mat firstImg, cv::Mat secondImg);
+cv::Mat getGuidedFilter(cv::Mat guidedImg, cv::Mat inputP, int r, double eps);
+
+
+//
 void createMask_lines(cv::Mat& dst);
+void createMask_lines2(cv::Mat& dst);
+
 cv::Mat detectLines_(cv::Mat& src1, cv::Mat& src2, bool isHorizon);
 void detectLines_(cv::Mat src1, cv::Mat src2, cv::Mat& dst, cv::Mat& dst_inv, bool isHorizon);
 void connectEdge(cv::Mat& src, int winSize_thres, bool isHorizon = true);
@@ -90,15 +98,23 @@ double stereoCamCalibration_2(std::string imgFilePathL, std::string cameraParaPa
 */
 //single fisheye camera calibration
 double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath);
+//stereo calibration based on single calibration results
+double stereoFisheyeCamCalib_(std::string imgFilePathL, std::string imgFilePathR, 
+	std::string calibResL_Path, std::string calibResR_Path, std::string stereoCalibRes);
+void stereoFisheyeUndistort_(cv::Mat distLeft, cv::Mat distRight, std::string stereoCalibRes, cv::Mat& rectiLeft, cv::Mat& rectiRight);
+void stereoFisheyeUndistort_2(cv::Mat distLeft, cv::Mat distRight, std::string stereoCalibRes, cv::Mat& rectiLeft, cv::Mat& rectiRight);
+
 void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string imgFilePath);
 void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string imgFilePath, 
 	std::vector<cv::Mat>& undistortImgs, bool isLeft = true);
+
 //stereo fisheye calibration
 double stereoFisheyeCamCalib(std::string imgFilePathL, std::string cameraParaPath);
 double stereoFisheyeCamCalib_2(std::string imgFilePathL, std::string cameraParaPath);
 double stereoFisheyeCamCalib_3(std::string imgFilePathL, std::string cameraParaPath);
+
 //fisheye image undistort
-void merge4();
+void merge4(const cv::Mat& tl, const cv::Mat& tr, const cv::Mat& bl, const cv::Mat& br, cv::Mat& merged);
 void stereoFisheyeUndistort(cv::Mat distLeft, cv::Mat distRight, std::string cameraParaPath, cv::Mat& rectiLeft, cv::Mat& rectiRight);
 void rectify_(std::string cameraParaPath, std::string imgPath);
 

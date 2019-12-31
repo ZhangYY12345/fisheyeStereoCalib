@@ -19,8 +19,18 @@ namespace my_cv
 			cv::InputArray K, cv::InputArray D, cv::InputArray R = cv::noArray(), cv::InputArray P = cv::noArray(), camMode mode = STEREOGRAPHIC);
 		CV_EXPORTS_W void undistortPoints_H(cv::InputArray distorted, cv::OutputArray undistorted,
 			cv::InputArray K, cv::InputArray D, camMode mode = STEREOGRAPHIC);
+		CV_EXPORTS_W void undistortPoints_rectify(cv::InputArray distorted, cv::OutputArray undistorted,
+			cv::InputArray K, cv::InputArray D, cv::InputArray R = cv::noArray(), cv::InputArray P = cv::noArray(), camMode mode = STEREOGRAPHIC);
 
 		CV_EXPORTS_W void initUndistortRectifyMap(cv::InputArray K, cv::InputArray D, cv::InputArray R, cv::InputArray P,
+			const cv::Size& size, int m1type, cv::OutputArray map1, cv::OutputArray map2, camMode mode = STEREOGRAPHIC);
+		CV_EXPORTS_W void initUndistortRectifyMap_rectify(cv::InputArray K, cv::InputArray D, cv::InputArray R, cv::InputArray P,
+			const cv::Size& size, int m1type, cv::OutputArray map1, cv::OutputArray map2, camMode mode = STEREOGRAPHIC);
+
+		CV_EXPORTS_W void initUndistortRectifyMap_rectify_2(cv::InputArray K, cv::InputArray D, cv::InputArray R, cv::InputArray tvec,
+			const cv::Size& size, int m1type, cv::OutputArray map1, cv::OutputArray map2, camMode mode = STEREOGRAPHIC);
+		CV_EXPORTS_W void initUndistortRectifyMap_rectify_3(cv::InputArray K, cv::InputArray D, cv::InputArray R, cv::InputArray tvec,
+			cv::InputArray R1, cv::InputArray tvec1,
 			const cv::Size& size, int m1type, cv::OutputArray map1, cv::OutputArray map2, camMode mode = STEREOGRAPHIC);
 
 		CV_EXPORTS_W void undistortImage(cv::InputArray distorted, cv::OutputArray undistorted,
@@ -36,6 +46,7 @@ namespace my_cv
 		CV_EXPORTS_W void stereoRectify(cv::InputArray K1, cv::InputArray D1, cv::InputArray K2, cv::InputArray D2, const cv::Size &imageSize, cv::InputArray R, cv::InputArray tvec,
 			cv::OutputArray R1, cv::OutputArray R2, cv::OutputArray P1, cv::OutputArray P2, cv::OutputArray Q, int flags, const cv::Size &newImageSize = cv::Size(),
 			double balance = 0.0, double fov_scale = 1.0);
+
 
 		CV_EXPORTS_W double stereoCalibrate(cv::InputArrayOfArrays objectPoints, cv::InputArrayOfArrays imagePoints1, cv::InputArrayOfArrays imagePoints2,
 			cv::InputOutputArray K1, cv::InputOutputArray D1, cv::InputOutputArray K2, cv::InputOutputArray D2, cv::Size imageSize,

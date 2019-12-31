@@ -6,7 +6,8 @@
 #include "fisheyeCalib_radius_rd.h"
 #include "fisheyeCalib_raduis_rd2.h"
 
-camMode cur_fisheye_mode = EQUISOLID;
+camMode cur_fisheye_mode = EQUIDISTANCE;
+camMode rectify_mode = EQUIDISTANCE;
 
 my_cv::internal::IntrinsicParams::IntrinsicParams() :
 	f(cv::Vec2d::all(0)), c(cv::Vec2d::all(0)), k(cv::Vec4d::all(0)), alpha(0), isEstimate(9, 0)
@@ -394,7 +395,7 @@ void my_cv::internal::CalibrateExtrinsics(cv::InputArrayOfArrays objectPoints, c
 	if (omc.empty()) omc.create(1, (int)objectPoints.total(), CV_64FC3);
 	if (Tc.empty()) Tc.create(1, (int)objectPoints.total(), CV_64FC3);
 
-	const int maxIter = 20;
+	const int maxIter = 100;
 
 	for (int image_idx = 0; image_idx < (int)imagePoints.total(); ++image_idx)
 	{

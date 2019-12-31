@@ -9,6 +9,7 @@
 using namespace cv;
 using namespace std;
 
+extern camMode cur_fisheye_mode;
 /**
  * \brief create images for camera calibration:circle image for fisheye cameras
  * \param width 
@@ -986,6 +987,136 @@ bool ptsCalib_Single(std::vector<cv::Mat> imgs, douVecPt2f& pts, douVecPt3f& pts
 	return true;
 }
 
+cv::Mat multiChl_to_oneChl_mul(cv::Mat firstImg, cv::Mat secondImg)
+{
+	if (firstImg.size != secondImg.size)
+		return Mat();
+
+	if (firstImg.depth() == CV_32F && secondImg.depth() == CV_32F
+		&& ((firstImg.channels() == 3 && secondImg.channels() == 3)
+			|| (firstImg.channels() == 6 && secondImg.channels() == 6)))
+	{
+		int width = firstImg.cols;
+		int height = firstImg.rows;
+
+		Mat res(height, width, CV_32FC1);
+
+		if (firstImg.channels() == 3)
+		{
+			for (int i = 0; i < width; i++)
+			{
+				for (int j = 0; j < height; j++)
+				{
+					res.at<float>(j, i) = firstImg.at<Vec3f>(j, i).dot(secondImg.at<Vec3f>(j, i));
+				}
+			}
+		}
+		else if (firstImg.channels() == 6)
+		{
+			for (int i = 0; i < width; i++)
+			{
+				for (int j = 0; j < height; j++)
+				{
+					res.at<float>(j, i) = firstImg.at<Vec6f>(j, i).dot(secondImg.at<Vec6f>(j, i));
+				}
+			}
+		}
+		return res;
+	}
+	return firstImg.mul(secondImg);
+}
+
+cv::Mat getGuidedFilter(cv::Mat guidedImg, cv::Mat inputP, int r, double eps)
+{
+	if (guidedImg.size() != inputP.size())
+		return Mat();
+
+	int width = guidedImg.cols;
+	int height = guidedImg.rows;
+
+	normalize(guidedImg, guidedImg, 0, 1, NORM_MINMAX, CV_32F);
+	normalize(inputP, inputP, 0, 1, NORM_MINMAX, CV_32F);
+
+	Mat meanGuid;
+	boxFilter(guidedImg, meanGuid, CV_32F, Size(r, r));
+	Mat meanP;
+	boxFilter(inputP, meanP, CV_32F, Size(r, r));
+
+	std::vector<Mat> guidedImg_split;
+	cv::split(guidedImg, guidedImg_split);
+
+	std::vector<Mat> corrGuid_split;
+	Mat corrGuidP;
+	for (int i = 0; i < guidedImg_split.size(); i++)
+	{
+		Mat corrGuid_channel;
+		boxFilter(guidedImg_split[i].mul(inputP), corrGuid_channel, CV_32F, Size(r, r));
+		corrGuid_split.push_back(corrGuid_channel);
+	}
+	merge(corrGuid_split, corrGuidP);
+
+	Mat corrGuid;
+	boxFilter(guidedImg.mul(guidedImg), corrGuid, CV_32F, Size(r, r));
+
+	Mat varGuid;
+	varGuid = corrGuid - meanGuid.mul(meanGuid);
+
+	std::vector<Mat> meanGrid_split;
+	cv::split(meanGuid, meanGrid_split);
+
+	std::vector<Mat> guidmul_split;
+	Mat meanGuidmulP;
+	for (int i = 0; i < meanGrid_split.size(); i++)
+	{
+		Mat guidmul_channel;
+		guidmul_channel = meanGrid_split[i].mul(meanP);
+		guidmul_split.push_back(guidmul_channel);
+	}
+	merge(guidmul_split, meanGuidmulP);
+
+	Mat covGuidP;
+	covGuidP = corrGuidP - meanGuidmulP;
+
+	//create image mask for matrix adding integer
+	Mat onesMat = Mat::ones(varGuid.size(), varGuid.depth());
+	Mat mergeOnes;
+	if (varGuid.channels() == 1)
+	{
+		mergeOnes = onesMat;
+	}
+	else if (varGuid.channels() == 3)
+	{
+		std::vector<Mat> oneChannel;
+		oneChannel.push_back(onesMat);
+		oneChannel.push_back(onesMat);
+		oneChannel.push_back(onesMat);
+
+		merge(oneChannel, mergeOnes);
+	}
+	else if (varGuid.channels() == 6)
+	{
+		std::vector<Mat> oneChannel;
+		oneChannel.push_back(onesMat);
+		oneChannel.push_back(onesMat);
+		oneChannel.push_back(onesMat);
+		oneChannel.push_back(onesMat);
+		oneChannel.push_back(onesMat);
+		oneChannel.push_back(onesMat);
+
+		merge(oneChannel, mergeOnes);
+	}
+
+	Mat a = covGuidP / (varGuid + mergeOnes * eps);
+	Mat b = meanP - multiChl_to_oneChl_mul(a, meanGuid);
+
+	boxFilter(a, a, CV_32F, Size(r, r));
+	boxFilter(b, b, CV_32F, Size(r, r));
+
+	Mat filteredImg = multiChl_to_oneChl_mul(a, guidedImg) + b;
+	return filteredImg;
+}
+
+
 void createMask_lines(cv::Mat& dst)
 {
 	vector<vector<cv::Point2i> > contours;
@@ -1103,6 +1234,58 @@ void createMask_lines(cv::Mat& dst)
 		contours.push_back(oneContour);
 	}
 
+	int width = 2560;
+	int height = 1440;
+	cv::Mat img = cv::Mat::zeros(height, width, CV_8UC1);
+
+	drawContours(img, contours, -1, 255, FILLED);
+	//imwrite("img_.jpg", img);
+	bitwise_not(img, dst);
+}
+
+void createMask_lines2(cv::Mat& dst)
+{
+	vector<vector<cv::Point2i> > contours;
+	{
+		vector<cv::Point2i> oneContour;
+
+		cv::Point2i p1(300, 0);
+		cv::Point2i p2(118, 394);
+		cv::Point2i p3(240, 464);
+		cv::Point2i p4(149, 576);
+		cv::Point2i p5(128, 603);
+		cv::Point2i p6(116, 810);
+		cv::Point2i p7(137, 887);
+		cv::Point2i p8(144, 942);
+		cv::Point2i p9(147, 985);
+		cv::Point2i p10(144, 1028);
+		cv::Point2i p11(202, 1226);
+		cv::Point2i p12(236, 1298);
+		cv::Point2i p13(241, 1328);
+		cv::Point2i p14(310, 1435);
+		cv::Point2i p15(0, 1439);
+		cv::Point2i p16(0, 0);
+
+		oneContour.push_back(p1);
+		oneContour.push_back(p2);
+		oneContour.push_back(p3);
+		oneContour.push_back(p4);
+		oneContour.push_back(p5);
+		oneContour.push_back(p6);
+		oneContour.push_back(p7);
+		oneContour.push_back(p8);
+		oneContour.push_back(p9);
+		oneContour.push_back(p10);
+		oneContour.push_back(p11);
+		oneContour.push_back(p12);
+		oneContour.push_back(p13);
+		oneContour.push_back(p14);
+		oneContour.push_back(p15);
+		oneContour.push_back(p16);
+
+		contours.push_back(oneContour);
+	}
+	//
 	int width = 2560;
 	int height = 1440;
 	cv::Mat img = cv::Mat::zeros(height, width, CV_8UC1);
@@ -2313,10 +2496,13 @@ void post_removeShortEdges2(cv::Mat& src, std::map<int, std::vector<cv::Point2i>
 void post_process(cv::Mat& src, std::map<int, std::vector<cv::Point2i> >& lines, bool isHorizon, RIGHT_COUNT_SIDE mode)
 {
 	connectEdge(src, 5, isHorizon);
+	connectEdge_(src, 10, isHorizon);
+	connectEdge_(src, 10, isHorizon);
+	connectEdge_(src, 10, isHorizon);
 	//int maxLen = removeShortEdges2(src, lines, 100, isHorizon, mode);
 	//post_removeShortEdges2(src, lines, maxLen / 2, isHorizon, mode);
 	int maxLen = removeShortEdges2(src, lines, 100, isHorizon, mode);
-	connectEdge_(src, 10, isHorizon);
+	connectEdge_(src, 20, isHorizon);
 	post_removeShortEdges2(src, lines, maxLen/2, isHorizon, mode);
 }
 
@@ -2330,8 +2516,16 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 {
 	cv::Mat lineV, lineV_inv;
 	cv::Mat lineH, lineH_inv;
-	detectLines_(src[0], src[1], lineV, lineV_inv, false);
-	detectLines_(src[2], src[3], lineH, lineH_inv, true);
+
+	cv::Mat src0 = getGuidedFilter(src[0], src[0], 7, 1e-6);
+	cv::Mat src1 = getGuidedFilter(src[1], src[1], 7, 1e-6);
+	cv::Mat src2 = getGuidedFilter(src[2], src[2], 7, 1e-6);
+	cv::Mat src3 = getGuidedFilter(src[3], src[3], 7, 1e-6);
+	detectLines_(src0, src1, lineV, lineV_inv, false);
+	detectLines_(src2, src3, lineH, lineH_inv, true);
+
+	//detectLines_(src[0], src[1], lineV, lineV_inv, false);
+	//detectLines_(src[2], src[3], lineH, lineH_inv, true);
 
 	bitwise_and(lineV, lineV_inv, lineV);
 	bitwise_and(lineH, lineH_inv, lineH);
@@ -2446,6 +2640,13 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 {
 	cv::Mat lineV, lineV_inv;
 	cv::Mat lineH, lineH_inv;
+	//cv::Mat src0 = getGuidedFilter(src[0], src[0], 7, 1e-6);
+	//cv::Mat src1 = getGuidedFilter(src[1], src[1], 7, 1e-6);
+	//cv::Mat src2 = getGuidedFilter(src[2], src[2], 7, 1e-6);
+	//cv::Mat src3 = getGuidedFilter(src[3], src[3], 7, 1e-6);
+	//detectLines_( src2, src3, lineV, lineV_inv, false);
+	//detectLines_(src0, src1, lineH, lineH_inv, true);
+
 	detectLines_(src[2], src[3], lineV, lineV_inv, false);
 	detectLines_(src[0], src[1], lineH, lineH_inv, true);
 
@@ -2610,9 +2811,11 @@ void detectPts(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::ve
 	//threshold(src[2], src_2, 80, 255, THRESH_BINARY);
 	//bitwise_xor(src_1, src_2, dst_1);
 
-	cornerSubPix(src[4], pts, cv::Size(5, 5), cv::Size(-1, -1),
-		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 700, 1e-8));
-
+	if (!pts.empty())
+	{
+		cornerSubPix(src[4], pts, cv::Size(5, 5), cv::Size(-1, -1),
+			TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 700, 1e-8));
+	}
 }
 
 void detectPts2(std::vector<cv::Mat>& src, std::vector<cv::Point2f>& pts, std::vector<cv::Point3f>& ptsReal,
@@ -2843,13 +3046,15 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 		ptsReal.clear();
 	}
 
+	int count = 1;
 	for(auto it = imgPaths.begin(); it != imgPaths.end(); it++)
 	{
 		if (it->first == TOP_LEFT || it->first == TOP_RIGHT || it->first == BOTTOM_LEFT || it->first == BOTTOM_RIGHT)
 		{
-
 			for (auto it_1 = it->second.begin(); it_1 != it->second.end(); it_1++)
 			{
+				std::cout << count << endl;
+
 				vector<cv::Point2f> oneImgPts;
 				vector<cv::Point3f> oneObjPts;
 
@@ -2869,8 +3074,10 @@ bool ptsCalib_single2(std::string xmlFilePath, cv::Size& imgSize, douVecPt2f& pt
 				detectPts(oneImgs, oneImgPts, oneObjPts, gridSize, hNum, vNum, it->first, mask);
 				pts.push_back(oneImgPts);
 				ptsReal.push_back(oneObjPts);
+				count++;
 			}
 		}
+		
 	}
 
 	return(!(pts.empty() || ptsReal.empty() || pts.size() != ptsReal.size()));
@@ -3134,6 +3341,344 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 	waitKey(0);
 
 	return rms;
+}
+
+double stereoFisheyeCamCalib_(std::string imgFilePathL, std::string imgFilePathR, std::string calibResL_Path,
+	std::string calibResR_Path, std::string stereoCalibRes)
+{
+	cv::Size imgSize;
+	cv::Mat mask_R;
+	createMask_lines2(mask_R);
+	std::vector<std::vector<Point2f> > cornerPtsVecL, cornerPtsVecR;		//store the detected inner corners of each image
+	std::vector<std::vector<Point3f> > objPts3dL, objPts3dR;			//calculated coordination of corners in world coordinate system
+	double gridSize = 16.5;
+	bool isSucR = ptsCalib_single2(imgFilePathR, imgSize, cornerPtsVecR, objPts3dR, gridSize, 17, 31, mask_R);
+	bool isSucL = ptsCalib_single2(imgFilePathL, imgSize, cornerPtsVecL, objPts3dL, gridSize, 17, 31);
+
+	/*
+	//每组图像的控制点数不一致
+	std::vector<std::vector<Point2f> > dst_cornerPtsVecL, dst_cornerPtsVecR;
+	std::vector<std::vector<Point3f> > objPts3d;
+	if (isSucL && isSucR)
+	{
+		int pairNum = cornerPtsVecL.size();
+		for (int i = 0; i < pairNum; i++)
+		{
+			std::vector<Point3f> obj_pts_3d;
+			std::vector<Point2f> dst_pts_2d_L, dst_pts_2d_R;
+			for(std::vector<Point3f>::iterator itorL = objPts3dL[i].begin(); itorL != objPts3dL[i].end(); itorL++)
+			{
+				Point3f curPt3d = *itorL;
+				std::vector<Point3f>::iterator itorR = find(objPts3dR[i].begin(), objPts3dR[i].end(), curPt3d);
+				if(itorR != objPts3dR[i].end())
+				{
+					int numL = itorL - objPts3dL[i].begin();
+					Point2f curPt2dL = cornerPtsVecL[i][numL];
+					dst_pts_2d_L.push_back(curPt2dL);
+
+					int numR = itorR - objPts3dR[i].begin();
+					Point2f curPt2dR = cornerPtsVecR[i][numR];
+					dst_pts_2d_R.push_back(curPt2dR);
+
+					obj_pts_3d.push_back(curPt3d);
+				}
+			}
+			objPts3d.push_back(obj_pts_3d);
+			dst_cornerPtsVecL.push_back(dst_pts_2d_L);
+			dst_cornerPtsVecR.push_back(dst_pts_2d_R);
+		}
+	}
+	*/
+
+	std::vector<std::vector<Point2f> > dst_cornerPtsVecL, dst_cornerPtsVecR;
+	std::vector<std::vector<Point3f> > objPts3d;
+	if (isSucL && isSucR)
+	{
+		int pairNum = cornerPtsVecL.size();
+		std::vector<Point3f> obj_ptsL_3d;
+		for (std::vector<Point3f>::iterator itorL = objPts3dL[0].begin(); itorL != objPts3dL[0].end(); itorL++)
+		{
+			Point3f curPt3d = *itorL;
+			bool isOk = true;
+			for (int i = 1; i < pairNum; i++)
+			{
+				std::vector<Point3f>::iterator it_ = find(objPts3dL[i].begin(), objPts3dL[i].end(), curPt3d);
+				if (it_ == objPts3dL[i].end())
+				{
+					isOk = false;
+					break;
+				}
+			}
+
+			if (isOk)
+			{
+				obj_ptsL_3d.push_back(curPt3d);
+			}
+		}
+
+		std::vector<Point3f> obj_ptsR_3d;
+		for (std::vector<Point3f>::iterator itorR = objPts3dR[0].begin(); itorR != objPts3dR[0].end(); itorR++)
+		{
+			Point3f curPt3d = *itorR;
+			bool isOk = true;
+			for (int i = 1; i < pairNum; i++)
+			{
+				std::vector<Point3f>::iterator it_ = find(objPts3dR[i].begin(), objPts3dR[i].end(), curPt3d);
+				if (it_ == objPts3dR[i].end())
+				{
+					isOk = false;
+					break;
+				}
+			}
+
+			if (isOk)
+			{
+				obj_ptsR_3d.push_back(curPt3d);
+			}
+		}
+
+		std::vector<Point3f> obj_ptsLR_3d;
+		for (std::vector<Point3f>::iterator itor = obj_ptsL_3d.begin(); itor != obj_ptsL_3d.end(); itor++)
+		{
+			std::vector<Point3f>::iterator it_ = find(obj_ptsR_3d.begin(), obj_ptsR_3d.end(), *itor);
+			if (it_ != obj_ptsR_3d.end())
+			{
+				obj_ptsLR_3d.push_back(*itor);
+			}
+
+		}
+
+
+		for (int i = 0; i < pairNum; i++)
+		{
+			std::vector<Point3f> obj_pts_3d;
+			std::vector<Point2f> dst_pts_2d_L, dst_pts_2d_R;
+			for(std::vector<Point3f>::iterator itor = obj_ptsLR_3d.begin(); itor != obj_ptsLR_3d.end(); itor++)
+			{
+				Point3f curPt3d = *itor;
+				std::vector<Point3f>::iterator itorL = find(objPts3dL[i].begin(), objPts3dL[i].end(), curPt3d);
+				std::vector<Point3f>::iterator itorR = find(objPts3dR[i].begin(), objPts3dR[i].end(), curPt3d);
+				if (itorL != objPts3dL[i].end() && itorR != objPts3dR[i].end())
+				{
+					int numL = itorL - objPts3dL[i].begin();
+					Point2f curPt2dL = cornerPtsVecL[i][numL];
+					dst_pts_2d_L.push_back(curPt2dL);
+
+					int numR = itorR - objPts3dR[i].begin();
+					Point2f curPt2dR = cornerPtsVecR[i][numR];
+					dst_pts_2d_R.push_back(curPt2dR);
+
+					obj_pts_3d.push_back(curPt3d);
+				}
+			}
+			objPts3d.push_back(obj_pts_3d);
+			dst_cornerPtsVecL.push_back(dst_pts_2d_L);
+			dst_cornerPtsVecR.push_back(dst_pts_2d_R);
+		}
+	}
+
+	cv::Mat K_L, D_L;
+	FileStorage fnL(calibResL_Path, FileStorage::READ);
+	fnL["CameraInnerPara"] >> K_L;
+	fnL["CameraDistPara"] >> D_L;
+	fnL.release();
+
+	cv::Mat K_R, D_R;
+	FileStorage fnR(calibResR_Path, FileStorage::READ);
+	fnR["CameraInnerPara"] >> K_R;
+	fnR["CameraDistPara"] >> D_R;
+	fnR.release();
+
+	cv::Mat R_l_r, T_l_r;
+	int flag = 0;
+	//flag |= fisheye::CALIB_RECOMPUTE_EXTRINSIC;
+	//flag |= fisheye::CALIB_CHECK_COND;
+	//flag |= fisheye::CALIB_FIX_SKEW;
+	//flag |= fisheye::CALIB_FIX_K1;
+	//flag |= fisheye::CALIB_FIX_K2;
+	//flag |= fisheye::CALIB_FIX_K3;
+	//flag |= fisheye::CALIB_FIX_K4;
+	//flag |= fisheye::CALIB_FIX_PRINCIPAL_POINT;
+	flag |= fisheye::CALIB_FIX_INTRINSIC;
+	//flag |= fisheye::CALIB_USE_INTRINSIC_GUESS;
+
+	double rms = my_cv::fisheye_r_d::stereoCalibrate(objPts3d, dst_cornerPtsVecL, dst_cornerPtsVecR, 
+		K_L, D_L, K_R, D_R, imgSize, R_l_r, T_l_r,
+		flag, cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 100, 1e-10));
+	
+	FileStorage fnStereo(stereoCalibRes, FileStorage::WRITE);
+	fnStereo << "ImgSize" << imgSize;
+	fnStereo << "CameraInnerParaL" << K_L;
+	fnStereo << "CameraDistParaL" << D_L;
+	fnStereo << "CameraInnerParaR" << K_R;
+	fnStereo << "CameraDistParaR" << D_R;
+	fnStereo << "RotationL2R" << R_l_r;
+	fnStereo << "TransationL2R" << T_l_r;
+	fnStereo << "RMS" << rms;
+	fnStereo.release();
+
+	return rms;
+}
+
+void stereoFisheyeUndistort_(cv::Mat distLeft, cv::Mat distRight, std::string stereoCalibRes, cv::Mat& rectiLeft,
+	cv::Mat& rectiRight)
+{
+	//camera stereo calibration parameters
+	cv::Size imgSize;
+	cv::Mat K_L, D_L, K_R, D_R;
+	cv::Mat R_l_r, T_l_r;
+
+	FileStorage fn(stereoCalibRes, FileStorage::READ);
+	fn["ImgSize"] >> imgSize;
+	fn["CameraInnerParaL"] >> K_L;
+	fn["CameraDistParaL"] >> D_L;
+	fn["CameraInnerParaR"] >> K_R;
+	fn["CameraDistParaR"] >> D_R;
+	fn["RotationL2R"] >> R_l_r;
+	fn["TransationL2R"] >> T_l_r;
+	fn.release();
+
+	if (distLeft.size() != imgSize)
+	{
+		resize(distLeft, distLeft, imgSize);
+	}
+	if (distRight.size() != imgSize)
+	{
+		resize(distRight, distRight, imgSize);
+	}
+	cv::Mat undistortLeft, undistortRight;
+	my_cv::fisheye_r_d::undistortImage(distLeft, undistortLeft, K_L, D_L, K_L, imgSize);
+	my_cv::fisheye_r_d::undistortImage(distRight, undistortRight, K_R, D_R, K_R, imgSize);
+
+
+	cv::Mat R1, R2, P1, P2, Q_;
+	my_cv::fisheye_r_d::stereoRectify(K_L, D_L, K_R, D_R,
+		imgSize, R_l_r, T_l_r, R1, R2, P1, P2, Q_,
+		CALIB_ZERO_DISPARITY);
+
+	cv::Mat lmapx, lmapy, rmapx, rmapy;
+	//rewrite for fisheye
+	my_cv::fisheye_r_d::initUndistortRectifyMap_rectify(K_L, D_L, R1, P1, imgSize, CV_32F, lmapx, lmapy, cur_fisheye_mode);
+	my_cv::fisheye_r_d::initUndistortRectifyMap_rectify(K_R, D_R, R2, P2, imgSize, CV_32F, rmapx, rmapy, cur_fisheye_mode);
+
+	cv::remap(distLeft, rectiLeft, lmapx, lmapy, cv::INTER_LINEAR);
+	cv::remap(distRight, rectiRight, rmapx, rmapy, cv::INTER_LINEAR);
+
+	imwrite("rectifyL.jpg", rectiLeft);
+	imwrite("rectifyR.jpg", rectiRight);
+
+	for (int ii = 0; ii < rectiLeft.rows; ii += 20)
+	{
+		cv::line(undistortLeft, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+		cv::line(undistortRight, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+
+		cv::line(rectiLeft, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+		cv::line(rectiRight, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+	}
+
+
+	cv::Mat rectification;
+	merge4(distLeft, distRight, rectiLeft, rectiRight, rectification);
+
+	cv::imwrite("rectify.jpg", rectification);
+
+
+
+	//cv::Mat frame_left, frame_right;
+	//cv::Mat imgLeft, imgRight;
+	//cv::Mat rimg, cimg;
+	//cv::Mat Mask;
+
+	//String filePath = imgFilePath + "\\*L.jpg";
+	//std::vector<String> fileNames;
+	//glob(filePath, fileNames, false);
+	//for (int i = 0; i < fileNames.size(); i++)
+	//{
+	//	frame_left = imread(fileNames[i]);
+	//	frame_right = imread(fileNames[i].substr(0, fileNames[i].length() - 5) + "R.jpg");
+
+	//	if (frame_left.rows != frame_right.rows
+	//		&& frame_left.cols != frame_right.cols
+	//		&& frame_left.rows != imgSize.height
+	//		&& frame_left.cols != imgSize.width)
+	//	{
+	//		std::cout << "img reading error" << std::endl;
+	//		return;
+	//	}
+
+	//	if (frame_left.empty() || frame_right.empty())
+	//		continue;
+
+	//	cv::Mat lundist, rundist;
+	//	cv::remap(frame_left, lundist, lmapx, lmapy, INTER_LINEAR);
+	//	cv::remap(frame_right, rundist, rmapx, rmapy, cv::INTER_LINEAR);
+
+	//	cv::Mat rectification = mergeRectification(lundist, rundist);
+
+	//	char c = (char)waitKey(0);
+	//	if (c == 27 || c == 'q' || c == 'Q')
+	//		break;
+	//}
+
+}
+
+void stereoFisheyeUndistort_2(cv::Mat distLeft, cv::Mat distRight, std::string stereoCalibRes, cv::Mat& rectiLeft,
+	cv::Mat& rectiRight)
+{
+	//camera stereo calibration parameters
+	cv::Size imgSize;
+	cv::Mat K_L, D_L, K_R, D_R;
+	cv::Mat R_l_r, T_l_r;
+
+	FileStorage fn(stereoCalibRes, FileStorage::READ);
+	fn["ImgSize"] >> imgSize;
+	fn["CameraInnerParaL"] >> K_L;
+	fn["CameraDistParaL"] >> D_L;
+	fn["CameraInnerParaR"] >> K_R;
+	fn["CameraDistParaR"] >> D_R;
+	fn["RotationL2R"] >> R_l_r;
+	fn["TransationL2R"] >> T_l_r;
+	fn.release();
+
+	if (distLeft.size() != imgSize)
+	{
+		resize(distLeft, distLeft, imgSize);
+	}
+	if (distRight.size() != imgSize)
+	{
+		resize(distRight, distRight, imgSize);
+	}
+	cv::Mat undistortLeft, undistortRight;
+	my_cv::fisheye_r_d::undistortImage(distLeft, undistortLeft, K_L, D_L, K_L, imgSize);
+	my_cv::fisheye_r_d::undistortImage(distRight, undistortRight, K_R, D_R, K_R, imgSize);
+
+	cv::Mat lmapx, lmapy, rmapx, rmapy;
+	//rewrite for fisheye
+	cv::Mat R_r = cv::Mat::eye(R_l_r.size(), R_l_r.type());
+	cv::Mat T_r = cv::Mat::zeros(T_l_r.size(), T_l_r.type());
+	my_cv::fisheye_r_d::initUndistortRectifyMap_rectify_3(K_L, D_L, R_l_r, T_l_r, R_l_r, T_l_r, imgSize, CV_32F, lmapx, lmapy, cur_fisheye_mode);
+	my_cv::fisheye_r_d::initUndistortRectifyMap_rectify_3(K_R, D_R, R_l_r, T_l_r, noArray(), noArray(), imgSize, CV_32F, rmapx, rmapy, cur_fisheye_mode);
+
+	cv::remap(undistortLeft, rectiLeft, lmapx, lmapy, cv::INTER_LINEAR);
+	cv::remap(undistortRight, rectiRight, rmapx, rmapy, cv::INTER_LINEAR);
+
+	imwrite("rectifyL.jpg", rectiLeft);
+	imwrite("rectifyR.jpg", rectiRight);
+
+	for (int ii = 0; ii < rectiLeft.rows; ii += 20)
+	{
+		cv::line(undistortLeft, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+		cv::line(undistortRight, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+
+		cv::line(rectiLeft, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+		cv::line(rectiRight, cv::Point(0, ii), cv::Point(rectiLeft.cols, ii), cv::Scalar(0, 255, 0));
+	}
+
+
+	cv::Mat rectification;
+	merge4(distLeft, distRight, rectiLeft, rectiRight, rectification);
+
+	cv::imwrite("rectify.jpg", rectification);
 }
 
 void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string imgFilePath)

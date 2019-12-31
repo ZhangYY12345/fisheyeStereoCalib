@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<ImgSize>
+  2560 1440</ImgSize>
+<CameraInnerPara type_id="opencv-matrix">
+  <rows>3</rows>
+  <cols>3</cols>
+  <dt>d</dt>
+  <data>
+    9.2250793592236141e+02 -3.6102576233789496e-01
+    1.2852198281950814e+03 0. 9.2324069500975168e+02
+    7.1104472201630495e+02 0. 0. 1.</data></CameraInnerPara>
+<CameraDistPara type_id="opencv-matrix">
+  <rows>4</rows>
+  <cols>1</cols>
+  <dt>d</dt>
+  <data>
+    -6.7451481193594801e-02 2.1796403999394367e-03
+    -5.8999181406961922e-03 1.4241746695038372e-03</data></CameraDistPara>
+<RMS>3.5774636103848378e-01</RMS>
+</opencv_storage>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<all>
+<img_width>2560</img_width>
+<img_height>1440</img_height>
+<images_tl>
+  <pair>
+      <pattern>./20191227/patternsImgR/2_pattern0.jpg</pattern>
+      <pattern>./20191227/patternsImgR/2_pattern1.jpg</pattern>
+      <pattern>./20191227/patternsImgR/2_pattern2.jpg</pattern>
+      <pattern>./20191227/patternsImgR/2_pattern3.jpg</pattern>
+      <pattern>./20191227/patternsImgR/2_pattern4.jpg</pattern>
+  </pair>
+  <pair>
+      <pattern>./20191227/patternsImgR/3_pattern0.jpg</pattern>
+      <pattern>./20191227/patternsImgR/3_pattern1.jpg</pattern>
+      <pattern>./20191227/patternsImgR/3_pattern2.jpg</pattern>
+      <pattern>./20191227/patternsImgR/3_pattern3.jpg</pattern>
+      <pattern>./20191227/patternsImgR/3_pattern4.jpg</pattern>
+  </pair>
+  <pair>
+      <pattern>./20191227/patternsImgR/9_pattern0.jpg</pattern>
+      <pattern>./20191227/patternsImgR/9_pattern1.jpg</pattern>
+      <pattern>./20191227/patternsImgR/9_pattern2.jpg</pattern>
+      <pattern>./20191227/patternsImgR/9_pattern3.jpg</pattern>
+      <pattern>./20191227/patternsImgR/9_pattern4.jpg</pattern>
+  </pair>
+  <pair>
+      <pattern>./20191227/patternsImgR/14_pattern0.jpg</pattern>
+      <pattern>./20191227/patternsImgR/14_pattern1.jpg</pattern>
+      <pattern>./20191227/patternsImgR/14_pattern2.jpg</pattern>
+      <pattern>./20191227/patternsImgR/14_pattern3.jpg</pattern>
+      <pattern>./20191227/patternsImgR/14_pattern4.jpg</pattern>
+  </pair>
+</images_tl>
+<images_tr>
+  <pair>
+      <pattern>./20191227/patternsImgR/10_pattern0.jpg</pattern>
+      <pattern>./20191227/patternsImgR/10_pattern1.jpg</pattern>
+      <pattern>./20191227/patternsImgR/10_pattern2.jpg</pattern>
+      <pattern>./20191227/patternsImgR/10_pattern3.jpg</pattern>
+      <pattern>./20191227/patternsImgR/10_pattern4.jpg</pattern>
+  </pair>
+  <pair>
+      <pattern>./20191227/patternsImgR/11_pattern0.jpg</pattern>
+      <pattern>./20191227/patternsImgR/11_pattern1.jpg</pattern>
+      <pattern>./20191227/patternsImgR/11_pattern2.jpg</pattern>
+      <pattern>./20191227/patternsImgR/11_pattern3.jpg</pattern>
+      <pattern>./20191227/patternsImgR/11_pattern4.jpg</pattern>
+  </pair>
+</images_tr>
+<images_bl>
+  <pair>
+      <pattern>./20191227/patternsImgR/7_pattern0.jpg</pattern>
+      <pattern>./20191227/patternsImgR/7_pattern1.jpg</pattern>
+      <pattern>./20191227/patternsImgR/7_pattern2.jpg</pattern>
+      <pattern>./20191227/patternsImgR/7_pattern3.jpg</pattern>
+      <pattern>./20191227/patternsImgR/7_pattern4.jpg</pattern>
+  </pair>
+  <pair>
+      <pattern>./20191227/patternsImgR/8_pattern0.jpg</pattern>
+      <pattern>./20191227/patternsImgR/8_pattern1.jpg</pattern>
+      <pattern>./20191227/patternsImgR/8_pattern2.jpg</pattern>
+      <pattern>./20191227/patternsImgR/8_pattern3.jpg</pattern>
+      <pattern>./20191227/patternsImgR/8_pattern4.jpg</pattern>
+  </pair>
+  <pair>
+      <pattern>./20191227/patternsImgR/13_pattern0.jpg</pattern>
+      <pattern>./20191227/patternsImgR/13_pattern1.jpg</pattern>
+      <pattern>./20191227/patternsImgR/13_pattern2.jpg</pattern>
+      <pattern>./20191227/patternsImgR/13_pattern3.jpg</pattern>
+      <pattern>./20191227/patternsImgR/13_pattern4.jpg</pattern>
+  </pair>
+</images_bl>
+<images_br>
+  <pair>
+      <pattern>./20191227/patternsImgR/5_pattern0.jpg</pattern>
+      <pattern>./20191227/patternsImgR/5_pattern1.jpg</pattern>
+      <pattern>./20191227/patternsImgR/5_pattern2.jpg</pattern>
+      <pattern>./20191227/patternsImgR/5_pattern3.jpg</pattern>
+      <pattern>./20191227/patternsImgR/5_pattern4.jpg</pattern>
+  </pair>
+  <pair>
+      <pattern>./20191227/patternsImgR/6_pattern0.jpg</pattern>
+      <pattern>./20191227/patternsImgR/6_pattern1.jpg</pattern>
+      <pattern>./20191227/patternsImgR/6_pattern2.jpg</pattern>
+      <pattern>./20191227/patternsImgR/6_pattern3.jpg</pattern>
+      <pattern>./20191227/patternsImgR/6_pattern4.jpg</pattern>
+  </pair>
+</images_br>
+</all>
