@@ -395,7 +395,7 @@ void my_cv::internal::CalibrateExtrinsics(cv::InputArrayOfArrays objectPoints, c
 	if (omc.empty()) omc.create(1, (int)objectPoints.total(), CV_64FC3);
 	if (Tc.empty()) Tc.create(1, (int)objectPoints.total(), CV_64FC3);
 
-	const int maxIter = 100;
+	const int maxIter = 500;
 
 	for (int image_idx = 0; image_idx < (int)imagePoints.total(); ++image_idx)
 	{

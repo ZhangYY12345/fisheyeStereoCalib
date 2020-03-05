@@ -820,9 +820,10 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap_rectify(cv::InputArray K, cv::I
 			px[0] -= new_alpha * px[1];
 			cv::Vec2d px_;
 			{
-				double xyz = getTheta(px[0], rectify_mode);
-				double yz = getTheta(px[1], rectify_mode);
-
+				//double xyz = getTheta(px[0], rectify_mode);
+				//double yz = getTheta(px[1], rectify_mode);
+				double xyz = px[0];
+				double yz = px[1];
 				double y_ = yz;
 				double x_ = xyz * sqrt(yz * yz + 1.0);
 
@@ -918,21 +919,24 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap_rectify_2(cv::InputArray K, cv:
 	cv::Matx33d RRR = RR.inv(cv::DECOMP_SVD);//
 
 	cv::Vec3d tt = cv::Vec3d(0, 0, 0);
+	cv::Matx33d tt_rrr = cv::Matx33d::eye();
 	if(!tvec.empty())
 	{
 		tvec.getMat().convertTo(tt, CV_64F);
+		double tt_theta_xz = -atan(tt[1] / tt[0]);
+		cv::Matx33d Rz = cv::Matx33d(cos(tt_theta_xz), -sin(tt_theta_xz), 0,
+			sin(tt_theta_xz), cos(tt_theta_xz), 0,
+			0, 0, 1);
+		double tt_theta_xy = -atan(tt[2] / sqrt(tt[0] * tt[0] + tt[1] * tt[1]));
+		cv::Matx33d Ry = cv::Matx33d(cos(tt_theta_xy), 0, sin(tt_theta_xy),
+			0, 1, 0,
+			-sin(tt_theta_xy), 0, cos(tt_theta_xy));
+		cv::Matx33d tt_rr =  Ry * Rz;
+		tt_rrr = tt_rr.inv(cv::DECOMP_SVD);
 	}
-	tt = RRR * tt;
-	double tt_theta_xz = atan(tt[1] / tt[0]);
-	cv::Matx33d Rz = cv::Matx33d(cos(tt_theta_xz), sin(tt_theta_xz), 0,
-		-sin(tt_theta_xz), cos(tt_theta_xz), 0,
-		0, 0, 1);
-	double tt_theta_xy = atan(tt[2] / sqrt(tt[0] * tt[0] + tt[1] * tt[1]));
-	cv::Matx33d Ry = cv::Matx33d(cos(-tt_theta_xy), 0, -sin(-tt_theta_xy), 
-		0, 1, 0,
-		sin(-tt_theta_xy), 0, cos(-tt_theta_xy));
 
-	cv::Matx33d tt_rr = Ry * Rz;
+	cv::Vec3d tt1 = cv::Vec3d(tt[0], 0, 0);
+	cv::Vec3d tt2 = cv::Vec3d(0, tt[1], tt[2]);
 
 	for (int i = 0; i < size.height; ++i)
 	{
@@ -945,41 +949,44 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap_rectify_2(cv::InputArray K, cv:
 		for (int j = 0; j < size.width; ++j)
 		{
 			cv::Vec2d x(j, i);
-			cv::Vec2d px = cv::Vec2d((x[0] - c[0]) / f[0], (x[1] - c[1]) / f[1]);
+			cv::Vec2d px = cv::Vec2d((x[0] - c[0]) / f[0], (x[1] - (c[1]-tt[1])) / f[1]);
 			px[0] -= alpha * px[1];
 
 			cv::Vec2d px_;
 			{
-				double xyz = getTheta(px[0], rectify_mode);
-				double yz = getTheta(px[1], rectify_mode);
+				double rr = sqrt(px.dot(px));
+				double theta_ = getTheta(rr, mode);
+				if (theta_ > PI * 0.5)
+				{
+					continue;
+				}
 
-				double y_ = yz;
-				double x_ = xyz * sqrt(yz * yz + 1.0);
+				cv::Vec2d fi_ = px / rr;
+				cv::Vec3d t_3d = cv::Vec3d(sin(theta_) * fi_[0], sin(theta_) * fi_[1], cos(theta_));
 
-				cv::Vec3d px_3d = tt_rr * RRR * cv::Vec3d(x_, y_, 1.0);
+				cv::Vec3d px_3d = (RRR * tt_rrr * t_3d);
 				if (fabs(px_3d[2]) < DBL_MIN)
 				{
-					px_3d[2] = 1.0;
+					px_[0] = 0.0;
+					px_[1] = 0.0;
 				}
-				px_[0] = px_3d[0] / px_3d[2];
-				px_[1] = px_3d[1] / px_3d[2];
+				else
+				{
+					px_[0] = px_3d[0] / px_3d[2];
+					px_[1] = px_3d[1] / px_3d[2];
+				}
 				//px_[0] = x_;
 				//px_[1] = y_;
 
 			}
 
-			//double rr = sqrt(px.dot(px));
-			//cv::Vec2d fi_ = px / rr;
-			//double theta_ = getTheta(rr, mode);
-			//cv::Vec3d t_3d = RRR * (cv::Vec3d(sin(theta_) * fi_[0], sin(theta_) * fi_[1], cos(theta_)));
-			//if(fabs(t_3d[2]) <DBL_MIN)
-			//{
-			//	t_3d[2] = 1.0;
-			//}
-			//cv::Vec2d fcc = cv::Vec2d(t_3d[0] / t_3d[2], t_3d[1] / t_3d[2]);
 			cv::Vec2d fcc = px_;
 			double rcc = sqrt(fcc.dot(fcc));
 			double theta_cc = getTheta(rcc, IDEAL_PERSPECTIVE);
+			if (theta_cc > PI * 0.5)
+			{
+				continue;
+			}
 			double r = getR(theta_cc, mode);
 
 			double u, v;
@@ -990,7 +997,7 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap_rectify_2(cv::InputArray K, cv:
 			cv::Vec2d xd3(xd1[0] + alpha * xd1[1], xd1[1]);
 			cv::Vec2d final_point(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
 			u = final_point[0];
-			v = final_point[1] + tt[1];
+			v = final_point[1];
 
 			if (m1type == CV_16SC2)
 			{
@@ -1057,6 +1064,11 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap_rectify_3(cv::InputArray K, cv:
 	else if (!R1.empty() && R1.size() == cv::Size(3, 3))
 		R1.getMat().convertTo(RR1, CV_64F);
 	cv::Matx33d RRR1 = RR1.inv(cv::DECOMP_SVD);//
+	cv::Vec3d tt1 = cv::Vec3d(0, 0, 0);
+	if (!tvec1.empty())
+	{
+		tvec1.getMat().convertTo(tt1, CV_64F);
+	}
 
 	////second rotation to be the same with baseline
 	cv::Matx33d RR = cv::Matx33d::eye();
@@ -1074,16 +1086,16 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap_rectify_3(cv::InputArray K, cv:
 	if (!tvec.empty())
 	{
 		tvec.getMat().convertTo(tt, CV_64F);
+		tt = -tt;
 	}
-	//tt = RRR * tt;
-	double tt_theta_xz = atan(tt[1] / tt[0]);
-	cv::Matx33d Rz = cv::Matx33d(cos(tt_theta_xz), sin(tt_theta_xz), 0,
-		-sin(tt_theta_xz), cos(tt_theta_xz), 0,
+	double tt_theta_xz = -atan(tt[1] / tt[0]);
+	cv::Matx33d Rz = cv::Matx33d(cos(tt_theta_xz), -sin(tt_theta_xz), 0,
+		sin(tt_theta_xz), cos(tt_theta_xz), 0,
 		0, 0, 1);
-	double tt_theta_xy = atan(tt[2] / sqrt(tt[0] * tt[0] + tt[1] * tt[1]));
-	cv::Matx33d Ry = cv::Matx33d(cos(-tt_theta_xy), 0, -sin(-tt_theta_xy),
+	double tt_theta_xy = -atan(tt[2] / sqrt(tt[0] * tt[0] + tt[1] * tt[1]));
+	cv::Matx33d Ry = cv::Matx33d(cos(tt_theta_xy), 0, sin(tt_theta_xy),
 		0, 1, 0,
-		sin(-tt_theta_xy), 0, cos(-tt_theta_xy));
+		-sin(tt_theta_xy), 0, cos(tt_theta_xy));
 	cv::Matx33d tt_rr = Ry * Rz;
 	cv::Matx33d tt_rrr = tt_rr.inv(cv::DECOMP_SVD);
 
@@ -1143,7 +1155,504 @@ void my_cv::fisheye_r_d::initUndistortRectifyMap_rectify_3(cv::InputArray K, cv:
 			cv::Vec2d xd3(xd1[0] + alpha * xd1[1], xd1[1]);
 			cv::Vec2d final_point(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
 			u = final_point[0];
-			v = final_point[1] + tt[1];
+			v = final_point[1] - tt1[1]; //important
+
+			if (m1type == CV_16SC2)
+			{
+				int iu = cv::saturate_cast<int>(u*cv::INTER_TAB_SIZE);
+				int iv = cv::saturate_cast<int>(v*cv::INTER_TAB_SIZE);
+				m1[j * 2 + 0] = (short)(iu >> cv::INTER_BITS);
+				m1[j * 2 + 1] = (short)(iv >> cv::INTER_BITS);
+				m2[j] = (ushort)((iv & (cv::INTER_TAB_SIZE - 1))*cv::INTER_TAB_SIZE + (iu & (cv::INTER_TAB_SIZE - 1)));
+			}
+			else if (m1type == CV_32FC1)
+			{
+				m1f[j] = (float)u;
+				m2f[j] = (float)v;
+			}
+
+		}
+	}
+}
+
+void my_cv::fisheye_r_d::initUndistortRectifyMap_rectify_4(cv::InputArray K, cv::InputArray D, cv::InputArray R,
+	cv::InputArray tvec, cv::InputArray R1, cv::InputArray tvec1, const cv::Size& size, int m1type,
+	cv::OutputArray map1, cv::OutputArray map2, camMode mode)
+{
+	CV_Assert(m1type == CV_16SC2 || m1type == CV_32F || m1type <= 0);
+	map1.create(size, m1type <= 0 ? CV_16SC2 : m1type);
+	map2.create(size, map1.type() == CV_16SC2 ? CV_16UC1 : CV_32F);
+
+	CV_Assert((K.depth() == CV_32F || K.depth() == CV_64F) && (D.depth() == CV_32F || D.depth() == CV_64F));
+	CV_Assert((R.empty() || R.depth() == CV_32F || R.depth() == CV_64F));
+	CV_Assert((R1.empty() || R1.depth() == CV_32F || R1.depth() == CV_64F));
+	CV_Assert(K.size() == cv::Size(3, 3) && (D.empty() || D.total() == 4));
+	CV_Assert(R.empty() || R.size() == cv::Size(3, 3) || R.total() * R.channels() == 3);
+	CV_Assert(R1.empty() || R1.size() == cv::Size(3, 3) || R1.total() * R1.channels() == 3);
+
+	cv::Vec2d f, c;
+	double alpha;
+	if (K.depth() == CV_32F)
+	{
+		cv::Matx33f camMat = K.getMat();
+		f = cv::Vec2f(camMat(0, 0), camMat(1, 1));
+		c = cv::Vec2f(camMat(0, 2), camMat(1, 2));
+		alpha = camMat(0, 1) / camMat(0, 0);
+	}
+	else
+	{
+		cv::Matx33d camMat = K.getMat();
+		f = cv::Vec2d(camMat(0, 0), camMat(1, 1));
+		c = cv::Vec2d(camMat(0, 2), camMat(1, 2));
+		alpha = camMat(0, 1) / camMat(0, 0);
+	}
+
+	cv::Vec4d k = cv::Vec4d::all(0);
+	if (!D.empty())
+		k = D.depth() == CV_32F ? (cv::Vec4d)*D.getMat().ptr<cv::Vec4f>() : *D.getMat().ptr<cv::Vec4d>();
+
+	//first rotation to be the same with left camera
+	cv::Matx33d RR1 = cv::Matx33d::eye();
+	if (!R1.empty() && R1.total() * R1.channels() == 3)
+	{
+		cv::Vec3d rvec;
+		R1.getMat().convertTo(rvec, CV_64F);
+		RR1 = cv::Affine3d(rvec).rotation();
+	}
+	else if (!R1.empty() && R1.size() == cv::Size(3, 3))
+		R1.getMat().convertTo(RR1, CV_64F);
+	cv::Matx33d RRR1 = RR1.inv(cv::DECOMP_SVD);//
+	cv::Vec3d tt1 = cv::Vec3d(0, 0, 0);
+	if (!tvec1.empty())
+	{
+		tvec1.getMat().convertTo(tt1, CV_64F);
+	}
+
+	////second rotation to be the same with baseline
+	cv::Matx33d RR = cv::Matx33d::eye();
+	if (!R.empty() && R.total() * R.channels() == 3)
+	{
+		cv::Vec3d rvec;
+		R.getMat().convertTo(rvec, CV_64F);
+		RR = cv::Affine3d(rvec).rotation();
+	}
+	else if (!R.empty() && R.size() == cv::Size(3, 3))
+		R.getMat().convertTo(RR, CV_64F);
+	cv::Matx33d RRR = RR.inv(cv::DECOMP_SVD);//
+
+	cv::Vec3d tt = cv::Vec3d(0, 0, 0);
+	if (!tvec.empty())
+	{
+		tvec.getMat().convertTo(tt, CV_64F);
+		tt = -tt;
+	}
+	double tt_theta_xz = -atan(tt[1] / tt[0]);
+	cv::Matx33d Rz = cv::Matx33d(cos(tt_theta_xz), -sin(tt_theta_xz), 0,
+		sin(tt_theta_xz), cos(tt_theta_xz), 0,
+		0, 0, 1);
+	double tt_theta_xy = -atan(tt[2] / sqrt(tt[0] * tt[0] + tt[1] * tt[1]));
+	cv::Matx33d Ry = cv::Matx33d(cos(tt_theta_xy), 0, sin(tt_theta_xy),
+		0, 1, 0,
+		-sin(tt_theta_xy), 0, cos(tt_theta_xy));
+	cv::Matx33d tt_rr = Ry * Rz;
+	cv::Matx33d tt_rrr = tt_rr.inv(cv::DECOMP_SVD);
+
+	for (int i = 0; i < size.height; ++i)
+	{
+		float* m1f = map1.getMat().ptr<float>(i);
+		float* m2f = map2.getMat().ptr<float>(i);
+		short*  m1 = (short*)m1f;
+		ushort* m2 = (ushort*)m2f;
+
+
+		for (int j = 0; j < size.width; ++j)
+		{
+			cv::Vec2d x(j, i);
+			cv::Vec2d px = cv::Vec2d((x[0] - c[0]) / f[0], (x[1] - c[1]) / f[1]);
+			px[0] -= alpha * px[1];
+
+			cv::Vec2d px_;
+			cv::Vec3d px_3d;
+			{
+				double rr = sqrt(px.dot(px));
+				double theta_ = getTheta(rr, mode);
+				//if (theta_ > PI * 0.5)
+				//{
+				//	continue;
+				//}
+
+				cv::Vec2d fi_ = px / rr;
+				cv::Vec3d t_3d = cv::Vec3d(sin(theta_) * fi_[0], sin(theta_) * fi_[1], cos(theta_));
+
+				px_3d = RRR1 * tt_rrr * t_3d;
+				if (fabs(px_3d[2]) < DBL_MIN)
+				{
+					continue;
+				}
+				px_[0] = px_3d[0] / px_3d[2];
+				px_[1] = px_3d[1] / px_3d[2];
+				//px_[0] = x_;
+				//px_[1] = y_;
+
+			}
+
+			//double rr = sqrt(px.dot(px));
+			//cv::Vec2d fi_ = px / rr;
+			//double theta_ = getTheta(rr, mode);
+			//cv::Vec3d t_3d = RRR * (cv::Vec3d(sin(theta_) * fi_[0], sin(theta_) * fi_[1], cos(theta_)));
+			//if(fabs(t_3d[2]) <DBL_MIN)
+			//{
+			//	t_3d[2] = 1.0;
+			//}
+			//cv::Vec2d fcc = cv::Vec2d(t_3d[0] / t_3d[2], t_3d[1] / t_3d[2]);
+			cv::Vec2d fcc = px_;
+			double rcc = sqrt(fcc.dot(fcc));
+			double theta_cc;
+			if (px_3d[2] < DBL_MIN)
+			{
+				theta_cc = getTheta(rcc, IDEAL_PERSPECTIVE);
+				theta_cc = PI - theta_cc;
+				fcc = -fcc;
+			}
+			else
+			{
+				theta_cc = getTheta(rcc, IDEAL_PERSPECTIVE);
+			}
+	
+			double r = getR(theta_cc, mode);
+
+			double u, v;
+			double inv_r_ = rcc > 1e-8 ? 1.0 / rcc : 1;
+			double cdist = rcc > 1e-8 ? r * inv_r_ : 1;
+
+			cv::Vec2d xd1 = fcc * cdist;
+			cv::Vec2d xd3(xd1[0] + alpha * xd1[1], xd1[1]);
+			cv::Vec2d final_point(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
+			u = final_point[0];
+			v = final_point[1] - tt1[1]; // - tt1[1]important
+
+			if (m1type == CV_16SC2)
+			{
+				int iu = cv::saturate_cast<int>(u*cv::INTER_TAB_SIZE);
+				int iv = cv::saturate_cast<int>(v*cv::INTER_TAB_SIZE);
+				m1[j * 2 + 0] = (short)(iu >> cv::INTER_BITS);
+				m1[j * 2 + 1] = (short)(iv >> cv::INTER_BITS);
+				m2[j] = (ushort)((iv & (cv::INTER_TAB_SIZE - 1))*cv::INTER_TAB_SIZE + (iu & (cv::INTER_TAB_SIZE - 1)));
+			}
+			else if (m1type == CV_32FC1)
+			{
+				m1f[j] = (float)u;
+				m2f[j] = (float)v;
+			}
+
+		}
+	}
+}
+
+void my_cv::fisheye_r_d::initUndistortRectifyMap_rectify_5(cv::InputArray K, cv::InputArray D, cv::InputArray R,
+	cv::InputArray tvec, cv::InputArray R1, cv::InputArray tvec1, const cv::Size& size, int m1type,
+	cv::OutputArray map1, cv::OutputArray map2, camMode mode)
+{
+	CV_Assert(m1type == CV_16SC2 || m1type == CV_32F || m1type <= 0);
+	map1.create(size, m1type <= 0 ? CV_16SC2 : m1type);
+	map2.create(size, map1.type() == CV_16SC2 ? CV_16UC1 : CV_32F);
+
+	CV_Assert((K.depth() == CV_32F || K.depth() == CV_64F) && (D.depth() == CV_32F || D.depth() == CV_64F));
+	CV_Assert((R.empty() || R.depth() == CV_32F || R.depth() == CV_64F));
+	CV_Assert((R1.empty() || R1.depth() == CV_32F || R1.depth() == CV_64F));
+	CV_Assert(K.size() == cv::Size(3, 3) && (D.empty() || D.total() == 4));
+	CV_Assert(R.empty() || R.size() == cv::Size(3, 3) || R.total() * R.channels() == 3);
+	CV_Assert(R1.empty() || R1.size() == cv::Size(3, 3) || R1.total() * R1.channels() == 3);
+
+	cv::Vec2d f, c;
+	double alpha;
+	if (K.depth() == CV_32F)
+	{
+		cv::Matx33f camMat = K.getMat();
+		f = cv::Vec2f(camMat(0, 0), camMat(1, 1));
+		c = cv::Vec2f(camMat(0, 2), camMat(1, 2));
+		alpha = camMat(0, 1) / camMat(0, 0);
+	}
+	else
+	{
+		cv::Matx33d camMat = K.getMat();
+		f = cv::Vec2d(camMat(0, 0), camMat(1, 1));
+		c = cv::Vec2d(camMat(0, 2), camMat(1, 2));
+		alpha = camMat(0, 1) / camMat(0, 0);
+	}
+
+	cv::Vec4d k = cv::Vec4d::all(0);
+	if (!D.empty())
+		k = D.depth() == CV_32F ? (cv::Vec4d)*D.getMat().ptr<cv::Vec4f>() : *D.getMat().ptr<cv::Vec4d>();
+
+	//first rotation to be the same with left camera
+	cv::Matx33d RR1 = cv::Matx33d::eye();
+	if (!R1.empty() && R1.total() * R1.channels() == 3)
+	{
+		cv::Vec3d rvec;
+		R1.getMat().convertTo(rvec, CV_64F);
+		RR1 = cv::Affine3d(rvec).rotation();
+	}
+	else if (!R1.empty() && R1.size() == cv::Size(3, 3))
+		R1.getMat().convertTo(RR1, CV_64F);
+	cv::Matx33d RRR1 = RR1.inv(cv::DECOMP_SVD);//
+	cv::Vec3d tt1 = cv::Vec3d(0, 0, 0);
+	if (!tvec1.empty())
+	{
+		tvec1.getMat().convertTo(tt1, CV_64F);
+	}
+
+	////second rotation to be the same with baseline
+	cv::Matx33d RR = cv::Matx33d::eye();
+	if (!R.empty() && R.total() * R.channels() == 3)
+	{
+		cv::Vec3d rvec;
+		R.getMat().convertTo(rvec, CV_64F);
+		RR = cv::Affine3d(rvec).rotation();
+	}
+	else if (!R.empty() && R.size() == cv::Size(3, 3))
+		R.getMat().convertTo(RR, CV_64F);
+	cv::Matx33d RRR = RR.inv(cv::DECOMP_SVD);//
+
+	cv::Vec3d tt = cv::Vec3d(0, 0, 0);
+	if (!tvec.empty())
+	{
+		tvec.getMat().convertTo(tt, CV_64F);
+		tt = -tt;
+	}
+	double tt_theta_xz = -atan(tt[1] / tt[0]);
+	cv::Matx33d Rz = cv::Matx33d(cos(tt_theta_xz), -sin(tt_theta_xz), 0,
+		sin(tt_theta_xz), cos(tt_theta_xz), 0,
+		0, 0, 1);
+	double tt_theta_xy = -atan(tt[2] / sqrt(tt[0] * tt[0] + tt[1] * tt[1]));
+	cv::Matx33d Ry = cv::Matx33d(cos(tt_theta_xy), 0, sin(tt_theta_xy),
+		0, 1, 0,
+		-sin(tt_theta_xy), 0, cos(tt_theta_xy));
+	cv::Matx33d tt_rr = Ry * Rz;
+	cv::Matx33d tt_rrr = tt_rr.inv(cv::DECOMP_SVD);
+
+	for (int i = 0; i < size.height; ++i)
+	{
+		float* m1f = map1.getMat().ptr<float>(i);
+		float* m2f = map2.getMat().ptr<float>(i);
+		short*  m1 = (short*)m1f;
+		ushort* m2 = (ushort*)m2f;
+
+
+		for (int j = 0; j < size.width; ++j)
+		{
+			cv::Vec2d x(j, i);
+			cv::Vec2d px = cv::Vec2d((x[0] - c[0]) / f[0], (x[1] - c[1]) / f[1]);
+			px[0] -= alpha * px[1];
+
+			cv::Vec2d px_;
+			cv::Vec3d px_3d;
+			{
+				double xyz = getTheta(px[0], rectify_mode);
+				double yz = getTheta(px[1], rectify_mode);
+
+				double y_ = yz;
+				double x_ = xyz * sqrt(yz * yz + 1.0);
+
+				px_3d = RRR1 * tt_rrr * cv::Vec3d(x_, y_, 1.0);
+
+				if (fabs(px_3d[2]) < DBL_MIN)
+				{
+					continue;
+				}
+				px_[0] = px_3d[0] / px_3d[2];
+				px_[1] = px_3d[1] / px_3d[2];
+				//px_[0] = x_;
+				//px_[1] = y_;
+
+			}
+
+			cv::Vec2d fcc = px_;
+			double rcc = sqrt(fcc.dot(fcc));
+			double theta_cc;
+			if (px_3d[2] < DBL_MIN)
+			{
+				theta_cc = getTheta(rcc, IDEAL_PERSPECTIVE);
+				theta_cc = PI - theta_cc;
+				fcc = -fcc;
+			}
+			else
+			{
+				theta_cc = getTheta(rcc, IDEAL_PERSPECTIVE);
+			}
+
+			double r = getR(theta_cc, mode);
+
+			double u, v;
+			double inv_r_ = rcc > 1e-8 ? 1.0 / rcc : 1;
+			double cdist = rcc > 1e-8 ? r * inv_r_ : 1;
+
+			cv::Vec2d xd1 = fcc * cdist;
+			cv::Vec2d xd3(xd1[0] + alpha * xd1[1], xd1[1]);
+			cv::Vec2d final_point(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
+			u = final_point[0];
+			v = final_point[1] - tt1[1]; // - tt1[1]important
+
+			if (m1type == CV_16SC2)
+			{
+				int iu = cv::saturate_cast<int>(u*cv::INTER_TAB_SIZE);
+				int iv = cv::saturate_cast<int>(v*cv::INTER_TAB_SIZE);
+				m1[j * 2 + 0] = (short)(iu >> cv::INTER_BITS);
+				m1[j * 2 + 1] = (short)(iv >> cv::INTER_BITS);
+				m2[j] = (ushort)((iv & (cv::INTER_TAB_SIZE - 1))*cv::INTER_TAB_SIZE + (iu & (cv::INTER_TAB_SIZE - 1)));
+			}
+			else if (m1type == CV_32FC1)
+			{
+				m1f[j] = (float)u;
+				m2f[j] = (float)v;
+			}
+
+		}
+	}
+}
+
+void my_cv::fisheye_r_d::initUndistortRectifyMap_rectify_6(cv::InputArray K, cv::InputArray D, cv::InputArray R,
+	cv::InputArray tvec, cv::InputArray R1, cv::InputArray tvec1, const cv::Size& size, int m1type,
+	cv::OutputArray map1, cv::OutputArray map2, camMode mode)
+{
+	CV_Assert(m1type == CV_16SC2 || m1type == CV_32F || m1type <= 0);
+	map1.create(size, m1type <= 0 ? CV_16SC2 : m1type);
+	map2.create(size, map1.type() == CV_16SC2 ? CV_16UC1 : CV_32F);
+
+	CV_Assert((K.depth() == CV_32F || K.depth() == CV_64F) && (D.depth() == CV_32F || D.depth() == CV_64F));
+	CV_Assert((R.empty() || R.depth() == CV_32F || R.depth() == CV_64F));
+	CV_Assert((R1.empty() || R1.depth() == CV_32F || R1.depth() == CV_64F));
+	CV_Assert(K.size() == cv::Size(3, 3) && (D.empty() || D.total() == 4));
+	CV_Assert(R.empty() || R.size() == cv::Size(3, 3) || R.total() * R.channels() == 3);
+	CV_Assert(R1.empty() || R1.size() == cv::Size(3, 3) || R1.total() * R1.channels() == 3);
+
+	cv::Vec2d f, c;
+	double alpha;
+	if (K.depth() == CV_32F)
+	{
+		cv::Matx33f camMat = K.getMat();
+		f = cv::Vec2f(camMat(0, 0), camMat(1, 1));
+		c = cv::Vec2f(camMat(0, 2), camMat(1, 2));
+		alpha = camMat(0, 1) / camMat(0, 0);
+	}
+	else
+	{
+		cv::Matx33d camMat = K.getMat();
+		f = cv::Vec2d(camMat(0, 0), camMat(1, 1));
+		c = cv::Vec2d(camMat(0, 2), camMat(1, 2));
+		alpha = camMat(0, 1) / camMat(0, 0);
+	}
+
+	cv::Vec4d k = cv::Vec4d::all(0);
+	if (!D.empty())
+		k = D.depth() == CV_32F ? (cv::Vec4d)*D.getMat().ptr<cv::Vec4f>() : *D.getMat().ptr<cv::Vec4d>();
+
+	//first rotation to be the same with left camera
+	cv::Matx33d RR1 = cv::Matx33d::eye();
+	if (!R1.empty() && R1.total() * R1.channels() == 3)
+	{
+		cv::Vec3d rvec;
+		R1.getMat().convertTo(rvec, CV_64F);
+		RR1 = cv::Affine3d(rvec).rotation();
+	}
+	else if (!R1.empty() && R1.size() == cv::Size(3, 3))
+		R1.getMat().convertTo(RR1, CV_64F);
+	cv::Matx33d RRR1 = RR1.inv(cv::DECOMP_SVD);//
+	cv::Vec3d tt1 = cv::Vec3d(0, 0, 0);
+	if (!tvec1.empty())
+	{
+		tvec1.getMat().convertTo(tt1, CV_64F);
+	}
+
+	////second rotation to be the same with baseline
+	cv::Matx33d RR = cv::Matx33d::eye();
+	if (!R.empty() && R.total() * R.channels() == 3)
+	{
+		cv::Vec3d rvec;
+		R.getMat().convertTo(rvec, CV_64F);
+		RR = cv::Affine3d(rvec).rotation();
+	}
+	else if (!R.empty() && R.size() == cv::Size(3, 3))
+		R.getMat().convertTo(RR, CV_64F);
+	cv::Matx33d RRR = RR.inv(cv::DECOMP_SVD);//
+
+	cv::Vec3d tt = cv::Vec3d(0, 0, 0);
+	if (!tvec.empty())
+	{
+		tvec.getMat().convertTo(tt, CV_64F);
+		tt = -tt;
+	}
+	double tt_theta_xz = -atan(tt[1] / tt[0]);
+	cv::Matx33d Rz = cv::Matx33d(cos(tt_theta_xz), -sin(tt_theta_xz), 0,
+		sin(tt_theta_xz), cos(tt_theta_xz), 0,
+		0, 0, 1);
+	double tt_theta_xy = -atan(tt[2] / sqrt(tt[0] * tt[0] + tt[1] * tt[1]));
+	cv::Matx33d Ry = cv::Matx33d(cos(tt_theta_xy), 0, sin(tt_theta_xy),
+		0, 1, 0,
+		-sin(tt_theta_xy), 0, cos(tt_theta_xy));
+	cv::Matx33d tt_rr = Ry * Rz;
+	cv::Matx33d tt_rrr = tt_rr.inv(cv::DECOMP_SVD);
+
+	for (int i = 0; i < size.height; ++i)
+	{
+		float* m1f = map1.getMat().ptr<float>(i);
+		float* m2f = map2.getMat().ptr<float>(i);
+		short*  m1 = (short*)m1f;
+		ushort* m2 = (ushort*)m2f;
+
+
+		for (int j = 0; j < size.width; ++j)
+		{
+			cv::Vec2d x(j, i);
+			cv::Vec2d px = cv::Vec2d((x[0] - c[0]) / f[0], (x[1] - c[1]) / f[1]);
+
+			cv::Vec2d px_;
+			cv::Vec3d px_3d;
+			{
+				double xyz = px[0];
+				double yz = px[1];
+
+				double y_ = yz;
+				double x_ = xyz * sqrt(yz * yz + 1.0);
+
+				px_3d = RRR1 * tt_rrr * cv::Vec3d(x_, y_, 1.0);
+
+				if (fabs(px_3d[2]) < DBL_MIN)
+				{
+					continue;
+				}
+				px_[0] = px_3d[0] / px_3d[2];
+				px_[1] = px_3d[1] / px_3d[2];
+				//px_[0] = x_;
+				//px_[1] = y_;
+
+			}
+
+			cv::Vec2d fcc = px_;
+			double rcc = sqrt(fcc.dot(fcc));
+			double theta_cc;
+			if (px_3d[2] < DBL_MIN)
+			{
+				theta_cc = getTheta(rcc, IDEAL_PERSPECTIVE);
+				theta_cc = PI - theta_cc;
+				fcc = -fcc;
+			}
+			else
+			{
+				theta_cc = getTheta(rcc, IDEAL_PERSPECTIVE);
+			}
+
+			double r = getR(theta_cc, mode);
+
+			double u, v;
+			double inv_r_ = rcc > 1e-8 ? 1.0 / rcc : 1;
+			double cdist = rcc > 1e-8 ? r * inv_r_ : 1;
+
+			cv::Vec2d xd1 = fcc * cdist;
+			cv::Vec2d xd3(xd1[0] + alpha * xd1[1], xd1[1]);
+			cv::Vec2d final_point(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
+			u = final_point[0];
+			v = final_point[1] - tt1[1]; // important+ tt1[1]
 
 			if (m1type == CV_16SC2)
 			{
@@ -1340,6 +1849,82 @@ void my_cv::fisheye_r_d::stereoRectify(cv::InputArray K1, cv::InputArray D1, cv:
 			0, 1, 0, -cc_new[0].y,
 			0, 0, 0, fc_new,
 			0, 0, -1. / tnew[0], (cc_new[0].x - cc_new[1].x) / tnew[0]), false).convertTo(Q, Q.empty() ? CV_64F : Q.depth());
+}
+
+void my_cv::fisheye_r_d::stereoRectify2(cv::InputArray K1, cv::InputArray D1, cv::InputArray K2, cv::InputArray D2,
+	const cv::Size& imageSize, cv::InputArray _R, cv::InputArray _tvec, cv::OutputArray R1, cv::OutputArray R2,
+	cv::OutputArray P1, cv::OutputArray P2, cv::OutputArray Q, int flags, const cv::Size& newImageSize, double balance,
+	double fov_scale)
+{
+
+	CV_Assert((_R.size() == cv::Size(3, 3) || _R.total() * _R.channels() == 3) && (_R.depth() == CV_32F || _R.depth() == CV_64F));
+	CV_Assert(_tvec.total() * _tvec.channels() == 3 && (_tvec.depth() == CV_32F || _tvec.depth() == CV_64F));
+
+
+	cv::Mat aaa = _tvec.getMat().reshape(3, 1);
+
+	////second rotation to be the same with baseline
+	cv::Matx33d RR = cv::Matx33d::eye();
+	if (!_R.empty() && _R.total() * _R.channels() == 3)
+	{
+		cv::Vec3d rvec;
+		_R.getMat().convertTo(rvec, CV_64F);
+		RR = cv::Affine3d(rvec).rotation();
+	}
+	else if (!_R.empty() && _R.size() == cv::Size(3, 3))
+		_R.getMat().convertTo(RR, CV_64F);
+	cv::Matx33d RRR = RR.inv(cv::DECOMP_SVD);//
+
+	cv::Vec3d tt = cv::Vec3d(0, 0, 0);
+	if (!_tvec.empty())
+	{
+		_tvec.getMat().convertTo(tt, CV_64F);
+		tt = -tt;
+	}
+	double tt_theta_xz = -atan(tt[1] / tt[0]);
+	cv::Matx33d Rz = cv::Matx33d(cos(tt_theta_xz), -sin(tt_theta_xz), 0,
+		sin(tt_theta_xz), cos(tt_theta_xz), 0,
+		0, 0, 1);
+	double tt_theta_xy = -atan(tt[2] / sqrt(tt[0] * tt[0] + tt[1] * tt[1]));
+	cv::Matx33d Ry = cv::Matx33d(cos(tt_theta_xy), 0, sin(tt_theta_xy),
+		0, 1, 0,
+		-sin(tt_theta_xy), 0, cos(tt_theta_xy));
+	cv::Matx33d tt_rr = Ry * Rz;
+
+	// apply to both views
+	cv::Mat(tt_rr * RR).convertTo(R1, R1.empty() ? CV_64F : R1.type());
+	cv::Mat(tt_rr).convertTo(R2, R2.empty() ? CV_64F : R2.type());
+
+	tt[0] = -sqrt(tt.dot(tt));
+	// calculate projection/camera matrices. these contain the relevant rectified image internal params (fx, fy=fx, cx, cy)
+	cv::Matx33d newK1, newK2;
+	estimateNewCameraMatrixForUndistortRectify(K1, D1, imageSize, R1, newK1, balance, newImageSize, fov_scale);
+	estimateNewCameraMatrixForUndistortRectify(K2, D2, imageSize, R2, newK2, balance, newImageSize, fov_scale);
+
+	double fc_new = std::min(newK1(1, 1), newK2(1, 1));
+	cv::Point2d cc_new[2] = { cv::Vec2d(newK1(0, 2), newK1(1, 2)), cv::Vec2d(newK2(0, 2), newK2(1, 2)) };
+
+	// Vertical focal length must be the same for both images to keep the epipolar constraint use fy for fx also.
+	// For simplicity, set the principal points for both cameras to be the average
+	// of the two principal points (either one of or both x- and y- coordinates)
+	if (flags & cv::CALIB_ZERO_DISPARITY)
+		cc_new[0] = cc_new[1] = (cc_new[0] + cc_new[1]) * 0.5;
+	else
+		cc_new[0].y = cc_new[1].y = (cc_new[0].y + cc_new[1].y)*0.5;
+
+	cv::Mat(cv::Matx34d(fc_new, 0, cc_new[0].x,  0,
+		0, fc_new, cc_new[0].y, 0,
+		0, 0, 1, 0), false).convertTo(P1, P1.empty() ? CV_64F : P1.type());
+
+	cv::Mat(cv::Matx34d(fc_new, 0, cc_new[1].x, -10*tt[0] * fc_new, // baseline * focal length;,
+		0, fc_new, cc_new[1].y, 0,
+		0, 0, 1, 0), false).convertTo(P2, P2.empty() ? CV_64F : P2.type());
+
+	if (Q.needed())
+		cv::Mat(cv::Matx44d(1, 0, 0, -cc_new[0].x,
+			0, 1, 0, -cc_new[0].y,
+			0, 0, 0, fc_new,
+			0, 0, -1. / tt[0], (cc_new[0].x - cc_new[1].x) / tt[0]), false).convertTo(Q, Q.empty() ? CV_64F : Q.depth());
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1682,9 +2267,9 @@ double my_cv::fisheye_r_d::stereoCalibrate(cv::InputArrayOfArrays objectPoints, 
 	double rms = 1.0;
 	for (int iter = 0; ; ++iter)
 	{
-		if ((criteria.type == 1 && iter >= criteria.maxCount) ||
-			(criteria.type == 2 && change <= criteria.epsilon) ||
-			(criteria.type == 3 && (change <= criteria.epsilon || iter >= criteria.maxCount)))
+		if ((criteria.type == 1 && iter >= criteria.maxCount && rms < 1.0) ||
+			(criteria.type == 2 && change <= criteria.epsilon && rms < 1.0) ||
+			(criteria.type == 3 && (change <= criteria.epsilon || iter >= criteria.maxCount) && rms < 1.0))
 			break;
 
 		J.create(4 * n_points * n_images, 18 + 6 * (n_images + 1), CV_64FC1);
@@ -1804,7 +2389,7 @@ double my_cv::fisheye_r_d::stereoCalibrate(cv::InputArrayOfArrays objectPoints, 
 
 		rms /= ((double)e.total() / 2.0);
 		rms = sqrt(rms);
-
+		std::cout << "current rms:" << rms << std::endl;
 	}
 
 	const cv::Vec2d* ptr_e = e.ptr<cv::Vec2d>();

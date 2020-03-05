@@ -102,7 +102,17 @@ double fisheyeCamCalibSingle(std::string imgFilePath, std::string cameraParaPath
 double stereoFisheyeCamCalib_(std::string imgFilePathL, std::string imgFilePathR, 
 	std::string calibResL_Path, std::string calibResR_Path, std::string stereoCalibRes);
 void stereoFisheyeUndistort_(cv::Mat distLeft, cv::Mat distRight, std::string stereoCalibRes, cv::Mat& rectiLeft, cv::Mat& rectiRight);
+//take this one as the final and useful one: stereoFisheyeUndistort_2
 void stereoFisheyeUndistort_2(cv::Mat distLeft, cv::Mat distRight, std::string stereoCalibRes, cv::Mat& rectiLeft, cv::Mat& rectiRight);
+
+void stereoFisheyeUndistort_3(cv::Mat distLeft, cv::Mat distRight, std::string stereoCalibRes, cv::Mat& rectiLeft, cv::Mat& rectiRight);
+// for test
+// get ideal stereo cameras' image
+void stereoFisheyeUndistort_4(cv::Mat distLeft, cv::Mat distRight, std::string stereoCalibRes, cv::Mat& rectiLeft, cv::Mat& rectiRight);
+//
+void stereoFisheyeUndistort_5(cv::Mat distLeft, cv::Mat distRight, std::string stereoCalibRes, cv::Mat& rectiLeft, cv::Mat& rectiRight);
+//
+void undistort_rectify_5(std::string pathL, std::string pathR, std::string stereoCalibRes);
 
 void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string imgFilePath);
 void distortRectify_fisheye(cv::Mat K, cv::Mat D, cv::Size imgSize, std::string imgFilePath, 
